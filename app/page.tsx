@@ -145,8 +145,7 @@ export default function HomePage() {
       </Section>
 
       <div className="pb-12 pt-4 text-center text-[10px] text-text-secondary">
-        Last updated {new Date(metrics.lastUpdated).toLocaleString()} · Local snapshot · Run{" "}
-        <code className="font-mono">npm run import -- &lt;export.json&gt;</code> to refresh
+        Last updated {new Date(metrics.lastUpdated).toLocaleString()} · Auto-refreshed hourly from snapshot
         <div className="mt-1">Not affiliated with BULK.</div>
       </div>
     </div>

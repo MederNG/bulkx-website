@@ -12,13 +12,13 @@ export function Header() {
           </span>
         </Link>
         <nav className="flex items-center gap-1 text-xs">
-          <a href="#lookup" className="btn-ghost">
+          <a href="#lookup" className="btn-ghost btn-ghost-header">
             Lookup
           </a>
-          <a href="#leaderboards" className="btn-ghost hidden sm:inline-flex">
+          <a href="#leaderboards" className="btn-ghost btn-ghost-header hidden sm:inline-flex">
             Leaderboards
           </a>
-          <a href="#calculator" className="btn-ghost hidden md:inline-flex">
+          <a href="#calculator" className="btn-ghost btn-ghost-header hidden md:inline-flex">
             Calculator
           </a>
           <a

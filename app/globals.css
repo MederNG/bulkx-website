@@ -149,9 +149,6 @@ body {
   .metric-card:hover {
     transform: none;
   }
-  .metric-card:hover::before {
-    animation: none;
-  }
 }
 
 .input-field {
@@ -213,6 +210,18 @@ input[type="number"] {
 .btn-ghost.active {
   color: var(--color-accent);
   border-color: rgba(255, 181, 71, 0.4);
+}
+
+/* Header nav uses text-style links without boxed borders. */
+.btn-ghost.btn-ghost-header {
+  border-color: transparent;
+  background: transparent;
+}
+
+.btn-ghost.btn-ghost-header:hover,
+.btn-ghost.btn-ghost-header.active {
+  border-color: transparent;
+  background: rgba(255, 181, 71, 0.08);
 }
 
 .recharts-cartesian-grid-horizontal line,
