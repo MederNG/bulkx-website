@@ -56,11 +56,27 @@ export function RankCalculator({ targets }: RankCalculatorProps) {
   );
 }
 
-export function FdvEstimator({ totalAuraSupply }: { totalAuraSupply: number }) {
-  const [userAura, setUserAura] = useState(500);
-  const [fdv, setFdv] = useState(500_000_000);
-  const [allocation, setAllocation] = useState(30);
-  const [auraSupply, setAuraSupply] = useState(Math.round(totalAuraSupply));
+interface FdvEstimatorProps {
+  userAura: number;
+  setUserAura: (v: number) => void;
+  fdv: number;
+  setFdv: (v: number) => void;
+  allocation: number;
+  setAllocation: (v: number) => void;
+  auraSupply: number;
+  setAuraSupply: (v: number) => void;
+}
+
+export function FdvEstimator({
+  userAura,
+  setUserAura,
+  fdv,
+  setFdv,
+  allocation,
+  setAllocation,
+  auraSupply,
+  setAuraSupply,
+}: FdvEstimatorProps) {
 
   const result = useMemo(
     () => computeFdv(userAura, fdv, allocation, auraSupply),
@@ -82,6 +98,31 @@ export function FdvEstimator({ totalAuraSupply }: { totalAuraSupply: number }) {
         <ResultBox label="Your Value" value={formatUsd(result.userValue)} accent />
       </div>
     </div>
+  );
+}
+
+export function FdvTools({ totalAuraSupply }: { totalAuraSupply: number }) {
+  const [userAura, setUserAura] = useState(500);
+  const [fdv, setFdv] = useState(500_000_000);
+  const [allocation, setAllocation] = useState(30);
+  const [auraSupply, setAuraSupply] = useState(Math.round(totalAuraSupply));
+
+  return (
+    <>
+      <FdvEstimator
+        userAura={userAura}
+        setUserAura={setUserAura}
+        fdv={fdv}
+        setFdv={setFdv}
+        allocation={allocation}
+        setAllocation={setAllocation}
+        auraSupply={auraSupply}
+        setAuraSupply={setAuraSupply}
+      />
+      <div className="mt-4">
+        <FdvMatrix userAura={userAura} allocation={allocation} totalAuraSupply={auraSupply} />
+      </div>
+    </>
   );
 }
 

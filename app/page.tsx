@@ -15,8 +15,7 @@ import {
   TvlChart,
 } from "@/components/charts/Charts";
 import {
-  FdvEstimator,
-  FdvMatrix,
+  FdvTools,
   RankCalculator,
 } from "@/components/calculator/Calculators";
 import { WalletLookup } from "@/components/lookup/WalletLookup";
@@ -127,10 +126,7 @@ export default function HomePage() {
       <Section id="calculator" title="Tools">
         <div className="grid gap-4 lg:grid-cols-2">
           <RankCalculator targets={targets} />
-          <FdvEstimator totalAuraSupply={metrics.totalAura} />
-        </div>
-        <div className="mt-4">
-          <FdvMatrix userAura={500} totalAuraSupply={metrics.totalAura} />
+          <FdvTools totalAuraSupply={metrics.totalAura} />
         </div>
       </Section>
 
