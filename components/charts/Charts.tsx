@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Area,
   AreaChart,
@@ -378,7 +378,20 @@ interface CategoryChartsProps {
 }
 
 export function CategoryCharts({ data }: CategoryChartsProps) {
-  const top = data.slice(0, 8);
+  const top = useMemo(() => {
+    const TOP_N = 7;
+    if (data.length <= TOP_N + 1) return data;
+    const head = data.slice(0, TOP_N);
+    const rest = data.slice(TOP_N);
+    return [
+      ...head,
+      {
+        category: "Others",
+        points: rest.reduce((s, d) => s + d.points, 0),
+        share: rest.reduce((s, d) => s + d.share, 0),
+      },
+    ];
+  }, [data]);
   const [activeIndex, setActiveIndex] = useState<number | undefined>(undefined);
   const { ref, hasEntered } = useInViewOnce<HTMLDivElement>(0.2);
 
@@ -443,6 +456,8 @@ export function CategoryCharts({ data }: CategoryChartsProps) {
                 borderRadius: 4,
                 fontSize: 12,
               }}
+              itemStyle={{ color: "#FFFEEF" }}
+              labelStyle={{ color: "#FFFEEF" }}
               formatter={(value: number) => [`${value.toFixed(1)}%`, "Share"]}
             />
             <Bar
