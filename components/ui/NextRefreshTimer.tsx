@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { RefreshCw } from "lucide-react";
 
 /**
- * Data is refreshed by the hourly GitHub Action (cron "0 * * * *", UTC), so the
+ * Data is refreshed hourly (GitHub Actions at :00 UTC, Vercel Cron backup at :15 UTC), so the
  * next refresh lands at the top of the next hour. This counts down to it live.
  */
 function msUntilNextHour(): number {

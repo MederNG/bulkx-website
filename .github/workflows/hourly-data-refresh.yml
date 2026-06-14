@@ -5,6 +5,8 @@ on:
     # Runs at minute 0 of every hour (UTC)
     - cron: "0 * * * *"
   workflow_dispatch:
+  repository_dispatch:
+    types: [tvl-refresh]
 
 permissions:
   contents: write
@@ -18,10 +20,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: 24
           cache: npm
