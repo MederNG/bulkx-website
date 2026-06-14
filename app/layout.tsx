@@ -16,10 +16,39 @@ const ibmPlexMono = IBM_Plex_Mono({
   variable: "--font-ibm-plex-mono",
 });
 
+const siteUrl = "https://www.aurabulk.xyz";
+const siteTitle = "AURA Intelligence | BULK Analytics Terminal";
+const siteDescription =
+  "Real-time analytics for the BULK AURA pre-deposit campaign. Institutional-grade insights beyond the official interface.";
+
 export const metadata: Metadata = {
-  title: "AURA Intelligence | BULK Analytics Terminal",
-  description:
-    "Real-time analytics for the BULK AURA pre-deposit campaign. Institutional-grade insights beyond the official interface.",
+  metadataBase: new URL(siteUrl),
+  title: siteTitle,
+  description: siteDescription,
+  alternates: {
+    canonical: "/",
+  },
+  openGraph: {
+    type: "website",
+    url: siteUrl,
+    siteName: "AURA Analytics Terminal",
+    title: siteTitle,
+    description: siteDescription,
+    images: [
+      {
+        url: "/og.jpg",
+        width: 1200,
+        height: 630,
+        alt: "AURA Analytics Terminal — Real-time analytics for the BULK AURA campaign.",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: siteTitle,
+    description: siteDescription,
+    images: ["/og.jpg"],
+  },
 };
 
 export default function RootLayout({
