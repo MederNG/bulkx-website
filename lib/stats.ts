@@ -90,6 +90,7 @@ export function computeDashboardMetrics(): DashboardMetrics {
     auraDistribution,
     categoryBreakdown,
     topReferrers,
+    referralCandidates,
     topEfficiency,
     alphaInsights,
     lastUpdated: new Date().toISOString(),

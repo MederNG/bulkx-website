@@ -120,7 +120,10 @@ export default function HomePage() {
 
       {/* Leaderboards */}
       <Section id="leaderboards" title="Leaderboards" subtitle="Top 100 wallets across ranking dimensions">
-        <LeaderboardTable initialData={leaderboard} />
+        <LeaderboardTable
+          initialData={leaderboard}
+          referralData={metrics.referralCandidates}
+        />
       </Section>
 
       {/* Share Card */}

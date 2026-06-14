@@ -1,5 +1,5 @@
 /**
- * Enrich top referrers in leaderboard.json with referees_total_deposited
+ * Enrich all qualified referrers in leaderboard.json with referees_total_deposited
  * from the wallet API (offline one-shot, no full leaderboard refetch).
  */
 import fs from "fs";
@@ -29,18 +29,19 @@ async function fetchWalletProfile(wallet: string): Promise<WalletProfile | null>
 
 async function main() {
   const entries = JSON.parse(fs.readFileSync(LEADERBOARD_FILE, "utf-8")) as LeaderboardEntry[];
-  const targets = [...entries]
-    .filter((e) => e.referrals_qualified > 0)
-    .sort((a, b) => b.referrals_qualified - a.referrals_qualified || b.aura - a.aura)
-    .slice(0, 25);
+  const targets = entries.filter((e) => e.referrals_qualified > 0);
 
-  console.log(`Enriching referred deposit totals for ${targets.length} top referrers...`);
+  console.log(`Enriching referred deposit totals for ${targets.length} qualified referrers...`);
 
+  let done = 0;
   for (const entry of targets) {
     const profile = await fetchWalletProfile(entry.wallet);
     if (profile) {
       entry.referees_total_deposited = Number(profile.referees_total_deposited) || 0;
-      console.log(`  ${entry.wallet.slice(0, 8)}... → $${entry.referees_total_deposited.toLocaleString()}`);
+    }
+    done += 1;
+    if (done % 25 === 0 || done === targets.length) {
+      console.log(`  enriched ${done}/${targets.length}`);
     }
     await sleep(80);
   }

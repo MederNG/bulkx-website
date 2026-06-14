@@ -12,6 +12,7 @@ type SortDir = "asc" | "desc";
 
 interface LeaderboardTableProps {
   initialData: LeaderboardEntry[];
+  referralData: LeaderboardEntry[];
 }
 
 interface ColumnDef {
@@ -124,12 +125,12 @@ function getColumns(tab: Tab): ColumnDef[] {
   }
 }
 
-function filterByTab(data: LeaderboardEntry[], tab: Tab): LeaderboardEntry[] {
+function filterByTab(data: LeaderboardEntry[], tab: Tab, referralData: LeaderboardEntry[]): LeaderboardEntry[] {
   if (tab === "efficiency") {
     return data.filter((e) => e.deposited_amount > 0 && computeDepositAura(e) > 0);
   }
   if (tab === "referral") {
-    return data.filter((e) => e.referrals_qualified > 0 || e.referrals_sent > 0);
+    return referralData;
   }
   return data;
 }
@@ -159,7 +160,7 @@ function sortEntries(
   return copy;
 }
 
-export function LeaderboardTable({ initialData }: LeaderboardTableProps) {
+export function LeaderboardTable({ initialData, referralData }: LeaderboardTableProps) {
   const [tab, setTab] = useState<Tab>("aura");
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
@@ -176,7 +177,10 @@ export function LeaderboardTable({ initialData }: LeaderboardTableProps) {
     setPage(1);
   }, [tab]);
 
-  const tabData = useMemo(() => filterByTab(initialData, tab), [initialData, tab]);
+  const tabData = useMemo(
+    () => filterByTab(initialData, tab, referralData),
+    [initialData, tab, referralData]
+  );
 
   const sorted = useMemo(
     () => sortEntries(tabData, columns, sortKey, sortDir),

@@ -59,6 +59,7 @@ export interface DashboardMetrics {
   auraDistribution: { bucket: string; count: number }[];
   categoryBreakdown: { category: string; points: number; share: number }[];
   topReferrers: LeaderboardEntry[];
+  referralCandidates: LeaderboardEntry[];
   topEfficiency: (LeaderboardEntry & { efficiency: number })[];
   alphaInsights: string[];
   lastUpdated: string;

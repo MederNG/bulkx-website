@@ -195,15 +195,12 @@ async function enrichReferrals(entries: LeaderboardEntry[], count: number): Prom
   }
 }
 
-async function enrichTopReferrerDeposits(entries: LeaderboardEntry[], count = 25): Promise<void> {
-  const targets = [...entries]
-    .filter((e) => e.referrals_qualified > 0)
-    .sort((a, b) => b.referrals_qualified - a.referrals_qualified || b.aura - a.aura)
-    .slice(0, count);
+async function enrichReferrerDeposits(entries: LeaderboardEntry[]): Promise<void> {
+  const targets = entries.filter((e) => e.referrals_qualified > 0);
 
   if (targets.length === 0) return;
 
-  console.log(`Enriching referred deposit totals for top ${targets.length} referrers...`);
+  console.log(`Enriching referred deposit totals for ${targets.length} qualified referrers...`);
 
   let done = 0;
   for (const entry of targets) {
@@ -306,7 +303,7 @@ async function main() {
     await enrichReferrals(entries, enrich);
   }
 
-  await enrichTopReferrerDeposits(entries);
+  await enrichReferrerDeposits(entries);
 
   fs.mkdirSync(DATA_DIR, { recursive: true });
   if (fs.existsSync(LEADERBOARD_FILE)) {
