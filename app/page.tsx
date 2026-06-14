@@ -118,7 +118,7 @@ export default function HomePage() {
       </Section>
 
       {/* Efficiency Analytics */}
-      <Section title="Efficiency Analytics" subtitle="Aura earned per dollar deposited">
+      <Section title="Efficiency Analytics" subtitle="Deposit Aura earned per dollar deposited">
         <EfficiencyTable data={metrics.topEfficiency} />
       </Section>
 

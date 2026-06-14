@@ -1,6 +1,7 @@
 import { getLeaderboard } from "@/lib/fetcher";
 import {
   computeEfficiency,
+  computeDepositAura,
   computeGini,
   computeLorenzCurve,
   computePercentile,
@@ -61,7 +62,7 @@ export function computeDashboardMetrics(): DashboardMetrics {
     .slice(0, 20);
 
   const topEfficiency = [...entries]
-    .filter((e) => e.deposited_amount > 0)
+    .filter((e) => e.deposited_amount > 0 && computeDepositAura(e) > 0)
     .map((e) => ({ ...e, efficiency: computeEfficiency(e) }))
     .sort((a, b) => b.efficiency - a.efficiency)
     .slice(0, 20);
@@ -155,7 +156,7 @@ export function getSortedLeaderboard(
       return [...entries].sort((a, b) => a.deposit_rank - b.deposit_rank);
     case "efficiency":
       return [...entries]
-        .filter((e) => e.deposited_amount > 0)
+        .filter((e) => e.deposited_amount > 0 && computeDepositAura(e) > 0)
         .sort((a, b) => computeEfficiency(b) - computeEfficiency(a));
     case "referral":
       return [...entries].sort(

@@ -84,9 +84,18 @@ export function estimateWalletAgeDays(entry: LeaderboardEntry): number {
   return 14 + (seed % 60);
 }
 
+export function computeDepositAura(entry: LeaderboardEntry): number {
+  let total = 0;
+  for (const [key, val] of Object.entries(entry.categories ?? {})) {
+    if (key.startsWith("referral_") || key.startsWith("retro_")) continue;
+    total += Number(val) || 0;
+  }
+  return total;
+}
+
 export function computeEfficiency(entry: LeaderboardEntry): number {
   if (entry.deposited_amount <= 0) return 0;
-  return entry.aura / entry.deposited_amount;
+  return computeDepositAura(entry) / entry.deposited_amount;
 }
 
 /**

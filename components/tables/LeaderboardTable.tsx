@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import type { LeaderboardEntry } from "@/types";
 import { formatNumber, formatUsd, truncateWallet } from "@/lib/utils";
+import { computeDepositAura, computeEfficiency } from "@/lib/percentiles";
 import { cn } from "@/lib/utils";
 
 type Tab = "aura" | "deposit" | "efficiency" | "referral";
@@ -95,14 +96,14 @@ export function LeaderboardTable({ initialData }: LeaderboardTableProps) {
                 </td>
                 <td className="px-4 py-2.5 font-mono">{truncateWallet(entry.wallet, 6)}</td>
                 <td className="px-4 py-2.5 text-right font-mono tabular-nums text-accent">
-                  {formatNumber(entry.aura)}
+                  {formatNumber(tab === "efficiency" ? computeDepositAura(entry) : entry.aura)}
                 </td>
                 <td className="px-4 py-2.5 text-right font-mono tabular-nums">
                   {formatUsd(entry.current_amount)}
                 </td>
                 {tab === "efficiency" && (
                   <td className="px-4 py-2.5 text-right font-mono tabular-nums text-bid-green">
-                    {(entry.aura / Math.max(entry.deposited_amount, 1)).toFixed(3)}
+                    {computeEfficiency(entry).toFixed(3)}
                   </td>
                 )}
                 {tab === "referral" && (
@@ -156,8 +157,8 @@ function sortData(data: LeaderboardEntry[], tab: Tab): LeaderboardEntry[] {
       return copy.sort((a, b) => a.deposit_rank - b.deposit_rank);
     case "efficiency":
       return copy
-        .filter((e) => e.deposited_amount > 0)
-        .sort((a, b) => b.aura / b.deposited_amount - a.aura / a.deposited_amount);
+        .filter((e) => e.deposited_amount > 0 && computeDepositAura(e) > 0)
+        .sort((a, b) => computeEfficiency(b) - computeEfficiency(a));
     case "referral":
       return copy.sort(
         (a, b) => b.referrals_qualified - a.referrals_qualified || b.aura - a.aura
@@ -314,7 +315,7 @@ export function EfficiencyTable({
               >
                 <td className="px-4 py-2.5 font-mono">{truncateWallet(entry.wallet, 6)}</td>
                 <td className="px-4 py-2.5 text-right font-mono tabular-nums text-accent">
-                  {formatNumber(entry.aura)}
+                  {formatNumber(computeDepositAura(entry))}
                 </td>
                 <td className="px-4 py-2.5 text-right font-mono tabular-nums">
                   {formatUsd(entry.deposited_amount)}
