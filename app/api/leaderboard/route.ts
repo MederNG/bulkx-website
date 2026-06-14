@@ -1,27 +1,43 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getSortedLeaderboard } from "@/lib/stats";
+import { getLeaderboard } from "@/lib/fetcher";
+import {
+  LEADERBOARD_TAB_DEFAULT_SORT,
+  LEADERBOARD_TOP_LIMIT,
+  getLeaderboardTop,
+  type LeaderboardSortDir,
+  type LeaderboardTab,
+} from "@/lib/leaderboard-table";
 
 export const revalidate = 300;
 
-export async function GET(request: NextRequest) {
-  const tab = request.nextUrl.searchParams.get("tab") ?? "aura";
-  const page = Number(request.nextUrl.searchParams.get("page") ?? 1);
-  const pageSize = Number(request.nextUrl.searchParams.get("page_size") ?? 25);
+const VALID_TABS: LeaderboardTab[] = ["aura", "deposit", "efficiency", "referral"];
 
-  const validTabs = ["aura", "deposit", "efficiency", "referral"] as const;
-  const selectedTab = validTabs.includes(tab as (typeof validTabs)[number])
-    ? (tab as (typeof validTabs)[number])
+export async function GET(request: NextRequest) {
+  const tabParam = request.nextUrl.searchParams.get("tab") ?? "aura";
+  const selectedTab = VALID_TABS.includes(tabParam as LeaderboardTab)
+    ? (tabParam as LeaderboardTab)
     : "aura";
 
-  const all = getSortedLeaderboard(selectedTab);
-  const start = (page - 1) * pageSize;
-  const items = all.slice(start, start + pageSize);
+  const defaults = LEADERBOARD_TAB_DEFAULT_SORT[selectedTab];
+  const sortKey = request.nextUrl.searchParams.get("sort") ?? defaults.key;
+  const dirParam = request.nextUrl.searchParams.get("dir");
+  const sortDir: LeaderboardSortDir =
+    dirParam === "asc" || dirParam === "desc" ? dirParam : defaults.dir;
+
+  const limitParam = Number(request.nextUrl.searchParams.get("limit") ?? LEADERBOARD_TOP_LIMIT);
+  const limit = Math.min(
+    LEADERBOARD_TOP_LIMIT,
+    Math.max(1, Number.isFinite(limitParam) ? limitParam : LEADERBOARD_TOP_LIMIT)
+  );
+
+  const items = getLeaderboardTop(getLeaderboard(), selectedTab, sortKey, sortDir, limit);
 
   return NextResponse.json({
     items,
-    total: all.length,
-    page,
-    page_size: pageSize,
-    total_pages: Math.ceil(all.length / pageSize),
+    total: items.length,
+    tab: selectedTab,
+    sort: sortKey,
+    dir: sortDir,
+    limit,
   });
 }

@@ -11,6 +11,7 @@ import {
   percentileValue,
 } from "@/lib/percentiles";
 import { filterSnapshotsByRange, readSnapshots } from "@/lib/snapshots";
+import { getLeaderboardTop } from "@/lib/leaderboard-table";
 import { hasReferralActivity } from "@/lib/referrals";
 import { AURA_BUCKETS, categoryLabel } from "@/lib/utils";
 import type {
@@ -148,24 +149,12 @@ export function getWalletData(address: string): WalletData | null {
 }
 
 export function getSortedLeaderboard(
-  tab: "aura" | "deposit" | "efficiency" | "referral"
+  tab: "aura" | "deposit" | "efficiency" | "referral",
+  sortKey?: string,
+  sortDir?: "asc" | "desc",
+  limit?: number
 ): LeaderboardEntry[] {
-  const entries = getLeaderboard();
-
-  switch (tab) {
-    case "deposit":
-      return [...entries].sort((a, b) => a.deposit_rank - b.deposit_rank);
-    case "efficiency":
-      return [...entries]
-        .filter((e) => e.deposited_amount > 0 && computeDepositAura(e) > 0)
-        .sort((a, b) => computeEfficiency(b) - computeEfficiency(a));
-    case "referral":
-      return [...entries].sort(
-        (a, b) => b.referrals_qualified - a.referrals_qualified || b.aura - a.aura
-      );
-    default:
-      return [...entries].sort((a, b) => a.aura_rank - b.aura_rank);
-  }
+  return getLeaderboardTop(getLeaderboard(), tab, sortKey, sortDir, limit);
 }
 
 export function getChartSnapshots(range: ChartRange): Snapshot[] {

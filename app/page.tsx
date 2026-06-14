@@ -1,6 +1,5 @@
 import { ArrowUpRight } from "lucide-react";
 import { computeDashboardMetrics, getChartSnapshots, getRankTargetsFromData } from "@/lib/stats";
-import { getLeaderboard } from "@/lib/fetcher";
 import { MetricCard, Section } from "@/components/cards/MetricCard";
 import {
   AlphaSection,
@@ -28,7 +27,6 @@ export default function HomePage() {
   const metrics = computeDashboardMetrics();
   const snapshots = getChartSnapshots("ALL");
   const targets = getRankTargetsFromData();
-  const leaderboard = getLeaderboard().slice(0, 100);
 
   return (
     <div className="mx-auto max-w-[1400px] px-4 md:px-6">
@@ -119,11 +117,8 @@ export default function HomePage() {
       </Section>
 
       {/* Leaderboards */}
-      <Section id="leaderboards" title="Leaderboards" subtitle="Top 100 wallets across ranking dimensions">
-        <LeaderboardTable
-          initialData={leaderboard}
-          referralData={metrics.referralCandidates}
-        />
+      <Section id="leaderboards" title="Leaderboards" subtitle="Top 100 wallets per ranking category">
+        <LeaderboardTable />
       </Section>
 
       {/* Share Card */}

@@ -3,39 +3,39 @@
 import { useEffect, useMemo, useState } from "react";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import type { LeaderboardEntry } from "@/types";
+import {
+  LEADERBOARD_TAB_DEFAULT_SORT,
+  LEADERBOARD_TOP_LIMIT,
+  type LeaderboardSortDir,
+  type LeaderboardTab,
+} from "@/lib/leaderboard-table";
 import { formatNumber, formatUsd, truncateWallet } from "@/lib/utils";
 import { computeDepositAura, computeEfficiency } from "@/lib/percentiles";
 import { cn } from "@/lib/utils";
-
-type Tab = "aura" | "deposit" | "efficiency" | "referral";
-type SortDir = "asc" | "desc";
-
-interface LeaderboardTableProps {
-  initialData: LeaderboardEntry[];
-  referralData: LeaderboardEntry[];
-}
 
 interface ColumnDef {
   key: string;
   label: string;
   align?: "left" | "right";
-  getSortValue: (entry: LeaderboardEntry) => number | string;
+  isDisplayRank?: boolean;
   render: (entry: LeaderboardEntry) => React.ReactNode;
 }
 
-const TAB_DEFAULT_SORT: Record<Tab, { key: string; dir: SortDir }> = {
-  aura: { key: "aura_rank", dir: "asc" },
-  deposit: { key: "deposit_rank", dir: "asc" },
-  efficiency: { key: "efficiency", dir: "desc" },
-  referral: { key: "referrals_qualified", dir: "desc" },
-};
+function getColumns(tab: LeaderboardTab): ColumnDef[] {
+  const rankKey =
+    tab === "deposit"
+      ? "deposit_rank"
+      : tab === "efficiency"
+        ? "efficiency"
+        : tab === "referral"
+          ? "referrals_qualified"
+          : "aura_rank";
 
-function getColumns(tab: Tab): ColumnDef[] {
   const rank: ColumnDef = {
-    key: tab === "deposit" ? "deposit_rank" : "aura_rank",
+    key: rankKey,
     label: "Rank",
     align: "left",
-    getSortValue: (entry) => (tab === "deposit" ? entry.deposit_rank : entry.aura_rank),
+    isDisplayRank: true,
     render: () => null,
   };
 
@@ -43,7 +43,6 @@ function getColumns(tab: Tab): ColumnDef[] {
     key: "wallet",
     label: "Wallet",
     align: "left",
-    getSortValue: (entry) => entry.wallet,
     render: (entry) => <span className="font-mono">{truncateWallet(entry.wallet, 6)}</span>,
   };
 
@@ -51,7 +50,6 @@ function getColumns(tab: Tab): ColumnDef[] {
     key: "aura",
     label: "Aura",
     align: "right",
-    getSortValue: (entry) => (tab === "efficiency" ? computeDepositAura(entry) : entry.aura),
     render: (entry) => (
       <span className="font-mono tabular-nums text-accent">
         {formatNumber(tab === "efficiency" ? computeDepositAura(entry) : entry.aura)}
@@ -63,7 +61,6 @@ function getColumns(tab: Tab): ColumnDef[] {
     key: "deposit",
     label: "Deposit",
     align: "right",
-    getSortValue: (entry) => entry.current_amount,
     render: (entry) => (
       <span className="font-mono tabular-nums">{formatUsd(entry.current_amount)}</span>
     ),
@@ -73,7 +70,6 @@ function getColumns(tab: Tab): ColumnDef[] {
     key: "referees_total_deposited",
     label: "Referred Amount",
     align: "right",
-    getSortValue: (entry) => entry.referees_total_deposited ?? 0,
     render: (entry) => (
       <span className="font-mono tabular-nums">
         {formatUsd(entry.referees_total_deposited ?? 0)}
@@ -85,7 +81,6 @@ function getColumns(tab: Tab): ColumnDef[] {
     key: "efficiency",
     label: "Efficiency",
     align: "right",
-    getSortValue: (entry) => computeEfficiency(entry),
     render: (entry) => (
       <span className="font-mono tabular-nums text-bid-green">
         {computeEfficiency(entry).toFixed(3)}
@@ -97,7 +92,6 @@ function getColumns(tab: Tab): ColumnDef[] {
     key: "referrals_sent",
     label: "Sent",
     align: "right",
-    getSortValue: (entry) => entry.referrals_sent,
     render: (entry) => (
       <span className="font-mono tabular-nums">{entry.referrals_sent}</span>
     ),
@@ -107,7 +101,6 @@ function getColumns(tab: Tab): ColumnDef[] {
     key: "referrals_qualified",
     label: "Qualified",
     align: "right",
-    getSortValue: (entry) => entry.referrals_qualified,
     render: (entry) => (
       <span className="font-mono tabular-nums">{entry.referrals_qualified}</span>
     ),
@@ -125,76 +118,72 @@ function getColumns(tab: Tab): ColumnDef[] {
   }
 }
 
-function filterByTab(data: LeaderboardEntry[], tab: Tab, referralData: LeaderboardEntry[]): LeaderboardEntry[] {
-  if (tab === "efficiency") {
-    return data.filter((e) => e.deposited_amount > 0 && computeDepositAura(e) > 0);
-  }
-  if (tab === "referral") {
-    return referralData;
-  }
-  return data;
+function defaultSortDirForKey(tab: LeaderboardTab, key: string): LeaderboardSortDir {
+  const defaults = LEADERBOARD_TAB_DEFAULT_SORT[tab];
+  if (key === defaults.key) return defaults.dir;
+  if (key.endsWith("_rank")) return "asc";
+  return "desc";
 }
 
-function sortEntries(
-  data: LeaderboardEntry[],
-  columns: ColumnDef[],
-  sortKey: string,
-  sortDir: SortDir
-): LeaderboardEntry[] {
-  const column = columns.find((col) => col.key === sortKey) ?? columns[0];
-  const copy = [...data];
-
-  copy.sort((a, b) => {
-    const aVal = column.getSortValue(a);
-    const bVal = column.getSortValue(b);
-
-    if (typeof aVal === "string" && typeof bVal === "string") {
-      const cmp = aVal.localeCompare(bVal);
-      return sortDir === "desc" ? -cmp : cmp;
-    }
-
-    const diff = Number(aVal) - Number(bVal);
-    return sortDir === "desc" ? -diff : diff;
-  });
-
-  return copy;
-}
-
-export function LeaderboardTable({ initialData, referralData }: LeaderboardTableProps) {
-  const [tab, setTab] = useState<Tab>("aura");
+export function LeaderboardTable() {
+  const [tab, setTab] = useState<LeaderboardTab>("aura");
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
-  const [sortKey, setSortKey] = useState(TAB_DEFAULT_SORT.aura.key);
-  const [sortDir, setSortDir] = useState<SortDir>(TAB_DEFAULT_SORT.aura.dir);
+  const [sortKey, setSortKey] = useState(LEADERBOARD_TAB_DEFAULT_SORT.aura.key);
+  const [sortDir, setSortDir] = useState<LeaderboardSortDir>(
+    LEADERBOARD_TAB_DEFAULT_SORT.aura.dir
+  );
+  const [rows, setRows] = useState<LeaderboardEntry[]>([]);
+  const [loading, setLoading] = useState(true);
   const pageSize = 25;
 
   const columns = useMemo(() => getColumns(tab), [tab]);
 
   useEffect(() => {
-    const defaults = TAB_DEFAULT_SORT[tab];
-    setSortKey(defaults.key);
-    setSortDir(defaults.dir);
-    setPage(1);
-  }, [tab]);
+    let cancelled = false;
 
-  const tabData = useMemo(
-    () => filterByTab(initialData, tab, referralData),
-    [initialData, tab, referralData]
-  );
+    async function load() {
+      setLoading(true);
+      try {
+        const params = new URLSearchParams({
+          tab,
+          sort: sortKey,
+          dir: sortDir,
+          limit: String(LEADERBOARD_TOP_LIMIT),
+        });
+        const res = await fetch(`/api/leaderboard?${params.toString()}`);
+        if (!res.ok) throw new Error("Failed to load leaderboard");
+        const data = (await res.json()) as { items: LeaderboardEntry[] };
+        if (!cancelled) setRows(data.items);
+      } catch {
+        if (!cancelled) setRows([]);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
 
-  const sorted = useMemo(
-    () => sortEntries(tabData, columns, sortKey, sortDir),
-    [tabData, columns, sortKey, sortDir]
-  );
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, [tab, sortKey, sortDir]);
 
   const filtered = useMemo(() => {
-    if (!search.trim()) return sorted;
+    if (!search.trim()) return rows;
     const q = search.toLowerCase();
-    return sorted.filter((e) => e.wallet.toLowerCase().includes(q));
-  }, [sorted, search]);
+    return rows.filter((entry) => entry.wallet.toLowerCase().includes(q));
+  }, [rows, search]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
   const pageData = filtered.slice((page - 1) * pageSize, page * pageSize);
+
+  function handleTabChange(nextTab: LeaderboardTab) {
+    const defaults = LEADERBOARD_TAB_DEFAULT_SORT[nextTab];
+    setTab(nextTab);
+    setSortKey(defaults.key);
+    setSortDir(defaults.dir);
+    setPage(1);
+  }
 
   function handleSort(key: string) {
     if (sortKey === key) {
@@ -202,10 +191,11 @@ export function LeaderboardTable({ initialData, referralData }: LeaderboardTable
       return;
     }
     setSortKey(key);
-    setSortDir("desc");
+    setSortDir(defaultSortDirForKey(tab, key));
+    setPage(1);
   }
 
-  const tabs: { id: Tab; label: string }[] = [
+  const tabs: { id: LeaderboardTab; label: string }[] = [
     { id: "aura", label: "Aura Rank" },
     { id: "deposit", label: "Deposit Rank" },
     { id: "efficiency", label: "Efficiency" },
@@ -219,7 +209,7 @@ export function LeaderboardTable({ initialData, referralData }: LeaderboardTable
           {tabs.map((t) => (
             <button
               key={t.id}
-              onClick={() => setTab(t.id)}
+              onClick={() => handleTabChange(t.id)}
               className={cn("btn-ghost", tab === t.id && "active")}
             >
               {t.label}
@@ -255,43 +245,65 @@ export function LeaderboardTable({ initialData, referralData }: LeaderboardTable
             </tr>
           </thead>
           <tbody>
-            {pageData.map((entry, i) => (
-              <tr
-                key={entry.wallet}
-                className="border-b border-[rgba(198,182,186,0.05)] hover:bg-[rgba(255,181,71,0.03)]"
-              >
-                {columns.map((col) => (
-                  <td
-                    key={col.key}
-                    className={cn(
-                      "px-4 py-2.5",
-                      col.align === "right" ? "text-right" : "text-left",
-                      col.key === "aura_rank" || col.key === "deposit_rank"
-                        ? "font-mono tabular-nums text-text-secondary"
-                        : ""
-                    )}
-                  >
-                    {col.key === "aura_rank" || col.key === "deposit_rank" ? (
-                      `#${(page - 1) * pageSize + i + 1}`
-                    ) : (
-                      col.render(entry)
-                    )}
-                  </td>
-                ))}
+            {loading ? (
+              <tr>
+                <td
+                  colSpan={columns.length}
+                  className="px-4 py-8 text-center text-text-secondary"
+                >
+                  Loading top {LEADERBOARD_TOP_LIMIT}…
+                </td>
               </tr>
-            ))}
+            ) : pageData.length === 0 ? (
+              <tr>
+                <td
+                  colSpan={columns.length}
+                  className="px-4 py-8 text-center text-text-secondary"
+                >
+                  No wallets found
+                </td>
+              </tr>
+            ) : (
+              pageData.map((entry, i) => (
+                <tr
+                  key={entry.wallet}
+                  className="border-b border-[rgba(198,182,186,0.05)] hover:bg-[rgba(255,181,71,0.03)]"
+                >
+                  {columns.map((col) => (
+                    <td
+                      key={col.key}
+                      className={cn(
+                        "px-4 py-2.5",
+                        col.align === "right" ? "text-right" : "text-left",
+                        col.isDisplayRank
+                          ? "font-mono tabular-nums text-text-secondary"
+                          : ""
+                      )}
+                    >
+                      {col.isDisplayRank ? (
+                        `#${(page - 1) * pageSize + i + 1}`
+                      ) : (
+                        col.render(entry)
+                      )}
+                    </td>
+                  ))}
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
       </div>
 
       <div className="flex items-center justify-between border-t border-[rgba(198,182,186,0.1)] px-4 py-3">
         <p className="text-xs text-text-secondary">
-          Showing {pageData.length} of {filtered.length.toLocaleString()}
+          {search.trim()
+            ? `Showing ${pageData.length} of ${filtered.length} matches (top ${LEADERBOARD_TOP_LIMIT} in category)`
+            : `Top ${LEADERBOARD_TOP_LIMIT} · showing ${pageData.length} of ${filtered.length}`}
         </p>
         <div className="flex gap-2">
           <button
             className="btn-ghost"
-            disabled={page <= 1}
+            disabled={page <= 1 || loading}
             onClick={() => setPage((p) => p - 1)}
           >
             Prev
@@ -301,7 +313,7 @@ export function LeaderboardTable({ initialData, referralData }: LeaderboardTable
           </span>
           <button
             className="btn-ghost"
-            disabled={page >= totalPages}
+            disabled={page >= totalPages || loading}
             onClick={() => setPage((p) => p + 1)}
           >
             Next
@@ -322,7 +334,7 @@ function SortableHeader({
   label: string;
   align?: "left" | "right";
   active: boolean;
-  direction: SortDir | null;
+  direction: LeaderboardSortDir | null;
   onClick: () => void;
 }) {
   return (
