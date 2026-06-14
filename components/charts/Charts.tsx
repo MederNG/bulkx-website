@@ -423,7 +423,7 @@ export function CategoryCharts({ data }: CategoryChartsProps) {
       <div className="card p-4 md:p-5">
         <p className="mb-4 flex items-center gap-1.5 text-sm font-medium">
           Source Breakdown
-          {othersInfo && <InfoTooltip text={othersInfo} panelClassName="w-72" />}
+          {othersInfo && <InfoTooltip text={othersInfo} panelClassName="w-72" floating />}
         </p>
         <ResponsiveContainer width="100%" height={300}>
           <PieChart key={hasEntered ? "pie-animate" : "pie-idle"}>
@@ -470,7 +470,7 @@ export function CategoryCharts({ data }: CategoryChartsProps) {
       <div className="card p-4 md:p-5">
         <p className="mb-4 flex items-center gap-1.5 text-sm font-medium">
           Category Share
-          {othersInfo && <InfoTooltip text={othersInfo} panelClassName="w-72" />}
+          {othersInfo && <InfoTooltip text={othersInfo} panelClassName="w-72" floating />}
         </p>
         <ResponsiveContainer width="100%" height={260}>
           <BarChart key={hasEntered ? "cat-animate" : "cat-idle"} data={top} layout="vertical">
