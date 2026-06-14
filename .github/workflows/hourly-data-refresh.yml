@@ -40,6 +40,8 @@ jobs:
 
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin main
+          git pull --rebase origin main
           git add data/leaderboard.json data/snapshots.json
           git commit -m "chore: refresh hourly aura snapshots"
           git push
