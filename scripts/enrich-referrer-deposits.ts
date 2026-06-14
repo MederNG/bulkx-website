@@ -1,6 +1,6 @@
 /**
- * Enrich all qualified referrers in leaderboard.json with referees_total_deposited
- * from the wallet API (offline one-shot, no full leaderboard refetch).
+ * Enrich all wallets with referral_number > 0 in leaderboard.json
+ * using the wallet API (offline one-shot, no full leaderboard refetch).
  */
 import fs from "fs";
 import path from "path";
@@ -12,6 +12,9 @@ const WALLET_ENDPOINT = `${BASE_URL}/v1/aura/wallet`;
 const LEADERBOARD_FILE = path.join(process.cwd(), "data", "leaderboard.json");
 
 interface WalletProfile {
+  referrals_sent?: number;
+  referrals_qualified?: number;
+  referrals_rewarded?: number;
   referees_total_deposited?: number;
 }
 
@@ -29,18 +32,21 @@ async function fetchWalletProfile(wallet: string): Promise<WalletProfile | null>
 
 async function main() {
   const entries = JSON.parse(fs.readFileSync(LEADERBOARD_FILE, "utf-8")) as LeaderboardEntry[];
-  const targets = entries.filter((e) => e.referrals_qualified > 0);
+  const targets = entries.filter((e) => (e.referral_number ?? 0) > 0);
 
-  console.log(`Enriching referred deposit totals for ${targets.length} qualified referrers...`);
+  console.log(`Enriching referral profiles for ${targets.length} wallets...`);
 
   let done = 0;
   for (const entry of targets) {
     const profile = await fetchWalletProfile(entry.wallet);
     if (profile) {
+      entry.referrals_sent = Number(profile.referrals_sent) || 0;
+      entry.referrals_qualified = Number(profile.referrals_qualified) || 0;
+      entry.referrals_rewarded = Number(profile.referrals_rewarded) || 0;
       entry.referees_total_deposited = Number(profile.referees_total_deposited) || 0;
     }
     done += 1;
-    if (done % 25 === 0 || done === targets.length) {
+    if (done % 50 === 0 || done === targets.length) {
       console.log(`  enriched ${done}/${targets.length}`);
     }
     await sleep(80);

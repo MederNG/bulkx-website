@@ -68,24 +68,23 @@ interface WalletProfile {
 interface Options {
   pageSize: number;
   maxPages: number;
-  enrich: number;
+  enrichReferrals: boolean;
 }
 
 function parseArgs(): Options {
   const args = process.argv.slice(2);
   let pageSize = 2000;
   let maxPages = Infinity;
-  let enrich = 500;
+  let enrichReferrals = true;
 
   for (const arg of args) {
     const [key, value] = arg.replace(/^--/, "").split("=");
     if (key === "page-size") pageSize = Math.min(2000, Math.max(1, Number(value) || 2000));
     if (key === "max-pages") maxPages = Math.max(1, Number(value) || Infinity);
-    if (key === "enrich") enrich = Math.max(0, Number(value) || 0);
-    if (key === "no-enrich") enrich = 0;
+    if (key === "no-enrich") enrichReferrals = false;
   }
 
-  return { pageSize, maxPages, enrich };
+  return { pageSize, maxPages, enrichReferrals };
 }
 
 function sleep(ms: number): Promise<void> {
@@ -174,9 +173,12 @@ async function fetchWalletProfile(wallet: string): Promise<WalletProfile | null>
   }
 }
 
-async function enrichReferrals(entries: LeaderboardEntry[], count: number): Promise<void> {
-  const targets = entries.slice(0, Math.min(count, entries.length));
-  console.log(`Enriching referral data for top ${targets.length} wallets (per-wallet endpoint)...`);
+async function enrichAllReferrerProfiles(entries: LeaderboardEntry[]): Promise<void> {
+  const targets = entries.filter((e) => (e.referral_number ?? 0) > 0);
+
+  if (targets.length === 0) return;
+
+  console.log(`Enriching referral profiles for ${targets.length} wallets (referral_number > 0)...`);
 
   let done = 0;
   for (const entry of targets) {
@@ -189,28 +191,7 @@ async function enrichReferrals(entries: LeaderboardEntry[], count: number): Prom
     }
     done += 1;
     if (done % 50 === 0 || done === targets.length) {
-      console.log(`  enriched ${done}/${targets.length} wallets`);
-    }
-    await sleep(80);
-  }
-}
-
-async function enrichReferrerDeposits(entries: LeaderboardEntry[]): Promise<void> {
-  const targets = entries.filter((e) => e.referrals_qualified > 0);
-
-  if (targets.length === 0) return;
-
-  console.log(`Enriching referred deposit totals for ${targets.length} qualified referrers...`);
-
-  let done = 0;
-  for (const entry of targets) {
-    const profile = await fetchWalletProfile(entry.wallet);
-    if (profile) {
-      entry.referees_total_deposited = Number(profile.referees_total_deposited) || 0;
-    }
-    done += 1;
-    if (done % 10 === 0 || done === targets.length) {
-      console.log(`  referred totals ${done}/${targets.length}`);
+      console.log(`  enriched ${done}/${targets.length} referrers`);
     }
     await sleep(80);
   }
@@ -265,7 +246,7 @@ function appendSnapshot(entries: LeaderboardEntry[]): void {
 }
 
 async function main() {
-  const { pageSize, maxPages, enrich } = parseArgs();
+  const { pageSize, maxPages, enrichReferrals } = parseArgs();
   console.log(`Fetching Aura leaderboard from ${BASE_URL} (page_size=${pageSize})...`);
 
   const first = await fetchPage(1, pageSize, false);
@@ -299,11 +280,9 @@ async function main() {
     e.deposit_rank = i + 1;
   });
 
-  if (enrich > 0) {
-    await enrichReferrals(entries, enrich);
+  if (enrichReferrals) {
+    await enrichAllReferrerProfiles(entries);
   }
-
-  await enrichReferrerDeposits(entries);
 
   fs.mkdirSync(DATA_DIR, { recursive: true });
   if (fs.existsSync(LEADERBOARD_FILE)) {

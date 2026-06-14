@@ -11,6 +11,7 @@ import {
   percentileValue,
 } from "@/lib/percentiles";
 import { filterSnapshotsByRange, readSnapshots } from "@/lib/snapshots";
+import { hasReferralActivity } from "@/lib/referrals";
 import { AURA_BUCKETS, categoryLabel } from "@/lib/utils";
 import type {
   ChartRange,
@@ -55,7 +56,7 @@ export function computeDashboardMetrics(): DashboardMetrics {
     }).length,
   }));
 
-  const referralCandidates = entries.filter((e) => e.referrals_qualified > 0);
+  const referralCandidates = entries.filter(hasReferralActivity);
 
   const topReferrers = [...referralCandidates]
     .sort((a, b) => b.referrals_qualified - a.referrals_qualified || b.aura - a.aura)
