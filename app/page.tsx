@@ -113,8 +113,8 @@ export default function HomePage() {
       </Section>
 
       {/* Referral Analytics */}
-      <Section title="Referral Analytics" subtitle="Top referrers by qualified referrals">
-        <ReferralTable data={metrics.topReferrers} />
+      <Section title="Referral Analytics" subtitle="Top-10 referrers">
+        <ReferralTable data={metrics.referralCandidates} />
       </Section>
 
       {/* Efficiency Analytics */}

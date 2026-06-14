@@ -54,7 +54,9 @@ export function computeDashboardMetrics(): DashboardMetrics {
     }).length,
   }));
 
-  const topReferrers = [...entries]
+  const referralCandidates = entries.filter((e) => e.referrals_qualified > 0);
+
+  const topReferrers = [...referralCandidates]
     .sort((a, b) => b.referrals_qualified - a.referrals_qualified || b.aura - a.aura)
     .slice(0, 20);
 
@@ -87,6 +89,7 @@ export function computeDashboardMetrics(): DashboardMetrics {
     auraDistribution,
     categoryBreakdown,
     topReferrers,
+    referralCandidates,
     topEfficiency,
     alphaInsights,
     lastUpdated: new Date().toISOString(),

@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { ChevronDown, ChevronUp } from "lucide-react";
 import type { LeaderboardEntry } from "@/types";
 import { formatNumber, formatUsd, truncateWallet } from "@/lib/utils";
 import { cn } from "@/lib/utils";
@@ -167,6 +168,50 @@ function sortData(data: LeaderboardEntry[], tab: Tab): LeaderboardEntry[] {
 }
 
 export function ReferralTable({ data }: { data: LeaderboardEntry[] }) {
+  type ReferralSortKey =
+    | "referrals_sent"
+    | "referrals_qualified"
+    | "referrals_rewarded"
+    | "aura"
+    | "referees_total_deposited";
+
+  const [sortKey, setSortKey] = useState<ReferralSortKey>("referrals_qualified");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
+
+  const sorted = useMemo(() => {
+    const copy = [...data];
+    copy.sort((a, b) => {
+      const aVal =
+        sortKey === "referees_total_deposited"
+          ? a.referees_total_deposited ?? 0
+          : a[sortKey];
+      const bVal =
+        sortKey === "referees_total_deposited"
+          ? b.referees_total_deposited ?? 0
+          : b[sortKey];
+      const diff = bVal - aVal;
+      return sortDir === "desc" ? diff : -diff;
+    });
+    return copy.slice(0, 10);
+  }, [data, sortKey, sortDir]);
+
+  function handleSort(key: ReferralSortKey) {
+    if (sortKey === key) {
+      setSortDir((d) => (d === "desc" ? "asc" : "desc"));
+      return;
+    }
+    setSortKey(key);
+    setSortDir("desc");
+  }
+
+  const columns: { key: ReferralSortKey; label: string }[] = [
+    { key: "referrals_sent", label: "Sent" },
+    { key: "referrals_qualified", label: "Qualified" },
+    { key: "referrals_rewarded", label: "Rewarded" },
+    { key: "aura", label: "Aura" },
+    { key: "referees_total_deposited", label: "Referred Amount" },
+  ];
+
   return (
     <div className="card overflow-hidden">
       <div className="overflow-x-auto">
@@ -174,15 +219,19 @@ export function ReferralTable({ data }: { data: LeaderboardEntry[] }) {
           <thead>
             <tr className="border-b border-[rgba(198,182,186,0.1)] text-text-secondary">
               <th className="px-4 py-3 font-medium">Wallet</th>
-              <th className="px-4 py-3 font-medium text-right">Sent</th>
-              <th className="px-4 py-3 font-medium text-right">Qualified</th>
-              <th className="px-4 py-3 font-medium text-right">Rewarded</th>
-              <th className="px-4 py-3 font-medium text-right">Aura</th>
-              <th className="px-4 py-3 font-medium text-right">Referred Amount</th>
+              {columns.map((col) => (
+                <SortableHeader
+                  key={col.key}
+                  label={col.label}
+                  active={sortKey === col.key}
+                  direction={sortKey === col.key ? sortDir : null}
+                  onClick={() => handleSort(col.key)}
+                />
+              ))}
             </tr>
           </thead>
           <tbody>
-            {data.slice(0, 10).map((entry) => (
+            {sorted.map((entry) => (
               <tr
                 key={entry.wallet}
                 className="border-b border-[rgba(198,182,186,0.05)] hover:bg-[rgba(255,181,71,0.03)]"
@@ -203,6 +252,40 @@ export function ReferralTable({ data }: { data: LeaderboardEntry[] }) {
         </table>
       </div>
     </div>
+  );
+}
+
+function SortableHeader({
+  label,
+  active,
+  direction,
+  onClick,
+}: {
+  label: string;
+  active: boolean;
+  direction: "asc" | "desc" | null;
+  onClick: () => void;
+}) {
+  return (
+    <th className="px-4 py-3 font-medium text-right">
+      <button
+        type="button"
+        onClick={onClick}
+        className={cn(
+          "inline-flex w-full items-center justify-end gap-1 transition-colors",
+          active ? "text-accent" : "text-text-secondary hover:text-text-primary"
+        )}
+      >
+        {label}
+        {active && direction === "desc" ? (
+          <ChevronDown className="h-3.5 w-3.5 shrink-0" />
+        ) : active && direction === "asc" ? (
+          <ChevronUp className="h-3.5 w-3.5 shrink-0" />
+        ) : (
+          <span className="inline-block h-3.5 w-3.5 shrink-0 opacity-0" aria-hidden />
+        )}
+      </button>
+    </th>
   );
 }
 
