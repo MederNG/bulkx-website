@@ -1,16 +1,17 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { HelpCircle } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 
 interface InfoTooltipProps {
-  text: string;
+  text: ReactNode;
   className?: string;
+  panelClassName?: string;
 }
 
-export function InfoTooltip({ text, className }: InfoTooltipProps) {
+export function InfoTooltip({ text, className, panelClassName }: InfoTooltipProps) {
   const [open, setOpen] = useState(false);
 
   return (
@@ -36,7 +37,10 @@ export function InfoTooltip({ text, className }: InfoTooltipProps) {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 4, scale: 0.98 }}
             transition={{ duration: 0.15, ease: "easeOut" }}
-            className="absolute bottom-full left-1/2 z-40 mb-2 w-60 -translate-x-1/2 rounded border border-[rgba(255,181,71,0.25)] bg-bg-primary p-3 text-left text-xs leading-relaxed font-normal text-text-secondary shadow-[0_12px_30px_rgba(0,0,0,0.45)]"
+            className={cn(
+              "absolute bottom-full left-1/2 z-40 mb-2 w-60 -translate-x-1/2 rounded border border-[rgba(255,181,71,0.25)] bg-bg-primary p-3 text-left text-xs leading-relaxed font-normal text-text-secondary shadow-[0_12px_30px_rgba(0,0,0,0.45)]",
+              panelClassName
+            )}
           >
             {text}
           </motion.span>

@@ -378,27 +378,53 @@ interface CategoryChartsProps {
 }
 
 export function CategoryCharts({ data }: CategoryChartsProps) {
-  const top = useMemo(() => {
+  const { top, othersCategories } = useMemo(() => {
     const TOP_N = 7;
-    if (data.length <= TOP_N + 1) return data;
+    if (data.length <= TOP_N + 1) {
+      return { top: data, othersCategories: [] as { category: string; share: number }[] };
+    }
     const head = data.slice(0, TOP_N);
     const rest = data.slice(TOP_N);
-    return [
-      ...head,
-      {
-        category: "Others",
-        points: rest.reduce((s, d) => s + d.points, 0),
-        share: rest.reduce((s, d) => s + d.share, 0),
-      },
-    ];
+    return {
+      top: [
+        ...head,
+        {
+          category: "Others",
+          points: rest.reduce((s, d) => s + d.points, 0),
+          share: rest.reduce((s, d) => s + d.share, 0),
+        },
+      ],
+      othersCategories: rest.map((d) => ({ category: d.category, share: d.share })),
+    };
   }, [data]);
+
+  const othersInfo =
+    othersCategories.length > 0 ? (
+      <span className="block">
+        <span className="mb-1.5 block font-medium text-text-primary">
+          “Others” combines {othersCategories.length} smaller sources:
+        </span>
+        <span className="block space-y-0.5">
+          {othersCategories.map((c) => (
+            <span key={c.category} className="flex justify-between gap-3">
+              <span>{c.category}</span>
+              <span className="tabular-nums text-text-secondary">{c.share.toFixed(2)}%</span>
+            </span>
+          ))}
+        </span>
+      </span>
+    ) : null;
+
   const [activeIndex, setActiveIndex] = useState<number | undefined>(undefined);
   const { ref, hasEntered } = useInViewOnce<HTMLDivElement>(0.2);
 
   return (
     <div ref={ref} className="grid gap-4 lg:grid-cols-2">
       <div className="card p-4 md:p-5">
-        <p className="mb-4 text-sm font-medium">Source Breakdown</p>
+        <p className="mb-4 flex items-center gap-1.5 text-sm font-medium">
+          Source Breakdown
+          {othersInfo && <InfoTooltip text={othersInfo} panelClassName="w-72" />}
+        </p>
         <ResponsiveContainer width="100%" height={300}>
           <PieChart key={hasEntered ? "pie-animate" : "pie-idle"}>
             <Pie
@@ -442,7 +468,10 @@ export function CategoryCharts({ data }: CategoryChartsProps) {
         </ResponsiveContainer>
       </div>
       <div className="card p-4 md:p-5">
-        <p className="mb-4 text-sm font-medium">Category Share</p>
+        <p className="mb-4 flex items-center gap-1.5 text-sm font-medium">
+          Category Share
+          {othersInfo && <InfoTooltip text={othersInfo} panelClassName="w-72" />}
+        </p>
         <ResponsiveContainer width="100%" height={260}>
           <BarChart key={hasEntered ? "cat-animate" : "cat-idle"} data={top} layout="vertical">
             <CartesianGrid strokeDasharray="3 3" />
