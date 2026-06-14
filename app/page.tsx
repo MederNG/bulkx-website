@@ -37,8 +37,8 @@ export default function HomePage() {
     <div className="mx-auto max-w-[1400px] px-4 md:px-6">
       {/* Hero */}
       <section className="border-b border-[rgba(198,182,186,0.1)] py-10 md:py-14">
-        <p className="section-title mb-3 text-accent">BULK Analytics Terminal</p>
-        <h1 className="text-3xl font-semibold tracking-tight md:text-5xl">AURA Intelligence</h1>
+        <p className="section-title mb-3 text-accent">AURA Analytics Terminal</p>
+        <h1 className="text-3xl font-semibold tracking-tight md:text-5xl">Intelligence</h1>
         <p className="mt-3 max-w-2xl text-sm text-text-secondary md:text-base">
           Real-time analytics for the BULK AURA campaign. Institutional-grade insights
           beyond the official interface.
