@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { RankTargets } from "@/types";
 import { FDV_SCENARIOS, formatNumber, formatUsd } from "@/lib/utils";
 import { computeFdv } from "@/lib/percentiles";
@@ -32,12 +32,7 @@ export function RankCalculator({ targets }: RankCalculatorProps) {
       <div className="grid gap-4 md:grid-cols-2">
         <div>
           <label className="mb-1 block text-xs text-text-secondary">Current Aura</label>
-          <input
-            type="number"
-            value={currentAura}
-            onChange={(e) => setCurrentAura(Number(e.target.value))}
-            className="input-field font-mono tabular-nums"
-          />
+          <NumericInput value={currentAura} onChange={setCurrentAura} className="input-field font-mono tabular-nums" />
         </div>
         <div>
           <label className="mb-1 block text-xs text-text-secondary">Target</label>
@@ -196,16 +191,75 @@ function Field({
   return (
     <div>
       <label className="mb-1 block text-xs text-text-secondary">{label}</label>
-      <input
-        type="number"
+      <NumericInput
         value={value}
+        onChange={onChange}
         step={step}
         max={max}
         disabled={disabled}
-        onChange={(e) => onChange(Number(e.target.value))}
         className="input-field font-mono tabular-nums disabled:opacity-50"
       />
     </div>
+  );
+}
+
+function NumericInput({
+  value,
+  onChange,
+  className,
+  step,
+  max,
+  disabled,
+}: {
+  value: number;
+  onChange: (v: number) => void;
+  className?: string;
+  step?: number;
+  max?: number;
+  disabled?: boolean;
+}) {
+  const [draft, setDraft] = useState(String(value));
+  const [isFocused, setIsFocused] = useState(false);
+
+  useEffect(() => {
+    if (!isFocused) {
+      setDraft(String(value));
+    }
+  }, [value, isFocused]);
+
+  return (
+    <input
+      type="number"
+      value={draft}
+      step={step}
+      max={max}
+      disabled={disabled}
+      onFocus={() => setIsFocused(true)}
+      onBlur={() => {
+        setIsFocused(false);
+        if (draft.trim() === "") {
+          setDraft("0");
+          onChange(0);
+        }
+      }}
+      onChange={(e) => {
+        const next = e.target.value;
+        setDraft(next);
+        if (next.trim() === "") {
+          return;
+        }
+        const parsed = Number(next);
+        if (!Number.isFinite(parsed)) {
+          return;
+        }
+        if (typeof max === "number") {
+          onChange(Math.min(parsed, max));
+          return;
+        }
+        onChange(parsed);
+      }}
+      className={className}
+    />
   );
 }
 
