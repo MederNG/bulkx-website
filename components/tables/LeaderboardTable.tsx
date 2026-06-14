@@ -18,24 +18,17 @@ interface ColumnDef {
   label: string;
   align?: "left" | "right";
   isDisplayRank?: boolean;
+  sortable?: boolean;
   render: (entry: LeaderboardEntry) => React.ReactNode;
 }
 
 function getColumns(tab: LeaderboardTab): ColumnDef[] {
-  const rankKey =
-    tab === "deposit"
-      ? "deposit_rank"
-      : tab === "efficiency"
-        ? "efficiency"
-        : tab === "referral"
-          ? "referrals_qualified"
-          : "aura_rank";
-
   const rank: ColumnDef = {
-    key: rankKey,
+    key: "rank",
     label: "Rank",
     align: "left",
     isDisplayRank: true,
+    sortable: false,
     render: () => null,
   };
 
@@ -237,6 +230,7 @@ export function LeaderboardTable() {
                   key={col.key}
                   label={col.label}
                   align={col.align}
+                  sortable={col.sortable !== false}
                   active={sortKey === col.key}
                   direction={sortKey === col.key ? sortDir : null}
                   onClick={() => handleSort(col.key)}
@@ -327,18 +321,36 @@ export function LeaderboardTable() {
 function SortableHeader({
   label,
   align = "right",
+  sortable,
   active,
   direction,
   onClick,
 }: {
   label: string;
   align?: "left" | "right";
+  sortable: boolean;
   active: boolean;
   direction: LeaderboardSortDir | null;
   onClick: () => void;
 }) {
+  const th = "px-4 py-3 font-medium";
+
+  if (!sortable) {
+    return (
+      <th
+        className={cn(
+          th,
+          align === "right" ? "text-right" : "text-left",
+          "text-text-secondary"
+        )}
+      >
+        {label}
+      </th>
+    );
+  }
+
   return (
-    <th className={cn("px-4 py-3 font-medium", align === "right" ? "text-right" : "text-left")}>
+    <th className={cn(th, align === "right" ? "text-right" : "text-left")}>
       <button
         type="button"
         onClick={onClick}

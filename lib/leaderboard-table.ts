@@ -11,8 +11,8 @@ export const LEADERBOARD_TAB_DEFAULT_SORT: Record<
   LeaderboardTab,
   { key: string; dir: LeaderboardSortDir }
 > = {
-  aura: { key: "aura_rank", dir: "asc" },
-  deposit: { key: "deposit_rank", dir: "asc" },
+  aura: { key: "aura", dir: "desc" },
+  deposit: { key: "deposit", dir: "desc" },
   efficiency: { key: "efficiency", dir: "desc" },
   referral: { key: "referrals_qualified", dir: "desc" },
 };
