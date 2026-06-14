@@ -9,6 +9,7 @@ export interface LeaderboardEntry {
   referrals_sent: number;
   referrals_qualified: number;
   referrals_rewarded: number;
+  referees_total_deposited?: number;
   categories: Record<string, number>;
   first_seen?: string;
   total_held_time_seconds?: number;

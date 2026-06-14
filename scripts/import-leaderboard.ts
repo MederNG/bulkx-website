@@ -71,6 +71,9 @@ function normalizeEntry(raw: Record<string, unknown>): LeaderboardEntry {
     referrals_sent: num(pick(raw, ["referrals_sent", "referralsSent"], 0)),
     referrals_qualified: num(pick(raw, ["referrals_qualified", "referralsQualified"], 0)),
     referrals_rewarded: num(pick(raw, ["referrals_rewarded", "referralsRewarded"], 0)),
+    referees_total_deposited: num(
+      pick(raw, ["referees_total_deposited", "refereesTotalDeposited"], 0)
+    ),
     categories,
     first_seen: pick<string | undefined>(
       raw,

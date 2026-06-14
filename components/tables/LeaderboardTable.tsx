@@ -178,7 +178,7 @@ export function ReferralTable({ data }: { data: LeaderboardEntry[] }) {
               <th className="px-4 py-3 font-medium text-right">Qualified</th>
               <th className="px-4 py-3 font-medium text-right">Rewarded</th>
               <th className="px-4 py-3 font-medium text-right">Aura</th>
-              <th className="px-4 py-3 font-medium text-right">Deposit</th>
+              <th className="px-4 py-3 font-medium text-right">Referred Amount</th>
             </tr>
           </thead>
           <tbody>
@@ -195,7 +195,7 @@ export function ReferralTable({ data }: { data: LeaderboardEntry[] }) {
                   {formatNumber(entry.aura)}
                 </td>
                 <td className="px-4 py-2.5 text-right font-mono tabular-nums">
-                  {formatUsd(entry.current_amount)}
+                  {formatUsd(entry.referees_total_deposited ?? 0)}
                 </td>
               </tr>
             ))}

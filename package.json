@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "next lint",
     "fetch": "tsx scripts/fetch-aura.ts",
-    "import": "tsx scripts/import-leaderboard.ts"
+    "import": "tsx scripts/import-leaderboard.ts",
+    "enrich-referrers": "tsx scripts/enrich-referrer-deposits.ts"
   },
   "dependencies": {
     "class-variance-authority": "^0.7.1",

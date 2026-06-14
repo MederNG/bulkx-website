@@ -62,6 +62,7 @@ interface WalletProfile {
   referrals_sent?: number;
   referrals_qualified?: number;
   referrals_rewarded?: number;
+  referees_total_deposited?: number;
 }
 
 interface Options {
@@ -184,10 +185,35 @@ async function enrichReferrals(entries: LeaderboardEntry[], count: number): Prom
       entry.referrals_sent = Number(profile.referrals_sent) || 0;
       entry.referrals_qualified = Number(profile.referrals_qualified) || 0;
       entry.referrals_rewarded = Number(profile.referrals_rewarded) || 0;
+      entry.referees_total_deposited = Number(profile.referees_total_deposited) || 0;
     }
     done += 1;
     if (done % 50 === 0 || done === targets.length) {
       console.log(`  enriched ${done}/${targets.length} wallets`);
+    }
+    await sleep(80);
+  }
+}
+
+async function enrichTopReferrerDeposits(entries: LeaderboardEntry[], count = 25): Promise<void> {
+  const targets = [...entries]
+    .filter((e) => e.referrals_qualified > 0)
+    .sort((a, b) => b.referrals_qualified - a.referrals_qualified || b.aura - a.aura)
+    .slice(0, count);
+
+  if (targets.length === 0) return;
+
+  console.log(`Enriching referred deposit totals for top ${targets.length} referrers...`);
+
+  let done = 0;
+  for (const entry of targets) {
+    const profile = await fetchWalletProfile(entry.wallet);
+    if (profile) {
+      entry.referees_total_deposited = Number(profile.referees_total_deposited) || 0;
+    }
+    done += 1;
+    if (done % 10 === 0 || done === targets.length) {
+      console.log(`  referred totals ${done}/${targets.length}`);
     }
     await sleep(80);
   }
@@ -279,6 +305,8 @@ async function main() {
   if (enrich > 0) {
     await enrichReferrals(entries, enrich);
   }
+
+  await enrichTopReferrerDeposits(entries);
 
   fs.mkdirSync(DATA_DIR, { recursive: true });
   if (fs.existsSync(LEADERBOARD_FILE)) {
