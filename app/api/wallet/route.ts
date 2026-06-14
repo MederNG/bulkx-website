@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getWalletData } from "@/lib/stats";
 import { upstreamJson } from "@/lib/upstream";
 import { getLeaderboard } from "@/lib/fetcher";
-import { computePercentile, computeEfficiency, estimateWalletAgeDays } from "@/lib/percentiles";
+import { computePercentile, computeEfficiency, computeHoldTimeDays } from "@/lib/percentiles";
 import type { LeaderboardEntry, WalletData } from "@/types";
 
 const SOLANA_ADDRESS_RE = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
@@ -60,7 +60,7 @@ export async function GET(request: NextRequest) {
       const wallet: WalletData = {
         ...entry,
         percentile: computePercentile(entry.aura, allAura),
-        wallet_age_estimate_days: estimateWalletAgeDays(entry),
+        hold_time_days: computeHoldTimeDays(entry),
         efficiency: computeEfficiency(entry),
       };
       return NextResponse.json(wallet);

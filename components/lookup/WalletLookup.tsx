@@ -66,7 +66,7 @@ export function WalletLookup() {
           <Stat label="Qualified" value={result.referrals_qualified.toString()} mono />
           <Stat label="Rewarded" value={result.referrals_rewarded.toString()} mono />
           <Stat label="Efficiency" value={`${result.efficiency.toFixed(3)} A/$`} mono />
-          <Stat label="Wallet Age" value={`~${result.wallet_age_estimate_days} days`} mono />
+          <Stat label="Hold Time" value={`${result.hold_time_days.toLocaleString()} days`} mono />
         </div>
       )}
     </div>

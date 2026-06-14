@@ -68,20 +68,16 @@ export function computeTopShare(values: number[], topN: number): number {
   return (top / total) * 100;
 }
 
-export function estimateWalletAgeDays(entry: LeaderboardEntry): number {
-  if (entry.total_held_time_seconds && entry.total_held_time_seconds > 0) {
-    return Math.max(1, Math.round(entry.total_held_time_seconds / 86400));
-  }
-  if (entry.first_seen) {
-    const diff = Date.now() - new Date(entry.first_seen).getTime();
-    return Math.max(1, Math.floor(diff / (1000 * 60 * 60 * 24)));
-  }
-  if (entry.updated_at) {
-    const diff = Date.now() - new Date(entry.updated_at).getTime();
-    return Math.max(1, Math.floor(diff / (1000 * 60 * 60 * 24)));
-  }
-  const seed = entry.wallet.charCodeAt(0) + entry.wallet.charCodeAt(entry.wallet.length - 1);
-  return 14 + (seed % 60);
+export function computeHoldTimeDays(entry: LeaderboardEntry): number {
+  // total_held_time_hours is amount-weighted (USD-hours = held amount × hours),
+  // per the BULK API author. Divide by the held balance to recover hours, then days.
+  const usdHours =
+    entry.total_held_time_hours ??
+    (entry.total_held_time_seconds ? entry.total_held_time_seconds / 3600 : 0);
+  const amount =
+    entry.current_amount > 0 ? entry.current_amount : entry.deposited_amount;
+  if (!usdHours || usdHours <= 0 || !amount || amount <= 0) return 0;
+  return Math.round(usdHours / amount / 24);
 }
 
 export function computeDepositAura(entry: LeaderboardEntry): number {

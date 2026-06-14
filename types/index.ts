@@ -28,7 +28,7 @@ export interface LeaderboardResponse {
 
 export interface WalletData extends LeaderboardEntry {
   percentile: number;
-  wallet_age_estimate_days: number;
+  hold_time_days: number;
   efficiency: number;
 }
 

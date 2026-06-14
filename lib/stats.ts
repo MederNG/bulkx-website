@@ -6,7 +6,7 @@ import {
   computeLorenzCurve,
   computePercentile,
   computeTopShare,
-  estimateWalletAgeDays,
+  computeHoldTimeDays,
   getRankTargets,
   percentileValue,
 } from "@/lib/percentiles";
@@ -143,7 +143,7 @@ export function getWalletData(address: string): WalletData | null {
   return {
     ...entry,
     percentile: computePercentile(entry.aura, allAura),
-    wallet_age_estimate_days: estimateWalletAgeDays(entry),
+    hold_time_days: computeHoldTimeDays(entry),
     efficiency: computeEfficiency(entry),
   };
 }
