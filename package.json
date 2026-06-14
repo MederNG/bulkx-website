@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "next lint",
     "fetch": "tsx scripts/fetch-aura.ts",
+    "fetch:totals": "tsx scripts/fetch-totals.ts",
     "import": "tsx scripts/import-leaderboard.ts",
     "enrich-referrers": "tsx scripts/enrich-referrer-deposits.ts"
   },

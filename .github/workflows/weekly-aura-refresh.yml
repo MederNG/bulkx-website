@@ -1,9 +1,9 @@
-name: Hourly TVL Refresh
+name: Weekly Aura Refresh
 
 on:
   schedule:
-    # Runs at minute 0 of every hour (UTC)
-    - cron: "0 * * * *"
+    # Saturdays at 13:00 UTC
+    - cron: "0 13 * * 6"
   workflow_dispatch:
 
 permissions:
@@ -16,6 +16,7 @@ concurrency:
 jobs:
   refresh:
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -32,25 +33,25 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Fetch latest TVL totals
-        run: npm run fetch:totals
+      - name: Fetch full Aura leaderboard (with referral enrichment)
+        run: npm run fetch -- --no-snapshot
         env:
           BULK_API_BASE: https://indexer.bulk.trade
 
-      - name: Commit updated totals
+      - name: Commit updated leaderboard
         shell: bash
         run: |
-          if git diff --quiet -- data/totals.json data/snapshots.json; then
+          if git diff --quiet -- data/leaderboard.json; then
             echo "No data changes to commit."
             exit 0
           fi
 
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add data/totals.json data/snapshots.json
-          git commit -m "chore: refresh hourly TVL totals"
+          git add data/leaderboard.json
+          git commit -m "chore: refresh weekly aura leaderboard"
 
-          # main may have moved on (manual pushes or the weekly job). Retry:
+          # main may have moved on (manual pushes or the hourly job). Retry:
           # re-base our fresh data on top of the latest remote and push again.
           for attempt in 1 2 3 4 5; do
             if git push origin HEAD:main; then
@@ -60,14 +61,14 @@ jobs:
             echo "Push rejected on attempt $attempt — syncing with latest main..."
             git fetch origin main
             git reset --soft origin/main
-            git add data/totals.json data/snapshots.json
+            git add data/leaderboard.json
             if git diff --cached --quiet; then
               echo "Remote already up to date with our data."
               exit 0
             fi
-            git commit -m "chore: refresh hourly TVL totals"
+            git commit -m "chore: refresh weekly aura leaderboard"
             sleep $((RANDOM % 8 + 3))
           done
 
-          echo "::error::Failed to push hourly totals after 5 attempts."
+          echo "::error::Failed to push weekly leaderboard after 5 attempts."
           exit 1

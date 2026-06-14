@@ -69,6 +69,7 @@ interface Options {
   pageSize: number;
   maxPages: number;
   enrichReferrals: boolean;
+  writeSnapshot: boolean;
 }
 
 function parseArgs(): Options {
@@ -76,15 +77,17 @@ function parseArgs(): Options {
   let pageSize = 2000;
   let maxPages = Infinity;
   let enrichReferrals = true;
+  let writeSnapshot = true;
 
   for (const arg of args) {
     const [key, value] = arg.replace(/^--/, "").split("=");
     if (key === "page-size") pageSize = Math.min(2000, Math.max(1, Number(value) || 2000));
     if (key === "max-pages") maxPages = Math.max(1, Number(value) || Infinity);
     if (key === "no-enrich") enrichReferrals = false;
+    if (key === "no-snapshot") writeSnapshot = false;
   }
 
-  return { pageSize, maxPages, enrichReferrals };
+  return { pageSize, maxPages, enrichReferrals, writeSnapshot };
 }
 
 function sleep(ms: number): Promise<void> {
@@ -242,11 +245,16 @@ function appendSnapshot(entries: LeaderboardEntry[]): void {
     wallets: entries.length,
   });
 
-  fs.writeFileSync(SNAPSHOTS_FILE, JSON.stringify(snapshots, null, 2));
+  // Keep the file bounded (~90 days of hourly snapshots) so the committed file
+  // and chart payload don't grow indefinitely.
+  const MAX_SNAPSHOTS = 2160;
+  const trimmed = snapshots.slice(-MAX_SNAPSHOTS);
+
+  fs.writeFileSync(SNAPSHOTS_FILE, JSON.stringify(trimmed, null, 2));
 }
 
 async function main() {
-  const { pageSize, maxPages, enrichReferrals } = parseArgs();
+  const { pageSize, maxPages, enrichReferrals, writeSnapshot } = parseArgs();
   console.log(`Fetching Aura leaderboard from ${BASE_URL} (page_size=${pageSize})...`);
 
   const first = await fetchPage(1, pageSize, false);
@@ -291,7 +299,11 @@ async function main() {
   }
 
   fs.writeFileSync(LEADERBOARD_FILE, JSON.stringify(entries, null, 2));
-  appendSnapshot(entries);
+  if (writeSnapshot) {
+    appendSnapshot(entries);
+  } else {
+    console.log("Skipping snapshot append (--no-snapshot).");
+  }
 
   const tvl = entries.reduce((s, e) => s + e.current_amount, 0);
   const totalAura = entries.reduce((s, e) => s + e.aura, 0);

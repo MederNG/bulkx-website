@@ -11,6 +11,7 @@ import {
   percentileValue,
 } from "@/lib/percentiles";
 import { filterSnapshotsByRange, readSnapshots } from "@/lib/snapshots";
+import { readTotals } from "@/lib/totals";
 import { getLeaderboardTop } from "@/lib/leaderboard-table";
 import { hasReferralActivity } from "@/lib/referrals";
 import { AURA_BUCKETS, categoryLabel } from "@/lib/utils";
@@ -24,12 +25,22 @@ import type {
 
 export function computeDashboardMetrics(): DashboardMetrics {
   const entries = getLeaderboard();
+  const snapshots = readSnapshots();
+  const lastUpdated =
+    snapshots.length > 0
+      ? snapshots[snapshots.length - 1].timestamp
+      : new Date().toISOString();
   const auraValues = entries.map((e) => e.aura);
   const sortedAuraAsc = [...auraValues].sort((a, b) => a - b);
 
-  const currentTvl = entries.reduce((s, e) => s + e.current_amount, 0);
-  const totalDeposited = entries.reduce((s, e) => s + e.deposited_amount, 0);
-  const totalWithdrawn = entries.reduce((s, e) => s + e.withdrawn_amount, 0);
+  // TVL / deposited / withdrawn are refreshed hourly into totals.json. Fall back
+  // to summing the (weekly) leaderboard if that file isn't present yet.
+  const totals = readTotals();
+  const currentTvl = totals?.tvl ?? entries.reduce((s, e) => s + e.current_amount, 0);
+  const totalDeposited =
+    totals?.totalDeposited ?? entries.reduce((s, e) => s + e.deposited_amount, 0);
+  const totalWithdrawn =
+    totals?.totalWithdrawn ?? entries.reduce((s, e) => s + e.withdrawn_amount, 0);
   const totalAura = auraValues.reduce((a, b) => a + b, 0);
   const qualifiedReferrals = entries.reduce((s, e) => s + e.referrals_qualified, 0);
 
@@ -95,7 +106,7 @@ export function computeDashboardMetrics(): DashboardMetrics {
     referralCandidates,
     topEfficiency,
     alphaInsights,
-    lastUpdated: new Date().toISOString(),
+    lastUpdated,
   };
 }
 

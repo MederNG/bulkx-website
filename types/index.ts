@@ -39,6 +39,14 @@ export interface Snapshot {
   wallets: number;
 }
 
+export interface Totals {
+  tvl: number;
+  totalDeposited: number;
+  totalWithdrawn: number;
+  totalWallets: number;
+  updatedAt: string;
+}
+
 export interface DashboardMetrics {
   totalWallets: number;
   currentTvl: number;
