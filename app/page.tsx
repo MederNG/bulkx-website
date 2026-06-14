@@ -70,7 +70,7 @@ export default function HomePage() {
 
       {/* TVL Analytics */}
       <Section title="TVL Analytics" subtitle="Historical total value locked">
-        <div className="mb-4 grid grid-cols-3 gap-3">
+        <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
           <MetricCard label="Current TVL" value={metrics.currentTvl} format="usd-full" />
           <MetricCard label="Total Deposited" value={metrics.totalDeposited} format="usd-full" />
           <MetricCard label="Total Withdrawn" value={metrics.totalWithdrawn} format="usd-full" />
