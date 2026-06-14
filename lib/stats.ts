@@ -81,7 +81,15 @@ export function computeDashboardMetrics(): DashboardMetrics {
     .slice(0, 20);
 
   const targets = getRankTargets(auraValues);
-  const alphaInsights = generateAlphaInsights(entries, sortedAuraAsc, categoryBreakdown, topEfficiency, topReferrers);
+  const alphaInsights = generateAlphaInsights(
+    entries,
+    sortedAuraAsc,
+    categoryBreakdown,
+    topEfficiency,
+    topReferrers,
+    currentTvl,
+    totals?.totalWallets ?? entries.length
+  );
 
   return {
     totalWallets: entries.length,
@@ -115,7 +123,9 @@ function generateAlphaInsights(
   sortedAuraAsc: number[],
   categories: { category: string; points: number; share: number }[],
   topEfficiency: (LeaderboardEntry & { efficiency: number })[],
-  topReferrers: LeaderboardEntry[]
+  topReferrers: LeaderboardEntry[],
+  currentTvl: number,
+  depositWallets: number
 ): string[] {
   const insights: string[] = [];
   const median = percentileValue(sortedAuraAsc, 50);
@@ -139,8 +149,9 @@ function generateAlphaInsights(
     insights.push(`Highest referral performer: ${topReferrers[0].wallet.slice(0, 8)}... (${topReferrers[0].referrals_qualified} qualified).`);
   }
 
-  const tvl = entries.reduce((s, e) => s + e.current_amount, 0);
-  insights.push(`Current TVL: $${tvl.toLocaleString()} across ${entries.length.toLocaleString()} wallets.`);
+  insights.push(
+    `Current TVL: $${Math.round(currentTvl).toLocaleString()} across ${depositWallets.toLocaleString()} depositors.`
+  );
 
   return insights;
 }
