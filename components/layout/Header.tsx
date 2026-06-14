@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import { NavMoreMenu } from "@/components/layout/NavMoreMenu";
 
 export function Header() {
   return (
@@ -12,15 +13,18 @@ export function Header() {
           </span>
         </Link>
         <nav className="flex items-center gap-1 text-xs">
-          <a href="#lookup" className="btn-ghost btn-ghost-header">
-            Lookup
-          </a>
-          <a href="#leaderboards" className="btn-ghost btn-ghost-header hidden sm:inline-flex">
-            Leaderboards
-          </a>
-          <a href="#calculator" className="btn-ghost btn-ghost-header hidden md:inline-flex">
-            Calculator
-          </a>
+          <div className="hidden items-center gap-1 md:flex">
+            <a href="#lookup" className="btn-ghost btn-ghost-header">
+              Lookup
+            </a>
+            <a href="#leaderboards" className="btn-ghost btn-ghost-header">
+              Leaderboards
+            </a>
+            <a href="#calculator" className="btn-ghost btn-ghost-header">
+              Calculator
+            </a>
+          </div>
+          <NavMoreMenu />
           <a
             href="https://early.bulk.trade/deposit?ref=maker"
             target="_blank"
