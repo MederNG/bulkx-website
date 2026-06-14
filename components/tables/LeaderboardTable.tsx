@@ -59,6 +59,15 @@ function getColumns(tab: LeaderboardTab): ColumnDef[] {
     ),
   };
 
+  const depositedBasis: ColumnDef = {
+    key: "deposited",
+    label: "Deposit",
+    align: "right",
+    render: (entry) => (
+      <span className="font-mono tabular-nums">{formatUsd(entry.deposited_amount)}</span>
+    ),
+  };
+
   const referredAmount: ColumnDef = {
     key: "referees_total_deposited",
     label: "Referred Amount",
@@ -103,7 +112,7 @@ function getColumns(tab: LeaderboardTab): ColumnDef[] {
     case "deposit":
       return [rank, wallet, aura, deposit];
     case "efficiency":
-      return [rank, wallet, aura, deposit, efficiency];
+      return [rank, wallet, aura, depositedBasis, efficiency];
     case "referral":
       return [rank, wallet, aura, referredAmount, sent, qualified];
     default:

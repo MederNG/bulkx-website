@@ -49,6 +49,8 @@ export function getLeaderboardSortValue(
       return tab === "efficiency" ? computeDepositAura(entry) : entry.aura;
     case "deposit":
       return entry.current_amount;
+    case "deposited":
+      return entry.deposited_amount;
     case "efficiency":
       return computeEfficiency(entry);
     case "referees_total_deposited":

@@ -81,10 +81,13 @@ export function computeHoldTimeDays(entry: LeaderboardEntry): number {
 }
 
 export function computeDepositAura(entry: LeaderboardEntry): number {
+  // Deposit-only aura: base weekly deposit-holding categories (week1, week2, ...).
+  // Excludes retro_*, referral_*, and week*_protocol_* (protocol-specific bonuses).
   let total = 0;
   for (const [key, val] of Object.entries(entry.categories ?? {})) {
-    if (key.startsWith("referral_") || key.startsWith("retro_")) continue;
-    total += Number(val) || 0;
+    if (/^week\d+$/.test(key)) {
+      total += Number(val) || 0;
+    }
   }
   return total;
 }
