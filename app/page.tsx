@@ -20,9 +20,7 @@ import {
 } from "@/components/calculator/Calculators";
 import { WalletLookup } from "@/components/lookup/WalletLookup";
 import {
-  EfficiencyTable,
   LeaderboardTable,
-  ReferralTable,
 } from "@/components/tables/LeaderboardTable";
 export const revalidate = 300;
 
@@ -110,16 +108,6 @@ export default function HomePage() {
       {/* Aura Source Breakdown */}
       <Section title="Aura Source Breakdown">
         <CategoryCharts data={metrics.categoryBreakdown} />
-      </Section>
-
-      {/* Referral Analytics */}
-      <Section title="Referral Analytics" subtitle="Top-10 referrers">
-        <ReferralTable data={metrics.referralCandidates} />
-      </Section>
-
-      {/* Efficiency Analytics */}
-      <Section title="Efficiency Analytics" subtitle="Deposit Aura earned per dollar deposited">
-        <EfficiencyTable data={metrics.topEfficiency} />
       </Section>
 
       {/* Calculators */}
