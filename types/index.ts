@@ -44,6 +44,7 @@ export interface Totals {
   totalDeposited: number;
   totalWithdrawn: number;
   totalWallets: number;
+  leaderboardWallets?: number;
   updatedAt: string;
 }
 

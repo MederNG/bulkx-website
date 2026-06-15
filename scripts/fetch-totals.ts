@@ -1,9 +1,9 @@
 /**
- * Hourly lightweight refresh — pulls only the aggregate financials (TVL,
+ * Daily lightweight refresh — pulls only the aggregate financials (TVL,
  * deposited, withdrawn, wallet count) from the upstream leaderboard's `totals`
  * block (returned on page 1), and appends a TVL snapshot for the chart.
  *
- * This is intentionally cheap (a single request) so it can run every hour. The
+ * This is intentionally cheap (a single request) so it can run daily. The
  * full per-wallet leaderboard (aura, ranks, categories, referrals) is refreshed
  * separately on a weekly cadence by `npm run fetch`.
  *

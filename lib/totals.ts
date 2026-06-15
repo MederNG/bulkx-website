@@ -4,7 +4,7 @@ import type { Totals } from "@/types";
 
 const TOTALS_FILE = path.join(process.cwd(), "data", "totals.json");
 
-// Hourly-refreshed aggregate financials (TVL / deposited / withdrawn). Cached by
+// Daily-refreshed aggregate financials (TVL / deposited / withdrawn). Cached by
 // file mtime so repeated reads within a process don't re-parse the file.
 let cache: { mtimeMs: number; data: Totals | null } | null = null;
 

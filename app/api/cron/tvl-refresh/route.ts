@@ -12,7 +12,7 @@ function isAuthorized(req: NextRequest): boolean {
   return req.headers.get("authorization") === `Bearer ${secret}`;
 }
 
-/** Vercel Cron backup — triggers the hourly TVL GitHub Action via repository_dispatch. */
+/** Vercel Cron backup — triggers the daily TVL GitHub Action via repository_dispatch. */
 export async function GET(req: NextRequest) {
   if (!isAuthorized(req)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

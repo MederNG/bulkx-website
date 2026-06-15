@@ -10,11 +10,12 @@ interface ApiTotals {
 }
 
 interface ApiResponse {
+  total?: number;
   totals?: ApiTotals;
 }
 
 let cache: { at: number; data: Totals } | null = null;
-const CACHE_MS = 60_000;
+const CACHE_MS = 300_000;
 
 /** Live TVL/deposited/withdrawn from upstream; falls back to data/totals.json. */
 export async function getLiveTotals(): Promise<Totals | null> {
@@ -25,13 +26,14 @@ export async function getLiveTotals(): Promise<Totals | null> {
   try {
     const res = await upstreamJson<ApiResponse>(
       "/v1/aura/predeposit/leaderboard?page=1&page_size=1",
-      { revalidate: 60 },
+      { revalidate: 300 },
     );
     const t = res?.totals ?? {};
     const tvl = Number(t.total_current_amount) || 0;
     const totalDeposited = Number(t.total_deposited_amount) || 0;
     const totalWithdrawn = Number(t.total_withdrawn_amount) || 0;
     const totalWallets = Number(t.total_wallets) || 0;
+    const leaderboardWallets = Number(res?.total) || undefined;
 
     if (tvl <= 0 && totalDeposited <= 0) return local;
 
@@ -40,6 +42,7 @@ export async function getLiveTotals(): Promise<Totals | null> {
       totalDeposited,
       totalWithdrawn,
       totalWallets,
+      leaderboardWallets,
       updatedAt: new Date().toISOString(),
     };
     cache = { at: Date.now(), data };

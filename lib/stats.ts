@@ -93,7 +93,7 @@ export async function computeDashboardMetrics(): Promise<DashboardMetrics> {
   );
 
   return {
-    totalWallets: entries.length,
+    totalWallets: totals?.leaderboardWallets ?? entries.length,
     depositWallets: totals?.totalWallets ?? entries.length,
     currentTvl,
     totalDeposited,

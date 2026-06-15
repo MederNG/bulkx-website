@@ -1,9 +1,7 @@
 import { ArrowUpRight } from "lucide-react";
-import { computeDashboardMetrics, getRankTargetsFromData } from "@/lib/stats";
-import { getLiveSnapshots } from "@/lib/live-snapshots";
+import { computeDashboardMetrics, getChartSnapshots, getRankTargetsFromData } from "@/lib/stats";
 import { MetricCard, Section } from "@/components/cards/MetricCard";
 import {
-  FinancialMetricsProvider,
   HeroTvlCard,
   LiveLastUpdated,
   LiveTvlInsight,
@@ -15,41 +13,31 @@ import {
   WhaleCard,
 } from "@/components/cards/Insights";
 import { ShareCardGenerator } from "@/components/cards/ShareCard";
-import { LiveTvlChart } from "@/components/charts/LiveTvlChart";
 import {
   AuraHistogram,
   CategoryCharts,
   LorenzChart,
+  TvlChart,
 } from "@/components/charts/Charts";
 import {
   FdvTools,
   RankCalculator,
 } from "@/components/calculator/Calculators";
 import { WalletLookup } from "@/components/lookup/WalletLookup";
-import { NextRefreshTimer } from "@/components/ui/NextRefreshTimer";
 import {
   LeaderboardTable,
 } from "@/components/tables/LeaderboardTable";
 
-export const revalidate = 60;
+export const revalidate = 300;
 
 export default async function HomePage() {
   const metrics = await computeDashboardMetrics();
-  const snapshots = await getLiveSnapshots();
+  const snapshots = getChartSnapshots("ALL");
   const targets = getRankTargetsFromData();
   const staticInsights = metrics.alphaInsights.slice(0, -1);
 
-  const liveInitial = {
-    currentTvl: metrics.currentTvl,
-    totalDeposited: metrics.totalDeposited,
-    totalWithdrawn: metrics.totalWithdrawn,
-    depositWallets: metrics.depositWallets,
-    updatedAt: metrics.lastUpdated,
-  };
-
   return (
-    <FinancialMetricsProvider initial={liveInitial}>
-      <div className="mx-auto max-w-[1400px] px-4 md:px-6">
+    <div className="mx-auto max-w-[1400px] px-4 md:px-6">
         {/* Hero */}
         <section className="border-b border-[rgba(198,182,186,0.1)] py-10 md:py-14">
           <p className="section-title mb-3 text-accent">AURA Analytics Terminal</p>
@@ -69,7 +57,7 @@ export default async function HomePage() {
           </a>
           <div className="mt-8 grid grid-cols-1 gap-3 sm:grid-cols-3">
             <MetricCard label="Total Wallets" value={metrics.totalWallets} format="plain" />
-            <HeroTvlCard />
+            <HeroTvlCard currentTvl={metrics.currentTvl} />
             <MetricCard label="Total Aura" value={metrics.totalAura} format="plain" />
           </div>
         </section>
@@ -82,14 +70,21 @@ export default async function HomePage() {
         {/* Alpha */}
         <Section title="Market Intelligence">
           <AlphaSection insights={staticInsights}>
-            <LiveTvlInsight />
+            <LiveTvlInsight
+              currentTvl={metrics.currentTvl}
+              depositWallets={metrics.depositWallets}
+            />
           </AlphaSection>
         </Section>
 
         {/* TVL Analytics */}
         <Section title="TVL Analytics" subtitle="Historical total value locked">
-          <TvlSectionCards />
-          <LiveTvlChart initial={snapshots} />
+          <TvlSectionCards
+            currentTvl={metrics.currentTvl}
+            totalDeposited={metrics.totalDeposited}
+            totalWithdrawn={metrics.totalWithdrawn}
+          />
+          <TvlChart data={snapshots} />
         </Section>
 
         {/* Aura Distribution */}
@@ -145,13 +140,9 @@ export default async function HomePage() {
         </Section>
 
         <div className="pb-12 pt-4 text-center text-[10px] text-text-secondary">
-          <LiveLastUpdated fallback={metrics.lastUpdated} />
-          <div className="mt-1.5">
-            <NextRefreshTimer />
-          </div>
+          <LiveLastUpdated updatedAt={metrics.lastUpdated} />
           <div className="mt-1">Not affiliated with BULK.</div>
         </div>
       </div>
-    </FinancialMetricsProvider>
   );
 }

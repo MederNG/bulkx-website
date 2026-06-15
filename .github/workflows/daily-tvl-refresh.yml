@@ -1,9 +1,9 @@
-name: Hourly TVL Refresh
+name: Daily TVL Refresh
 
 on:
   schedule:
-    # Runs at minute 0 of every hour (UTC)
-    - cron: "0 * * * *"
+    # Runs once per day (UTC)
+    - cron: "0 0 * * *"
   workflow_dispatch:
   repository_dispatch:
     types: [tvl-refresh]
