@@ -34,7 +34,7 @@ interface KpiTerminalCounterProps {
 export function KpiTerminalCounter({
   value,
   format = "plain",
-  durationMs = 400,
+  durationMs = 800,
   className,
 }: KpiTerminalCounterProps) {
   const [displayed, setDisplayed] = useState(0);
