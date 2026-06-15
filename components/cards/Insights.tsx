@@ -2,7 +2,13 @@ import { Sparkles } from "lucide-react";
 import { KpiTerminalCounter, type NumberFormat } from "@/components/cards/KpiTerminalCounter";
 import { InfoTooltip } from "@/components/ui/InfoTooltip";
 
-export function AlphaSection({ insights }: { insights: string[] }) {
+export function AlphaSection({
+  insights,
+  children,
+}: {
+  insights: string[];
+  children?: React.ReactNode;
+}) {
   return (
     <div className="card card-highlight p-4 md:p-5">
       <div className="mb-4 flex items-center gap-2">
@@ -16,6 +22,7 @@ export function AlphaSection({ insights }: { insights: string[] }) {
             {insight}
           </li>
         ))}
+        {children}
       </ul>
     </div>
   );

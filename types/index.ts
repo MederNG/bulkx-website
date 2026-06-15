@@ -49,6 +49,7 @@ export interface Totals {
 
 export interface DashboardMetrics {
   totalWallets: number;
+  depositWallets: number;
   currentTvl: number;
   totalDeposited: number;
   totalWithdrawn: number;

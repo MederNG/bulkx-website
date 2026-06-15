@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { RefreshCw } from "lucide-react";
 
 /**
- * Data is refreshed hourly (GitHub Actions at :00 UTC, Vercel Cron backup at :15 UTC), so the
- * next refresh lands at the top of the next hour. This counts down to it live.
+ * TVL totals are fetched live from the upstream API. This timer marks the top
+ * of each UTC hour (when git snapshots refresh) and triggers a client refetch.
  */
 function msUntilNextHour(): number {
   const now = new Date();
@@ -16,6 +16,7 @@ function msUntilNextHour(): number {
 
 export function NextRefreshTimer() {
   const [ms, setMs] = useState<number | null>(null);
+  const firedRef = useRef(false);
 
   useEffect(() => {
     const tick = () => setMs(msUntilNextHour());
@@ -23,6 +24,18 @@ export function NextRefreshTimer() {
     const id = setInterval(tick, 1000);
     return () => clearInterval(id);
   }, []);
+
+  useEffect(() => {
+    if (ms === null) return;
+    const refreshing = ms <= 0;
+    if (refreshing && !firedRef.current) {
+      firedRef.current = true;
+      window.dispatchEvent(new Event("aura:data-refresh"));
+    }
+    if (!refreshing) {
+      firedRef.current = false;
+    }
+  }, [ms]);
 
   if (ms === null) return null;
 

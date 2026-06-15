@@ -11,7 +11,7 @@ import {
   percentileValue,
 } from "@/lib/percentiles";
 import { filterSnapshotsByRange, readSnapshots } from "@/lib/snapshots";
-import { readTotals } from "@/lib/totals";
+import { getLiveTotals } from "@/lib/live-totals";
 import { getLeaderboardTop } from "@/lib/leaderboard-table";
 import { hasReferralActivity } from "@/lib/referrals";
 import { AURA_BUCKETS, categoryLabel } from "@/lib/utils";
@@ -23,19 +23,20 @@ import type {
   WalletData,
 } from "@/types";
 
-export function computeDashboardMetrics(): DashboardMetrics {
+export async function computeDashboardMetrics(): Promise<DashboardMetrics> {
   const entries = getLeaderboard();
   const snapshots = readSnapshots();
+  const totals = await getLiveTotals();
   const lastUpdated =
-    snapshots.length > 0
+    totals?.updatedAt ??
+    (snapshots.length > 0
       ? snapshots[snapshots.length - 1].timestamp
-      : new Date().toISOString();
+      : new Date().toISOString());
   const auraValues = entries.map((e) => e.aura);
   const sortedAuraAsc = [...auraValues].sort((a, b) => a - b);
 
-  // TVL / deposited / withdrawn are refreshed hourly into totals.json. Fall back
-  // to summing the (weekly) leaderboard if that file isn't present yet.
-  const totals = readTotals();
+  // TVL / deposited / withdrawn are fetched live from upstream (hourly git
+  // snapshots are a fallback when the API is unreachable).
   const currentTvl = totals?.tvl ?? entries.reduce((s, e) => s + e.current_amount, 0);
   const totalDeposited =
     totals?.totalDeposited ?? entries.reduce((s, e) => s + e.deposited_amount, 0);
@@ -93,6 +94,7 @@ export function computeDashboardMetrics(): DashboardMetrics {
 
   return {
     totalWallets: entries.length,
+    depositWallets: totals?.totalWallets ?? entries.length,
     currentTvl,
     totalDeposited,
     totalWithdrawn,
