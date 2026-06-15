@@ -1,5 +1,6 @@
 import { ArrowUpRight } from "lucide-react";
-import { computeDashboardMetrics, getChartSnapshots, getRankTargetsFromData } from "@/lib/stats";
+import { computeDashboardMetrics, getRankTargetsFromData } from "@/lib/stats";
+import { getLiveSnapshots } from "@/lib/live-snapshots";
 import { MetricCard, Section } from "@/components/cards/MetricCard";
 import {
   FinancialMetricsProvider,
@@ -14,11 +15,11 @@ import {
   WhaleCard,
 } from "@/components/cards/Insights";
 import { ShareCardGenerator } from "@/components/cards/ShareCard";
+import { LiveTvlChart } from "@/components/charts/LiveTvlChart";
 import {
   AuraHistogram,
   CategoryCharts,
   LorenzChart,
-  TvlChart,
 } from "@/components/charts/Charts";
 import {
   FdvTools,
@@ -34,7 +35,7 @@ export const revalidate = 60;
 
 export default async function HomePage() {
   const metrics = await computeDashboardMetrics();
-  const snapshots = getChartSnapshots("ALL");
+  const snapshots = await getLiveSnapshots();
   const targets = getRankTargetsFromData();
   const staticInsights = metrics.alphaInsights.slice(0, -1);
 
@@ -88,7 +89,7 @@ export default async function HomePage() {
         {/* TVL Analytics */}
         <Section title="TVL Analytics" subtitle="Historical total value locked">
           <TvlSectionCards />
-          <TvlChart data={snapshots} />
+          <LiveTvlChart initial={snapshots} />
         </Section>
 
         {/* Aura Distribution */}
