@@ -9,6 +9,7 @@
     "lint": "next lint",
     "fetch": "tsx scripts/fetch-aura.ts",
     "fetch:totals": "tsx scripts/fetch-totals.ts",
+    "generate:favicons": "node scripts/generate-favicons.mjs",
     "import": "tsx scripts/import-leaderboard.ts",
     "enrich-referrers": "tsx scripts/enrich-referrer-deposits.ts"
   },
@@ -31,6 +32,7 @@
     "@types/react": "^19.1.6",
     "@types/react-dom": "^19.1.5",
     "tailwindcss": "^4.1.8",
+    "to-ico": "^1.1.5",
     "tsx": "^4.19.4",
     "typescript": "^5.8.3"
   }
