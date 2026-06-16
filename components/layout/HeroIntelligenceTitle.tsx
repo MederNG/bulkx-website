@@ -2,30 +2,31 @@
 
 import { motion, useReducedMotion } from "framer-motion";
 
+const SHIMMER_GRADIENT =
+  "linear-gradient(90deg, transparent 0%, transparent 24%, rgba(190, 180, 165, 1) 34%, rgba(255, 255, 255, 1) 46%, rgba(165, 185, 210, 1) 50%, rgba(255, 255, 255, 1) 54%, rgba(190, 180, 165, 1) 64%, transparent 74%, transparent 100%)";
+
 export function HeroIntelligenceTitle() {
   const reduceMotion = useReducedMotion();
 
   return (
-    <h1 className="relative inline-block overflow-hidden text-3xl font-medium uppercase tracking-[0.06em] text-[#fffeef] md:text-5xl">
-      INTELLIGENCE
+    <h1 className="hero-intelligence-title-wrap text-3xl md:text-5xl">
+      <span className="hero-intelligence-title-base">INTELLIGENCE</span>
       {!reduceMotion ? (
         <motion.span
           aria-hidden
-          className="pointer-events-none absolute top-[-35%] h-[170%] w-[36%] -skew-x-[14deg]"
+          className="hero-intelligence-title-shine"
           style={{
-            background:
-              "linear-gradient(90deg, transparent 0%, rgba(120, 110, 95, 0.85) 26%, rgba(255, 255, 255, 1) 48%, rgba(95, 110, 130, 0.95) 54%, rgba(120, 110, 95, 0.85) 74%, transparent 100%)",
-            mixBlendMode: "soft-light",
+            backgroundImage: SHIMMER_GRADIENT,
           }}
-          initial={{ left: "-40%" }}
-          animate={{ left: ["-40%", "110%"] }}
+          initial={{ backgroundPosition: "170% 50%" }}
+          animate={{ backgroundPosition: "-70% 50%" }}
           transition={{
-            duration: 1.2,
-            repeat: Infinity,
-            repeatDelay: 18.8,
+            duration: 2,
             ease: "linear",
           }}
-        />
+        >
+          INTELLIGENCE
+        </motion.span>
       ) : null}
     </h1>
   );
