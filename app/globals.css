@@ -276,9 +276,3 @@ input[type="number"] {
   pointer-events: none;
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .hero-intelligence-title-shine {
-    display: none;
-  }
-}
-

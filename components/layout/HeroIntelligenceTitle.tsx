@@ -19,10 +19,6 @@ export function HeroIntelligenceTitle() {
   const shineRef = useRef<HTMLSpanElement>(null);
 
   useEffect(() => {
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-      return;
-    }
-
     const el = shineRef.current;
     if (!el) return;
 
