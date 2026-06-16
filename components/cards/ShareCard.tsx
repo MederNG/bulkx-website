@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { Download } from "lucide-react";
+import { Check, Copy, Download } from "lucide-react";
 import { toPng } from "html-to-image";
 import type { WalletData } from "@/types";
 import { formatNumber, formatUsd, truncateWallet } from "@/lib/utils";
@@ -21,6 +21,8 @@ export function ShareCardGenerator() {
   const [wallet, setWallet] = useState<WalletData | null>(null);
   const [loading, setLoading] = useState(false);
   const [bgLoaded, setBgLoaded] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const [copyError, setCopyError] = useState(false);
   const [selectedBackground, setSelectedBackground] = useState<(typeof BACKGROUND_OPTIONS)[number]["id"]>(
     "phoenician"
   );
@@ -43,15 +45,19 @@ export function ShareCardGenerator() {
     }
   }
 
-  async function exportPng() {
-    if (!exportCardRef.current) return;
-    if (!bgLoaded) return;
-    const dataUrl = await toPng(exportCardRef.current, {
+  async function renderCardPng() {
+    if (!exportCardRef.current || !bgLoaded) return null;
+    return toPng(exportCardRef.current, {
       pixelRatio: 2,
       backgroundColor: "#0A0C11",
       cacheBust: true,
       skipFonts: true,
     });
+  }
+
+  async function exportPng() {
+    const dataUrl = await renderCardPng();
+    if (!dataUrl) return;
     const link = document.createElement("a");
     const safeName = (displayName.trim() || wallet?.wallet.slice(0, 8) || "card")
       .toLowerCase()
@@ -59,6 +65,22 @@ export function ShareCardGenerator() {
     link.download = `bulk-intelligence-${safeName}.png`;
     link.href = dataUrl;
     link.click();
+  }
+
+  async function copyPng() {
+    const dataUrl = await renderCardPng();
+    if (!dataUrl) return;
+
+    setCopyError(false);
+    try {
+      const blob = await (await fetch(dataUrl)).blob();
+      await navigator.clipboard.write([new ClipboardItem({ [blob.type]: blob })]);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 2000);
+    } catch {
+      setCopyError(true);
+      window.setTimeout(() => setCopyError(false), 2500);
+    }
   }
 
   return (
@@ -206,15 +228,26 @@ export function ShareCardGenerator() {
               </div>
             </div>
           </div>
-          <button
-            onClick={exportPng}
-            className="btn-primary mt-4 flex items-center gap-2"
-            disabled={!bgLoaded}
-            title={!bgLoaded ? "Background is still loading..." : undefined}
-          >
-            <Download className="h-4 w-4" />
-            Export PNG
-          </button>
+          <div className="mt-4 flex flex-wrap items-center gap-2">
+            <button
+              onClick={exportPng}
+              className="btn-primary flex items-center gap-2"
+              disabled={!bgLoaded}
+              title={!bgLoaded ? "Background is still loading..." : undefined}
+            >
+              <Download className="h-4 w-4" />
+              Export PNG
+            </button>
+            <button
+              onClick={copyPng}
+              className="btn-ghost flex items-center gap-2 border border-[rgba(198,182,186,0.2)]"
+              disabled={!bgLoaded}
+              title={!bgLoaded ? "Background is still loading..." : undefined}
+            >
+              {copied ? <Check className="h-4 w-4 text-bid-green" /> : <Copy className="h-4 w-4" />}
+              {copied ? "Copied!" : copyError ? "Copy failed" : "Copy PNG"}
+            </button>
+          </div>
         </>
       )}
     </div>
