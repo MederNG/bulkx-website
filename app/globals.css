@@ -253,45 +253,30 @@ input[type="number"] {
 .hero-intelligence-title-shine {
   background-image: linear-gradient(
     90deg,
-    rgba(190, 180, 165, 1) 0%,
-    rgba(255, 255, 255, 1) 35%,
-    rgba(165, 185, 210, 1) 50%,
-    rgba(255, 255, 255, 1) 65%,
-    rgba(190, 180, 165, 1) 100%
+    #fffeef 0%,
+    #d9d9d9 20%,
+    #ffffff 40%,
+    #ffffff 50%,
+    #d9d9d9 60%,
+    #fffeef 100%
   );
-  background-size: 100% 100%;
+  background-size: 300% 100%;
+  background-repeat: no-repeat;
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
   color: transparent;
-  filter: brightness(1.5);
+  animation: hero-intelligence-shimmer 4s linear infinite;
   pointer-events: none;
-  -webkit-mask-image: linear-gradient(
-    90deg,
-    transparent 0%,
-    transparent 18%,
-    rgba(0, 0, 0, 0.35) 32%,
-    rgba(0, 0, 0, 1) 48%,
-    rgba(0, 0, 0, 1) 52%,
-    rgba(0, 0, 0, 0.35) 68%,
-    transparent 82%,
-    transparent 100%
-  );
-  mask-image: linear-gradient(
-    90deg,
-    transparent 0%,
-    transparent 18%,
-    rgba(0, 0, 0, 0.35) 32%,
-    rgba(0, 0, 0, 1) 48%,
-    rgba(0, 0, 0, 1) 52%,
-    rgba(0, 0, 0, 0.35) 68%,
-    transparent 82%,
-    transparent 100%
-  );
-  -webkit-mask-size: 280% 100%;
-  mask-size: 280% 100%;
-  -webkit-mask-repeat: no-repeat;
-  mask-repeat: no-repeat;
+}
+
+@keyframes hero-intelligence-shimmer {
+  from {
+    background-position: -200% 50%;
+  }
+  to {
+    background-position: 200% 50%;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
