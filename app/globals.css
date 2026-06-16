@@ -233,3 +233,45 @@ input[type="number"] {
   fill: var(--color-text-secondary) !important;
   font-size: 11px !important;
 }
+
+.hero-intelligence-title {
+  font-weight: 500;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  background-image: linear-gradient(
+    90deg,
+    var(--color-text-secondary) 0%,
+    var(--color-text-secondary) 38%,
+    #e4d8dc 44%,
+    #fffeef 50%,
+    #e4d8dc 56%,
+    var(--color-text-secondary) 62%,
+    var(--color-text-secondary) 100%
+  );
+  background-size: 250% 100%;
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  animation: hero-intelligence-shimmer 20s ease-in-out infinite;
+}
+
+@keyframes hero-intelligence-shimmer {
+  0%,
+  82% {
+    background-position: 0% center;
+  }
+  88% {
+    background-position: 100% center;
+  }
+  100% {
+    background-position: 100% center;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-intelligence-title {
+    animation: none;
+    background-image: none;
+    color: var(--color-text-secondary);
+  }
+}
