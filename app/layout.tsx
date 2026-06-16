@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { IBM_Plex_Mono, IBM_Plex_Sans } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
@@ -33,7 +33,6 @@ export const metadata: Metadata = {
     ],
     apple: "/apple-icon.png",
   },
-  themeColor: "#141310",
   alternates: {
     canonical: "/",
   },
@@ -50,6 +49,10 @@ export const metadata: Metadata = {
     title: siteTitle,
     description: siteDescription,
   },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#141310",
 };
 
 export default function RootLayout({
