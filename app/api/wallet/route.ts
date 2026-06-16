@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getWalletData } from "@/lib/stats";
+import { mergeFinancialRow } from "@/lib/leaderboard-financial-sync";
 import { upstreamJson } from "@/lib/upstream";
 import { getLeaderboard } from "@/lib/fetcher";
 import { computePercentile, computeEfficiency, computeHoldTimeDays } from "@/lib/percentiles";
@@ -23,6 +24,27 @@ interface UpstreamWallet {
   updated_at?: string;
 }
 
+function withLiveFinancials(
+  entry: LeaderboardEntry,
+  remote: UpstreamWallet,
+  allAura: number[]
+): WalletData {
+  const merged = mergeFinancialRow(entry, {
+    wallet: remote.wallet,
+    deposited_amount: Number(remote.deposited_amount) || entry.deposited_amount,
+    withdrawn_amount: Number(remote.withdrawn_amount) || entry.withdrawn_amount,
+    current_amount: Number(remote.current_amount) || entry.current_amount,
+    updated_at: remote.updated_at ?? entry.updated_at,
+  });
+
+  return {
+    ...merged,
+    percentile: computePercentile(merged.aura, allAura),
+    hold_time_days: computeHoldTimeDays(merged),
+    efficiency: computeEfficiency(merged),
+  };
+}
+
 export async function GET(request: NextRequest) {
   const address = request.nextUrl.searchParams.get("address")?.trim();
   if (!address) {
@@ -32,14 +54,19 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Invalid wallet address format" }, { status: 400 });
   }
 
+  const allAura = getLeaderboard().map((e) => e.aura);
   const local = getWalletData(address);
-  if (local) {
-    return NextResponse.json(local);
-  }
 
   try {
-    const remote = await upstreamJson<UpstreamWallet>(`/v1/aura/wallet/${address}`);
+    const remote = await upstreamJson<UpstreamWallet>(`/v1/aura/wallet/${address}`, {
+      revalidate: 300,
+    });
+
     if (remote) {
+      if (local) {
+        return NextResponse.json(withLiveFinancials(local, remote, allAura));
+      }
+
       const entry: LeaderboardEntry = {
         wallet: remote.wallet,
         aura: remote.aura ?? 0,
@@ -56,7 +83,6 @@ export async function GET(request: NextRequest) {
         total_held_time_hours: remote.total_held_time_hours ?? 0,
         updated_at: remote.updated_at,
       };
-      const allAura = getLeaderboard().map((e) => e.aura);
       const wallet: WalletData = {
         ...entry,
         percentile: computePercentile(entry.aura, allAura),
@@ -66,7 +92,11 @@ export async function GET(request: NextRequest) {
       return NextResponse.json(wallet);
     }
   } catch {
-    // fall through to 404
+    if (local) return NextResponse.json(local);
+  }
+
+  if (local) {
+    return NextResponse.json(local);
   }
 
   return NextResponse.json({ error: "Wallet not found" }, { status: 404 });

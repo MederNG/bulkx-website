@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getLeaderboard } from "@/lib/fetcher";
+import { getLeaderboardWithLiveFinancials } from "@/lib/live-leaderboard-financials";
 import {
   LEADERBOARD_TAB_DEFAULT_SORT,
   LEADERBOARD_TOP_LIMIT,
@@ -30,7 +30,8 @@ export async function GET(request: NextRequest) {
     Math.max(1, Number.isFinite(limitParam) ? limitParam : LEADERBOARD_TOP_LIMIT)
   );
 
-  const items = getLeaderboardTop(getLeaderboard(), selectedTab, sortKey, sortDir, limit);
+  const entries = await getLeaderboardWithLiveFinancials();
+  const items = getLeaderboardTop(entries, selectedTab, sortKey, sortDir, limit);
 
   return NextResponse.json({
     items,

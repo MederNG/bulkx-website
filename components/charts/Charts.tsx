@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Area,
-  AreaChart,
+  ComposedChart,
   Bar,
   BarChart,
   CartesianGrid,
@@ -20,7 +20,14 @@ import {
   YAxis,
 } from "recharts";
 import type { ChartRange } from "@/types";
-import { cn, formatNumber } from "@/lib/utils";
+import type { ProjectedSnapshotTvl } from "@/lib/projected-snapshot-tvl";
+import {
+  formatSignedUsd,
+  formatSnapshotUtc,
+  formatSnapshotUtcParts,
+  formatUsdCompact,
+} from "@/lib/projected-snapshot-tvl";
+import { cn, formatNumber, formatUsd } from "@/lib/utils";
 import { InfoTooltip } from "@/components/ui/InfoTooltip";
 
 const COLORS = [
@@ -193,21 +200,145 @@ function renderActiveShape(rawProps: unknown) {
   );
 }
 
-interface TvlChartProps {
-  data: { timestamp: string; tvl: number; totalAura: number }[];
+interface TvlChartPoint {
+  timestamp: string;
+  tvl?: number | null;
+  projectedTvl?: number | null;
+  isProjectionEndpoint?: boolean;
 }
 
-export function TvlChart({ data }: TvlChartProps) {
+interface TvlChartProps {
+  data: { timestamp: string; tvl: number; totalAura: number }[];
+  currentTvl: number;
+  projection: ProjectedSnapshotTvl;
+  referenceTimeMs: number;
+}
+
+function buildTvlChartData(
+  historical: { timestamp: string; tvl: number; totalAura: number }[],
+  currentTvl: number,
+  projection: ProjectedSnapshotTvl,
+  referenceTimeMs: number
+): TvlChartPoint[] {
+  const points: TvlChartPoint[] = historical.map((d) => ({
+    timestamp: d.timestamp,
+    tvl: d.tvl,
+    projectedTvl: null,
+  }));
+
+  if (!projection.available) {
+    return points;
+  }
+
+  const nowIso = new Date(referenceTimeMs).toISOString();
+  const lastHistorical = points[points.length - 1];
+  const bridgeTvl = currentTvl;
+
+  if (!lastHistorical || new Date(lastHistorical.timestamp).getTime() < referenceTimeMs - 60_000) {
+    points.push({ timestamp: nowIso, tvl: bridgeTvl, projectedTvl: bridgeTvl });
+  } else {
+    lastHistorical.tvl = bridgeTvl;
+    lastHistorical.projectedTvl = bridgeTvl;
+  }
+
+  const bridge = points[points.length - 1];
+  if (bridge) {
+    bridge.projectedTvl = bridgeTvl;
+  }
+
+  points.push({
+    timestamp: new Date(projection.nextSnapshotTimestamp).toISOString(),
+    tvl: null,
+    projectedTvl: projection.projectedTvl,
+    isProjectionEndpoint: true,
+  });
+
+  return points;
+}
+
+function TvlChartTooltip({
+  active,
+  payload,
+  label,
+  projection,
+}: {
+  active?: boolean;
+  payload?: { payload?: TvlChartPoint }[];
+  label?: string;
+  projection: ProjectedSnapshotTvl;
+}) {
+  if (!active || !payload?.length || !label) return null;
+
+  const point = payload[0]?.payload;
+  if (!point) return null;
+
+  if (point.isProjectionEndpoint && projection.available) {
+    const snapshotParts = formatSnapshotUtcParts(projection.nextSnapshotTimestamp);
+    return (
+      <div
+        className="rounded border border-[rgba(198,182,186,0.2)] px-3 py-2 text-xs"
+        style={{ background: "#1B1A14" }}
+      >
+        <p className="font-medium text-accent">Projected TVL</p>
+        <p className="mt-1 font-mono tabular-nums text-text-primary">
+          {formatUsdCompact(projection.projectedTvl)}
+        </p>
+        <p className="mt-2 text-text-secondary">Weighted Daily Flow</p>
+        <p className="mt-0.5 font-mono tabular-nums text-bid-green">
+          {formatSignedUsd(projection.weightedDailyFlow, true)}/day
+        </p>
+        <p className="mt-2 text-text-secondary">Snapshot</p>
+        <p className="mt-0.5 text-text-primary">{snapshotParts.date}</p>
+        <p className="text-text-primary">{snapshotParts.time}</p>
+        <p className="mt-2 text-text-secondary">Expected Growth</p>
+        <p className="mt-0.5 font-mono tabular-nums text-bid-green">
+          {formatSignedUsd(projection.expectedGrowth, true)}
+        </p>
+      </div>
+    );
+  }
+
+  const tvl = point.tvl ?? point.projectedTvl;
+  if (tvl == null) return null;
+
+  return (
+    <div
+      className="rounded border border-[rgba(198,182,186,0.2)] px-3 py-2 text-xs"
+      style={{ background: "#1B1A14" }}
+    >
+      <p className="text-text-secondary">
+        {new Date(label).toLocaleString("en-US", { timeZone: "UTC" })} UTC
+      </p>
+      <p className="mt-1 font-mono tabular-nums text-text-primary">${tvl.toLocaleString("en-US")}</p>
+    </div>
+  );
+}
+
+export function TvlChart({ data, currentTvl, projection, referenceTimeMs }: TvlChartProps) {
   const [range, setRange] = useState<ChartRange>("7D");
   const ranges: ChartRange[] = ["24H", "7D", "30D", "ALL"];
   const { ref, hasEntered } = useInViewOnce<HTMLDivElement>(0.2);
 
-  const filtered = filterByRange(data, range);
+  const filtered = filterByRange(data, range, referenceTimeMs);
+  const chartData = useMemo(
+    () => buildTvlChartData(filtered, currentTvl, projection, referenceTimeMs),
+    [filtered, currentTvl, projection, referenceTimeMs]
+  );
+
+  const projectionEnd = projection.available
+    ? chartData.find((p) => p.isProjectionEndpoint)
+    : undefined;
 
   return (
     <div ref={ref} className="card p-4 md:p-5">
-      <div className="mb-4 flex items-center justify-between">
-        <p className="text-sm font-medium">TVL History</p>
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <p className="text-sm font-medium">TVL History &amp; Projection</p>
+          <InfoTooltip
+            floating
+            text="Historical TVL from hourly snapshots. The dashed line projects TVL to the next weekly snapshot using weighted 7-day TVL growth."
+          />
+        </div>
         <div className="flex gap-1">
           {ranges.map((r) => (
             <button
@@ -220,56 +351,124 @@ export function TvlChart({ data }: TvlChartProps) {
           ))}
         </div>
       </div>
-      <ResponsiveContainer width="100%" height={280}>
-        <AreaChart key={hasEntered ? "tvl-animate" : "tvl-idle"} data={filtered}>
-          <defs>
-            <linearGradient id="tvlGrad" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#FFB547" stopOpacity={0.3} />
-              <stop offset="100%" stopColor="#FFB547" stopOpacity={0} />
-            </linearGradient>
-          </defs>
-          <CartesianGrid strokeDasharray="3 3" />
-          <XAxis
-            dataKey="timestamp"
-            tickFormatter={(v) =>
-              new Date(v).toLocaleDateString("en-US", { month: "short", day: "numeric" })
-            }
-            minTickGap={30}
-          />
-          <YAxis tickFormatter={(v) => `$${(v / 1e6).toFixed(1)}M`} width={60} />
-          <Tooltip
-            contentStyle={{
-              background: "#1B1A14",
-              border: "1px solid rgba(198,182,186,0.2)",
-              borderRadius: 4,
-              fontSize: 12,
-            }}
-            formatter={(value: number) => [`$${value.toLocaleString()}`, "TVL"]}
-            labelFormatter={(label) => new Date(label).toLocaleString()}
-          />
-          <Area
-            type="monotone"
-            dataKey="tvl"
-            stroke="#FFB547"
-            fill="url(#tvlGrad)"
-            strokeWidth={2}
-            isAnimationActive={hasEntered}
-          />
-        </AreaChart>
-      </ResponsiveContainer>
+
+      {projection.available && (
+        <div className="mb-3 flex flex-wrap items-center gap-4 text-[11px] text-text-secondary">
+          <span className="inline-flex items-center gap-1.5">
+            <span className="inline-block h-0.5 w-4 rounded bg-[#FFB547]" />
+            Historical TVL
+          </span>
+          <span className="inline-flex items-center gap-1.5">
+            <span
+              className="inline-block h-0.5 w-4 rounded border-t-2 border-dashed border-[#FFB547]"
+              style={{ opacity: 0.5 }}
+            />
+            Projected TVL
+          </span>
+          <span className="ml-auto hidden text-text-secondary md:inline">
+            Snapshot: {formatSnapshotUtc(projection.nextSnapshotTimestamp)}
+          </span>
+        </div>
+      )}
+
+      <div className="relative">
+        <ResponsiveContainer width="100%" height={280}>
+          <ComposedChart key={hasEntered ? "tvl-animate" : "tvl-idle"} data={chartData}>
+            <defs>
+              <linearGradient id="tvlGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#FFB547" stopOpacity={0.3} />
+                <stop offset="100%" stopColor="#FFB547" stopOpacity={0} />
+              </linearGradient>
+            </defs>
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis
+              dataKey="timestamp"
+              tickFormatter={(v) =>
+                new Date(v).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" })
+              }
+              minTickGap={30}
+            />
+            <YAxis tickFormatter={(v) => `$${(v / 1e6).toFixed(1)}M`} width={60} domain={["auto", "auto"]} />
+            <Tooltip
+              content={(props) => (
+                <TvlChartTooltip
+                  active={props.active}
+                  payload={props.payload as { payload?: TvlChartPoint }[] | undefined}
+                  label={props.label as string | undefined}
+                  projection={projection}
+                />
+              )}
+            />
+            <Area
+              type="monotone"
+              dataKey="tvl"
+              stroke="#FFB547"
+              fill="url(#tvlGrad)"
+              strokeWidth={2}
+              connectNulls={false}
+              isAnimationActive={hasEntered}
+            />
+            {projection.available && (
+              <Line
+                type="linear"
+                dataKey="projectedTvl"
+                stroke="#FFB547"
+                strokeWidth={2}
+                strokeDasharray="6 4"
+                strokeOpacity={0.5}
+                dot={false}
+                connectNulls
+                isAnimationActive={hasEntered}
+              />
+            )}
+          </ComposedChart>
+        </ResponsiveContainer>
+
+        {projection.available && projectionEnd && (
+          <div className="pointer-events-none absolute right-2 top-6 hidden rounded border border-[rgba(255,181,71,0.35)] bg-[rgba(20,19,16,0.92)] px-2.5 py-1.5 text-right md:block">
+            <p className="text-[10px] uppercase tracking-wider text-text-secondary">Projected TVL</p>
+            <p className="font-mono text-sm font-semibold tabular-nums text-accent">
+              {formatUsd(projection.projectedTvl)}
+            </p>
+          </div>
+        )}
+      </div>
+
+      {projection.available && (
+        <div className="mt-4 rounded border border-[rgba(198,182,186,0.12)] bg-[rgba(255,254,239,0.02)] p-3">
+          <p className="text-xs font-medium text-text-primary">How Projection Works</p>
+          <p className="mt-2 text-xs leading-relaxed text-text-secondary">
+            Projected TVL is calculated using a weighted average of net TVL growth over the last 7
+            days.
+          </p>
+          <p className="mt-2 text-xs leading-relaxed text-text-secondary">
+            Recent days receive greater weighting than older days, allowing the projection to react
+            to changing deposit trends while reducing the impact of isolated outliers.
+          </p>
+          <p className="mt-2 font-mono text-[11px] leading-relaxed text-text-secondary">
+            Weighted Daily Flow = Σ(Net Flow × Weight) / Σ(Weight)
+          </p>
+          <p className="mt-1 font-mono text-[11px] leading-relaxed text-text-secondary">
+            Projected TVL = Current TVL + (Weighted Daily Flow × Remaining Days)
+          </p>
+          <p className="mt-2 text-xs text-text-secondary">
+            This projection assumes the recent trend continues until the next snapshot.
+          </p>
+        </div>
+      )}
     </div>
   );
 }
 
 function filterByRange(
   data: { timestamp: string; tvl: number; totalAura: number }[],
-  range: ChartRange
+  range: ChartRange,
+  referenceTimeMs: number
 ) {
   if (range === "ALL") return data;
-  const now = Date.now();
   const ms =
     range === "24H" ? 86400000 : range === "7D" ? 7 * 86400000 : 30 * 86400000;
-  return data.filter((d) => now - new Date(d.timestamp).getTime() <= ms);
+  return data.filter((d) => referenceTimeMs - new Date(d.timestamp).getTime() <= ms);
 }
 
 interface HistogramProps {

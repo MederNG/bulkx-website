@@ -1,11 +1,13 @@
 import { ArrowUpRight } from "lucide-react";
 import { computeDashboardMetrics, getChartSnapshots, getRankTargetsFromData } from "@/lib/stats";
+import { computeProjectedSnapshotTvl } from "@/lib/projected-snapshot-tvl";
+import { computeTvlKpiSecondaryMetrics } from "@/lib/tvl-kpi-secondary";
 import { MetricCard, Section } from "@/components/cards/MetricCard";
+import { TvlAnalytics } from "@/components/cards/TvlAnalytics";
 import {
   HeroTvlCard,
   LiveLastUpdated,
   LiveTvlInsight,
-  TvlSectionCards,
 } from "@/components/cards/LiveFinancialMetrics";
 import {
   AlphaSection,
@@ -17,7 +19,6 @@ import {
   AuraHistogram,
   CategoryCharts,
   LorenzChart,
-  TvlChart,
 } from "@/components/charts/Charts";
 import {
   FdvTools,
@@ -34,6 +35,19 @@ export default async function HomePage() {
   const snapshots = getChartSnapshots("ALL");
   const targets = getRankTargetsFromData();
   const staticInsights = metrics.alphaInsights.slice(0, -1);
+  const referenceTimeMs = Date.parse(metrics.lastUpdated);
+  const projection = computeProjectedSnapshotTvl(
+    snapshots,
+    metrics.currentTvl,
+    referenceTimeMs
+  );
+  const tvlSecondaryMetrics = computeTvlKpiSecondaryMetrics(
+    snapshots,
+    metrics.currentTvl,
+    metrics.totalDeposited,
+    metrics.totalWithdrawn,
+    referenceTimeMs
+  );
 
   return (
     <div className="mx-auto max-w-[1400px] px-4 md:px-6">
@@ -78,12 +92,15 @@ export default async function HomePage() {
 
         {/* TVL Analytics */}
         <Section title="TVL Analytics" subtitle="Historical total value locked">
-          <TvlSectionCards
+          <TvlAnalytics
+            snapshots={snapshots}
             currentTvl={metrics.currentTvl}
             totalDeposited={metrics.totalDeposited}
             totalWithdrawn={metrics.totalWithdrawn}
+            projection={projection}
+            secondaryMetrics={tvlSecondaryMetrics}
+            referenceTimeMs={referenceTimeMs}
           />
-          <TvlChart data={snapshots} />
         </Section>
 
         {/* Aura Distribution */}

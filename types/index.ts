@@ -37,6 +37,8 @@ export interface Snapshot {
   tvl: number;
   totalAura: number;
   wallets: number;
+  totalDeposited?: number;
+  totalWithdrawn?: number;
 }
 
 export interface Totals {

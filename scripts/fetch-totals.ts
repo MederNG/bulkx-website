@@ -1,19 +1,21 @@
 /**
- * Daily lightweight refresh — pulls only the aggregate financials (TVL,
- * deposited, withdrawn, wallet count) from the upstream leaderboard's `totals`
- * block (returned on page 1), and appends a TVL snapshot for the chart.
+ * Lightweight refresh — pulls aggregate financials (TVL, deposited, withdrawn)
+ * from the upstream leaderboard `totals` block, patches per-wallet deposit /
+ * withdraw / current amounts in data/leaderboard.json, and appends a TVL snapshot.
  *
- * This is intentionally cheap (a single request) so it can run daily. The
- * full per-wallet leaderboard (aura, ranks, categories, referrals) is refreshed
- * separately on a weekly cadence by `npm run fetch`.
+ * Aura, categories, and referrals stay on the weekly `npm run fetch` cadence.
  *
  *   npm run fetch:totals
- *
- * Source: https://indexer.bulk.trade/v1/aura/predeposit/leaderboard
  */
 import fs from "fs";
 import path from "path";
-import type { Snapshot, Totals } from "../types/index";
+import type { LeaderboardEntry, Snapshot, Totals } from "../types/index";
+import {
+  fetchAllLeaderboardFinancialRows,
+  mergeFinancialRowsIntoEntries,
+  recomputeDepositRanks,
+  type LeaderboardFinancialPage,
+} from "../lib/leaderboard-financial-sync";
 import { getUpstreamBase } from "../lib/upstream";
 
 const BASE_URL = getUpstreamBase();
@@ -28,6 +30,8 @@ const MAX_SNAPSHOTS = 2160; // ~90 days of hourly snapshots
 const MAX_RETRIES = 5;
 const BASE_BACKOFF_MS = 1000;
 const MAX_BACKOFF_MS = 30_000;
+const PAGE_SIZE = 2000;
+const PAGE_DELAY_MS = 300;
 
 interface ApiTotals {
   total_wallets?: number;
@@ -39,6 +43,7 @@ interface ApiTotals {
 interface ApiResponse {
   total?: number;
   totals?: ApiTotals;
+  total_pages?: number;
 }
 
 function sleep(ms: number): Promise<void> {
@@ -99,6 +104,77 @@ function readLeaderboardAura(): { totalAura: number; wallets: number } {
   }
 }
 
+async function fetchLeaderboardPage(
+  page: number,
+  pageSize: number,
+  noTotal: boolean
+): Promise<LeaderboardFinancialPage> {
+  const params = new URLSearchParams({
+    page: String(page),
+    page_size: String(pageSize),
+  });
+  if (noTotal) params.set("no_total", "true");
+  const url = `${ENDPOINT}?${params.toString()}`;
+
+  let attempt = 0;
+  while (true) {
+    let res: Response;
+    try {
+      res = await fetch(url, {
+        headers: { "User-Agent": "AURA-Intelligence/1.0", Accept: "application/json" },
+      });
+    } catch (err) {
+      if (attempt >= MAX_RETRIES) throw err;
+      const wait = Math.min(BASE_BACKOFF_MS * 2 ** attempt, MAX_BACKOFF_MS);
+      attempt += 1;
+      console.warn(`[totals] page ${page} network error — retry ${attempt}/${MAX_RETRIES}`);
+      await sleep(wait);
+      continue;
+    }
+
+    if (res.ok) return (await res.json()) as LeaderboardFinancialPage;
+
+    if ((res.status === 429 || res.status >= 500) && attempt < MAX_RETRIES) {
+      const retryAfter = parseRetryAfter(res.headers.get("retry-after"));
+      const backoff = Math.min(BASE_BACKOFF_MS * 2 ** attempt, MAX_BACKOFF_MS);
+      attempt += 1;
+      await sleep((retryAfter ?? backoff) + Math.floor(Math.random() * 250));
+      continue;
+    }
+
+    throw new Error(`Leaderboard page ${page} failed: ${res.status} ${res.statusText}`);
+  }
+}
+
+function readLeaderboardEntries(): LeaderboardEntry[] {
+  if (!fs.existsSync(LEADERBOARD_FILE)) return [];
+  try {
+    return JSON.parse(fs.readFileSync(LEADERBOARD_FILE, "utf-8")) as LeaderboardEntry[];
+  } catch {
+    return [];
+  }
+}
+
+async function patchLeaderboardFinancials(): Promise<number> {
+  const entries = readLeaderboardEntries();
+  if (!entries.length) {
+    console.log("No local leaderboard to patch — skipping per-wallet financial sync.");
+    return 0;
+  }
+
+  console.log(`Syncing deposit/withdraw data for ${entries.length.toLocaleString()} wallets...`);
+  const rows = await fetchAllLeaderboardFinancialRows(fetchLeaderboardPage, {
+    pageSize: PAGE_SIZE,
+    pageDelayMs: PAGE_DELAY_MS,
+  });
+
+  const merged = mergeFinancialRowsIntoEntries(entries, rows);
+  recomputeDepositRanks(merged);
+  fs.writeFileSync(LEADERBOARD_FILE, JSON.stringify(merged, null, 2));
+  console.log(`Patched leaderboard.json (${rows.length.toLocaleString()} upstream rows).`);
+  return merged.length;
+}
+
 async function main() {
   console.log(`Fetching aggregate totals from ${BASE_URL}...`);
   const res = await fetchTotals();
@@ -140,8 +216,12 @@ async function main() {
     tvl,
     totalAura,
     wallets: wallets || res.total || totalWallets,
+    totalDeposited,
+    totalWithdrawn,
   });
   fs.writeFileSync(SNAPSHOTS_FILE, JSON.stringify(snapshots.slice(-MAX_SNAPSHOTS), null, 2));
+
+  await patchLeaderboardFinancials();
 
   console.log(`Saved totals → totals.json`);
   console.log(`   TVL:             $${tvl.toLocaleString()}`);
