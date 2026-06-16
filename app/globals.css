@@ -264,6 +264,7 @@ input[type="number"] {
   );
   background-size: 400% 100%;
   background-repeat: no-repeat;
+  background-position: -200% 50%;
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -271,16 +272,28 @@ input[type="number"] {
   text-shadow:
     0 0 8px rgba(255, 255, 255, 0.6),
     0 0 16px rgba(255, 255, 255, 0.3);
-  animation: hero-intelligence-shimmer 4s linear infinite;
+  opacity: 1;
+  animation:
+    hero-intelligence-sweep 2s linear forwards,
+    hero-intelligence-fade 1s ease-out 2s forwards;
   pointer-events: none;
 }
 
-@keyframes hero-intelligence-shimmer {
+@keyframes hero-intelligence-sweep {
   from {
     background-position: -200% 50%;
   }
   to {
     background-position: 200% 50%;
+  }
+}
+
+@keyframes hero-intelligence-fade {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
   }
 }
 
