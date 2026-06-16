@@ -235,36 +235,39 @@ input[type="number"] {
 }
 
 .hero-intelligence-title {
+  display: inline-block;
   font-weight: 500;
-  letter-spacing: 0.2em;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
   background-image: linear-gradient(
     90deg,
-    var(--color-text-secondary) 0%,
-    var(--color-text-secondary) 38%,
-    #e4d8dc 44%,
-    #fffeef 50%,
-    #e4d8dc 56%,
-    var(--color-text-secondary) 62%,
-    var(--color-text-secondary) 100%
+    #fffeef 0%,
+    #fffeef 28%,
+    #ffffff 44%,
+    #b8c4d0 50%,
+    #ffffff 56%,
+    #fffeef 72%,
+    #fffeef 100%
   );
-  background-size: 250% 100%;
-  background-clip: text;
+  background-size: 350% 100%;
+  background-repeat: no-repeat;
   -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
   color: transparent;
-  animation: hero-intelligence-shimmer 20s ease-in-out infinite;
+  animation: hero-intelligence-shimmer 20s linear infinite;
 }
 
 @keyframes hero-intelligence-shimmer {
   0%,
-  82% {
-    background-position: 0% center;
+  84% {
+    background-position: 150% center;
   }
-  88% {
-    background-position: 100% center;
+  90% {
+    background-position: -50% center;
   }
   100% {
-    background-position: 100% center;
+    background-position: -50% center;
   }
 }
 
@@ -272,6 +275,7 @@ input[type="number"] {
   .hero-intelligence-title {
     animation: none;
     background-image: none;
-    color: var(--color-text-secondary);
+    -webkit-text-fill-color: #fffeef;
+    color: #fffeef;
   }
 }
