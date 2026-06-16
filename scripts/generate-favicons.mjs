@@ -3,12 +3,12 @@
  *
  *   node scripts/generate-favicons.mjs path/to/logo.png
  *
- * Requires: sharp (bundled with Next.js) and devDependency to-ico.
+ * Requires: sharp (bundled with Next.js) and devDependency png-to-ico.
  */
 import fs from "fs";
 import path from "path";
 import sharp from "sharp";
-import toIco from "to-ico";
+import pngToIco from "png-to-ico";
 
 const src = process.argv[2];
 if (!src || !fs.existsSync(src)) {
@@ -17,17 +17,27 @@ if (!src || !fs.existsSync(src)) {
 }
 
 const appDir = path.join(process.cwd(), "app");
+const tmpDir = path.join(process.cwd(), ".tmp-icons");
 
-async function render(size) {
-  return sharp(src).resize(size, size, { fit: "cover", position: "centre" }).png().toBuffer();
+async function renderToFile(size, filename) {
+  const out = path.join(tmpDir, filename);
+  await sharp(src)
+    .resize(size, size, { fit: "cover", position: "centre" })
+    .png()
+    .toFile(out);
+  return out;
 }
 
-const png16 = await render(16);
-const png32 = await render(32);
-const png48 = await render(48);
+fs.mkdirSync(tmpDir, { recursive: true });
+
+const png16 = await renderToFile(16, "16.png");
+const png32 = await renderToFile(32, "32.png");
+const png48 = await renderToFile(48, "48.png");
 
 await sharp(src).resize(512, 512, { fit: "cover" }).png().toFile(path.join(appDir, "icon.png"));
 await sharp(src).resize(180, 180, { fit: "cover" }).png().toFile(path.join(appDir, "apple-icon.png"));
-fs.writeFileSync(path.join(appDir, "favicon.ico"), await toIco([png16, png32, png48]));
+fs.writeFileSync(path.join(appDir, "favicon.ico"), await pngToIco([png16, png32, png48]));
+
+fs.rmSync(tmpDir, { recursive: true, force: true });
 
 console.log("Wrote app/favicon.ico, app/icon.png, app/apple-icon.png");
