@@ -28,7 +28,7 @@ body {
   min-height: 100vh;
 }
 
-@media (pointer: fine) {
+@media (pointer: fine) and (hover: hover) {
   html:not(.custom-cursor-ready),
   html:not(.custom-cursor-ready) * {
     cursor: url("/cursor/cursor-48.png") 11 4, auto !important;
@@ -37,6 +37,12 @@ body {
   html.custom-cursor-ready,
   html.custom-cursor-ready * {
     cursor: none !important;
+  }
+}
+
+@media (hover: none), (pointer: coarse) {
+  .custom-cursor-root {
+    display: none !important;
   }
 }
 

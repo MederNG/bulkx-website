@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   CURSOR_DISPLAY_SIZE,
   CURSOR_HOTSPOT_DISPLAY_X,
@@ -10,7 +10,24 @@ import {
 const INTERACTIVE_SELECTOR =
   'a, button, [role="button"], input, select, textarea, label, summary, [data-cursor-hover]';
 
+const DESKTOP_CURSOR_QUERY = "(pointer: fine) and (hover: hover)";
+
+function useDesktopCursor() {
+  const [enabled, setEnabled] = useState(false);
+
+  useEffect(() => {
+    const media = window.matchMedia(DESKTOP_CURSOR_QUERY);
+    const sync = () => setEnabled(media.matches);
+    sync();
+    media.addEventListener("change", sync);
+    return () => media.removeEventListener("change", sync);
+  }, []);
+
+  return enabled;
+}
+
 export function CustomCursor() {
+  const enabled = useDesktopCursor();
   const rootRef = useRef<HTMLDivElement>(null);
   const innerRef = useRef<HTMLDivElement>(null);
   const posRef = useRef({ x: -9999, y: -9999 });
@@ -19,13 +36,13 @@ export function CustomCursor() {
   const pressedRef = useRef(false);
 
   useEffect(() => {
-    const finePointer = window.matchMedia("(pointer: fine)").matches;
-    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if (!finePointer) return;
+    if (!enabled) return;
 
     const root = rootRef.current;
     const inner = innerRef.current;
     if (!root || !inner) return;
+
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
     const enableNativeHide = () => {
       document.documentElement.classList.add("custom-cursor-ready");
@@ -104,7 +121,9 @@ export function CustomCursor() {
       document.removeEventListener("visibilitychange", onVisibilityChange);
       if (rafRef.current !== null) window.cancelAnimationFrame(rafRef.current);
     };
-  }, []);
+  }, [enabled]);
+
+  if (!enabled) return null;
 
   return (
     <div
