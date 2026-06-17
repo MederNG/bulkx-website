@@ -230,7 +230,7 @@ export function LeaderboardTable() {
         />
       </div>
 
-      <div className="overflow-x-auto">
+      <div className={cn("overflow-x-auto", loading && "min-h-[680px]")}>
         <table className="w-full text-left text-xs">
           <thead>
             <tr className="border-b border-[rgba(198,182,186,0.1)] text-text-secondary">

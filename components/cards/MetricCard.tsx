@@ -80,7 +80,7 @@ interface SectionProps {
 
 export function Section({ id, title, subtitle, children, className }: SectionProps) {
   return (
-    <section id={id} className={cn("py-8 md:py-10", className)}>
+    <section id={id} className={cn("scroll-mt-[4.75rem] py-8 md:py-10", className)}>
       <div className="mb-5">
         <h2 className="section-title">{title}</h2>
         {subtitle && <p className="mt-1 text-sm text-text-secondary">{subtitle}</p>}

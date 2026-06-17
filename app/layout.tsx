@@ -6,6 +6,7 @@ import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { CustomCursor } from "@/components/cursor/CustomCursor";
 import { ScrollToTop } from "@/components/layout/ScrollToTop";
+import { HashScrollOnLoad } from "@/components/layout/HashScrollOnLoad";
 
 const ibmPlexSans = IBM_Plex_Sans({
   subsets: ["latin"],
@@ -66,6 +67,7 @@ export default function RootLayout({
     <html lang="en" className={`${ibmPlexSans.variable} ${ibmPlexMono.variable}`}>
       <body className="antialiased">
         <CustomCursor />
+        <HashScrollOnLoad />
         <Header />
         <main>{children}</main>
         <Footer />

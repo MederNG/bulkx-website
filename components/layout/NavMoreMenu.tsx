@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { AnchorLink } from "@/components/layout/AnchorLink";
 
 const NAV_ITEMS = [
   { href: "#lookup", label: "Lookup" },
@@ -68,14 +69,14 @@ export function NavMoreMenu() {
           >
             {NAV_ITEMS.map((item) => (
               <li key={item.href} role="none">
-                <a
+                <AnchorLink
                   href={item.href}
                   role="menuitem"
                   onClick={() => setOpen(false)}
                   className="block rounded px-3 py-2 text-sm text-text-secondary transition-colors hover:bg-[rgba(255,181,71,0.06)] hover:text-text-primary"
                 >
                   {item.label}
-                </a>
+                </AnchorLink>
               </li>
             ))}
           </motion.ul>

@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import { AnchorLink } from "@/components/layout/AnchorLink";
 import { NavMoreMenu } from "@/components/layout/NavMoreMenu";
 
 export function Header() {
@@ -14,21 +15,21 @@ export function Header() {
         </Link>
         <nav className="flex items-center gap-1 text-xs">
           <div className="hidden items-center gap-1 md:flex">
-            <a href="#lookup" className="btn-ghost btn-ghost-header">
+            <AnchorLink href="#lookup" className="btn-ghost btn-ghost-header">
               Lookup
-            </a>
-            <a href="#analytics" className="btn-ghost btn-ghost-header">
+            </AnchorLink>
+            <AnchorLink href="#analytics" className="btn-ghost btn-ghost-header">
               Analytics
-            </a>
-            <a href="#leaderboards" className="btn-ghost btn-ghost-header">
+            </AnchorLink>
+            <AnchorLink href="#leaderboards" className="btn-ghost btn-ghost-header">
               Leaderboards
-            </a>
-            <a href="#calculator" className="btn-ghost btn-ghost-header">
+            </AnchorLink>
+            <AnchorLink href="#calculator" className="btn-ghost btn-ghost-header">
               Calculator
-            </a>
-            <a href="#share-card" className="btn-ghost btn-ghost-header">
+            </AnchorLink>
+            <AnchorLink href="#share-card" className="btn-ghost btn-ghost-header">
               Share Card
-            </a>
+            </AnchorLink>
           </div>
           <NavMoreMenu />
           <a
