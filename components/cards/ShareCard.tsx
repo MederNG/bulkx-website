@@ -173,7 +173,11 @@ export function ShareCardGenerator() {
                 <div className="mt-8 flex justify-between">
                   <div className="w-[190px] space-y-5">
                     <CardStat label="Aura" value={formatNumber(wallet.aura)} highlight />
-                    <CardStat label="Efficiency" value={wallet.efficiency.toFixed(3)} />
+                    <CardStat
+                      label="Efficiency"
+                      value={wallet.efficiency.toFixed(3)}
+                      unit="AURA/USDC"
+                    />
                   </div>
                   <div className="w-[210px] space-y-5 text-right">
                     <CardStat label="Aura Rank" value={`#${wallet.aura_rank}`} />
@@ -218,7 +222,11 @@ export function ShareCardGenerator() {
                 <div className="mt-8 flex justify-between">
                   <div className="w-[190px] space-y-5">
                     <CardStat label="Aura" value={formatNumber(wallet.aura)} highlight />
-                    <CardStat label="Efficiency" value={wallet.efficiency.toFixed(3)} />
+                    <CardStat
+                      label="Efficiency"
+                      value={wallet.efficiency.toFixed(3)}
+                      unit="AURA/USDC"
+                    />
                   </div>
                   <div className="w-[210px] space-y-5 text-right">
                     <CardStat label="Aura Rank" value={`#${wallet.aura_rank}`} />
@@ -257,17 +265,26 @@ export function ShareCardGenerator() {
 function CardStat({
   label,
   value,
+  unit,
   highlight,
 }: {
   label: string;
   value: string;
+  unit?: string;
   highlight?: boolean;
 }) {
   return (
     <div>
       <p className="text-[10px] uppercase tracking-wider text-[rgba(255,254,239,0.75)]">{label}</p>
-      <p className={`mt-1 font-mono text-[28px] font-semibold leading-none tabular-nums ${highlight ? "text-accent" : "text-text-primary"}`}>
+      <p
+        className={`mt-1 font-mono text-[28px] font-semibold leading-none tabular-nums ${highlight ? "text-accent" : "text-text-primary"}`}
+      >
         {value}
+        {unit ? (
+          <span className="ml-1.5 align-baseline text-[11px] font-sans font-medium tracking-wide text-[rgba(255,254,239,0.65)]">
+            {unit}
+          </span>
+        ) : null}
       </p>
     </div>
   );
