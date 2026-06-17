@@ -11,6 +11,7 @@
     "fetch:totals": "tsx scripts/fetch-totals.ts",
     "generate:favicons": "node scripts/generate-favicons.mjs",
     "generate:fud": "node scripts/make-fud-transparent.mjs",
+    "generate:cursor": "node scripts/generate-cursor-fallbacks.mjs",
     "import": "tsx scripts/import-leaderboard.ts",
     "enrich-referrers": "tsx scripts/enrich-referrer-deposits.ts"
   },
