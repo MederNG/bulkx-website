@@ -4,7 +4,7 @@ import { useRef, useState } from "react";
 import { Check, Copy, Download } from "lucide-react";
 import { toPng } from "html-to-image";
 import type { WalletData } from "@/types";
-import { formatNumber, formatUsd, truncateWallet } from "@/lib/utils";
+import { formatNumber, truncateWallet } from "@/lib/utils";
 
 const BACKGROUND_OPTIONS = [
   { id: "phoenician", label: "Phoenician", src: "/share-card-backgrounds/phoenician.png" },
@@ -173,7 +173,7 @@ export function ShareCardGenerator() {
                 <div className="mt-8 flex justify-between">
                   <div className="w-[190px] space-y-5">
                     <CardStat label="Aura" value={formatNumber(wallet.aura)} highlight />
-                    <CardStat label="Deposit" value={formatUsd(wallet.current_amount)} />
+                    <CardStat label="Efficiency" value={wallet.efficiency.toFixed(3)} />
                   </div>
                   <div className="w-[210px] space-y-5 text-right">
                     <CardStat label="Aura Rank" value={`#${wallet.aura_rank}`} />
@@ -218,7 +218,7 @@ export function ShareCardGenerator() {
                 <div className="mt-8 flex justify-between">
                   <div className="w-[190px] space-y-5">
                     <CardStat label="Aura" value={formatNumber(wallet.aura)} highlight />
-                    <CardStat label="Deposit" value={formatUsd(wallet.current_amount)} />
+                    <CardStat label="Efficiency" value={wallet.efficiency.toFixed(3)} />
                   </div>
                   <div className="w-[210px] space-y-5 text-right">
                     <CardStat label="Aura Rank" value={`#${wallet.aura_rank}`} />

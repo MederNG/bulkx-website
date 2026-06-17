@@ -145,7 +145,7 @@ export default async function HomePage() {
         </Section>
 
         {/* Share Card */}
-        <Section title="Share Card">
+        <Section id="share-card" title="Share Card">
           <ShareCardGenerator />
         </Section>
 

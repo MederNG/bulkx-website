@@ -29,13 +29,13 @@ body {
 }
 
 @media (pointer: fine) and (hover: hover) {
-  html:not(.custom-cursor-ready),
-  html:not(.custom-cursor-ready) * {
+  html:not(.custom-cursor-disabled):not(.custom-cursor-ready),
+  html:not(.custom-cursor-disabled):not(.custom-cursor-ready) * {
     cursor: url("/cursor/cursor-48.png") 11 4, auto !important;
   }
 
-  html.custom-cursor-ready,
-  html.custom-cursor-ready * {
+  html:not(.custom-cursor-disabled).custom-cursor-ready,
+  html:not(.custom-cursor-disabled).custom-cursor-ready * {
     cursor: none !important;
   }
 }

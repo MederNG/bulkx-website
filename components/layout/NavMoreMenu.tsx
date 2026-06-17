@@ -10,6 +10,7 @@ const NAV_ITEMS = [
   { href: "#analytics", label: "Analytics" },
   { href: "#leaderboards", label: "Leaderboards" },
   { href: "#calculator", label: "Calculator" },
+  { href: "#share-card", label: "Share Card" },
 ] as const;
 
 export function NavMoreMenu() {

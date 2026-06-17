@@ -26,6 +26,9 @@ export function Header() {
             <a href="#calculator" className="btn-ghost btn-ghost-header">
               Calculator
             </a>
+            <a href="#share-card" className="btn-ghost btn-ghost-header">
+              Share Card
+            </a>
           </div>
           <NavMoreMenu />
           <a

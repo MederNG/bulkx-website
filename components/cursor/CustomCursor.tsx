@@ -1,33 +1,19 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import {
   CURSOR_DISPLAY_SIZE,
   CURSOR_HOTSPOT_DISPLAY_X,
   CURSOR_HOTSPOT_DISPLAY_Y,
 } from "@/lib/cursor-config";
+import { useCustomCursorPreference } from "@/components/cursor/useCustomCursorPreference";
 
 const INTERACTIVE_SELECTOR =
   'a, button, [role="button"], input, select, textarea, label, summary, [data-cursor-hover]';
 
-const DESKTOP_CURSOR_QUERY = "(pointer: fine) and (hover: hover)";
-
-function useDesktopCursor() {
-  const [enabled, setEnabled] = useState(false);
-
-  useEffect(() => {
-    const media = window.matchMedia(DESKTOP_CURSOR_QUERY);
-    const sync = () => setEnabled(media.matches);
-    sync();
-    media.addEventListener("change", sync);
-    return () => media.removeEventListener("change", sync);
-  }, []);
-
-  return enabled;
-}
-
 export function CustomCursor() {
-  const enabled = useDesktopCursor();
+  const { enabled, isDesktop, ready } = useCustomCursorPreference();
+  const active = ready && isDesktop && enabled;
   const rootRef = useRef<HTMLDivElement>(null);
   const innerRef = useRef<HTMLDivElement>(null);
   const posRef = useRef({ x: -9999, y: -9999 });
@@ -36,7 +22,7 @@ export function CustomCursor() {
   const pressedRef = useRef(false);
 
   useEffect(() => {
-    if (!enabled) return;
+    if (!active) return;
 
     const root = rootRef.current;
     const inner = innerRef.current;
@@ -121,9 +107,9 @@ export function CustomCursor() {
       document.removeEventListener("visibilitychange", onVisibilityChange);
       if (rafRef.current !== null) window.cancelAnimationFrame(rafRef.current);
     };
-  }, [enabled]);
+  }, [active]);
 
-  if (!enabled) return null;
+  if (!active) return null;
 
   return (
     <div
