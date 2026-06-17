@@ -88,7 +88,7 @@ export default async function HomePage() {
         </Section>
 
         {/* TVL Analytics */}
-        <Section title="TVL Analytics" subtitle="Historical total value locked">
+        <Section id="analytics" title="TVL Analytics" subtitle="Historical total value locked">
           <TvlAnalytics
             snapshots={snapshots}
             currentTvl={metrics.currentTvl}

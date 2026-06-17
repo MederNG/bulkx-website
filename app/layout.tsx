@@ -5,6 +5,7 @@ import "./globals.css";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { CustomCursor } from "@/components/cursor/CustomCursor";
+import { ScrollToTop } from "@/components/layout/ScrollToTop";
 
 const ibmPlexSans = IBM_Plex_Sans({
   subsets: ["latin"],
@@ -68,6 +69,7 @@ export default function RootLayout({
         <Header />
         <main>{children}</main>
         <Footer />
+        <ScrollToTop />
         <Analytics />
       </body>
     </html>

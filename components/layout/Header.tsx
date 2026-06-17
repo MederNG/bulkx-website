@@ -17,6 +17,9 @@ export function Header() {
             <a href="#lookup" className="btn-ghost btn-ghost-header">
               Lookup
             </a>
+            <a href="#analytics" className="btn-ghost btn-ghost-header">
+              Analytics
+            </a>
             <a href="#leaderboards" className="btn-ghost btn-ghost-header">
               Leaderboards
             </a>

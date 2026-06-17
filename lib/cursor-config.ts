@@ -4,7 +4,7 @@ export const CURSOR_HOTSPOT_X = 234;
 export const CURSOR_HOTSPOT_Y = 81;
 
 /** Rendered cursor size in CSS pixels. */
-export const CURSOR_DISPLAY_SIZE = 72;
+export const CURSOR_DISPLAY_SIZE = 54;
 
 export const CURSOR_HOTSPOT_DISPLAY_X =
   (CURSOR_HOTSPOT_X / CURSOR_VIEWBOX) * CURSOR_DISPLAY_SIZE;

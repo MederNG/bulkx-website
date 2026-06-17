@@ -128,6 +128,35 @@ body {
   .fud-float-inner {
     animation: none;
   }
+
+  .scroll-to-top-float {
+    animation: none;
+  }
+}
+
+@keyframes scroll-to-top-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+}
+
+.scroll-to-top-float {
+  animation: scroll-to-top-float 2.8s ease-in-out infinite;
+}
+
+.scroll-to-top-btn:hover {
+  border-color: rgba(255, 181, 71, 0.55);
+  color: #ffd27a;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scroll-to-top-btn {
+    transition: none;
+  }
 }
 
 @keyframes halo-spin {
