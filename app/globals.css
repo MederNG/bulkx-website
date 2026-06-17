@@ -75,6 +75,31 @@ body {
     0 0 4px rgba(255, 181, 71, 0.45);
 }
 
+@keyframes fud-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+.fud-float-inner {
+  animation: fud-float 3.2s ease-in-out infinite;
+}
+
+/* Transparent PNG cutout shadow */
+.fud-figure {
+  filter: drop-shadow(0 16px 32px rgba(0, 0, 0, 0.55));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fud-float-inner {
+    animation: none;
+  }
+}
+
 @keyframes halo-spin {
   to {
     transform: translate(-50%, -50%) rotate(360deg);

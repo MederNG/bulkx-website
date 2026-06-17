@@ -10,6 +10,7 @@
     "fetch": "tsx scripts/fetch-aura.ts",
     "fetch:totals": "tsx scripts/fetch-totals.ts",
     "generate:favicons": "node scripts/generate-favicons.mjs",
+    "generate:fud": "node scripts/make-fud-transparent.mjs",
     "import": "tsx scripts/import-leaderboard.ts",
     "enrich-referrers": "tsx scripts/enrich-referrer-deposits.ts"
   },
@@ -32,6 +33,7 @@
     "@types/react": "^19.1.6",
     "@types/react-dom": "^19.1.5",
     "png-to-ico": "^3.0.1",
+    "sharp": "^0.34.2",
     "tailwindcss": "^4.1.8",
     "tsx": "^4.19.4",
     "typescript": "^5.8.3"

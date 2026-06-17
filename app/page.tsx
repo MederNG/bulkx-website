@@ -20,10 +20,7 @@ import {
   CategoryCharts,
   LorenzChart,
 } from "@/components/charts/Charts";
-import {
-  FdvTools,
-  RankCalculator,
-} from "@/components/calculator/Calculators";
+import { CalculatorSection } from "@/components/calculator/Calculators";
 import { WalletLookup } from "@/components/lookup/WalletLookup";
 import { HeroIntelligenceTitle } from "@/components/layout/HeroIntelligenceTitle";
 import { LeaderboardTable } from "@/components/tables/LeaderboardTable";
@@ -139,10 +136,7 @@ export default async function HomePage() {
 
         {/* Tools */}
         <Section id="calculator" title="Tools">
-          <div className="grid gap-4 lg:grid-cols-2">
-            <RankCalculator targets={targets} />
-            <FdvTools totalAuraSupply={metrics.totalAura} />
-          </div>
+          <CalculatorSection targets={targets} totalAuraSupply={metrics.totalAura} />
         </Section>
 
         {/* Leaderboards */}
