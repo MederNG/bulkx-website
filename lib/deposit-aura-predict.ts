@@ -30,6 +30,8 @@ export interface DepositAuraPredictContext {
   cohortUsdHoursAtSnapshot: number;
   nextSnapshotTimestamp: number;
   snapshotLabel: string;
+  /** Sat 13:00 UTC → Sat 13:00 UTC window for the active campaign week. */
+  currentWeekWindow: string;
   currentTvl: number;
   /** TVL anchor per campaign week (for Hold since Week N). */
   weekTvl: Record<number, number>;
@@ -65,8 +67,22 @@ export function getCampaignWeek1StartMs(): number {
   return getPreviousSnapshotTimestamp(CAMPAIGN_WEEK1_SNAPSHOT_MS);
 }
 
+/** Saturday 13:00 UTC when campaign Week N begins (same instant Week N−1 ends). */
+export function getCampaignWeekStartMs(week: number): number {
+  return getCampaignWeek1StartMs() + (week - 1) * MS_PER_WEEK;
+}
+
+/** Saturday 13:00 UTC snapshot at the end of campaign Week N. */
 export function getCampaignWeekEndMs(week: number): number {
-  return getCampaignWeek1StartMs() + week * MS_PER_WEEK;
+  return getCampaignWeekStartMs(week) + MS_PER_WEEK;
+}
+
+export function getCampaignWeekHours(week: number): number {
+  return (getCampaignWeekEndMs(week) - getCampaignWeekStartMs(week)) / MS_PER_HOUR;
+}
+
+export function formatCampaignWeekWindow(week: number): string {
+  return `${formatSnapshotUtc(getCampaignWeekStartMs(week))} → ${formatSnapshotUtc(getCampaignWeekEndMs(week))}`;
 }
 
 /** TVL at or just after the Week N snapshot boundary. */
@@ -122,11 +138,13 @@ export function buildWeekTvlMap(
   return map;
 }
 
-/** Current campaign week from the weekly snapshot calendar (not leaderboard category keys). */
+/** Active campaign week from the Sat 13:00 UTC snapshot calendar. */
 export function getCurrentCampaignWeek(nowMs: number = Date.now()): number {
   const week1Start = getCampaignWeek1StartMs();
   if (nowMs < week1Start) return 1;
-  return Math.floor((nowMs - week1Start) / MS_PER_WEEK) + 1;
+
+  const periodStartMs = getPreviousSnapshotTimestamp(getNextSnapshotTimestamp(nowMs));
+  return Math.floor((periodStartMs - week1Start) / MS_PER_WEEK) + 1;
 }
 
 export function computeCohortUsdHoursAtSnapshot(
@@ -151,16 +169,15 @@ export function computeUserWeekUsdHours(
 }
 
 /**
- * Hours in a hold-since week window.
- * Completed weeks use the full snapshot-to-snapshot period; the current week uses
- * elapsed time plus remaining hours until the upcoming snapshot (not a full 168h upfront).
+ * Hours in a hold-since week window (Sat 13:00 UTC → Sat 13:00 UTC).
+ * Completed weeks use the full snapshot period; the current week uses elapsed + remaining hours.
  */
 export function resolveHoldSinceWeekHours(
   week: number,
   context: Pick<DepositAuraPredictContext, "campaignWeek" | "hoursInWeek" | "hoursUntilSnapshot">
 ): number {
   if (week < context.campaignWeek) {
-    return context.hoursInWeek;
+    return getCampaignWeekHours(week);
   }
 
   const hoursElapsed = Math.max(0, context.hoursInWeek - context.hoursUntilSnapshot);
@@ -187,6 +204,7 @@ export function computeDepositAuraPredictContext(
     cohortUsdHoursAtSnapshot: computeCohortUsdHoursAtSnapshot(currentTvl, hoursInWeek),
     nextSnapshotTimestamp,
     snapshotLabel: formatSnapshotUtc(nextSnapshotTimestamp),
+    currentWeekWindow: formatCampaignWeekWindow(campaignWeek),
     currentTvl,
     weekTvl: buildWeekTvlMap(campaignWeek, currentTvl, snapshots),
   };

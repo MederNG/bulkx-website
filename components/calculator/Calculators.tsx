@@ -265,6 +265,9 @@ export function DepositAuraPredictor({
           <div>
             <p className="section-title">Aura Predictor</p>
             <p className="mt-1 text-xs text-text-secondary">Week {context.campaignWeek}</p>
+            <p className="mt-0.5 text-[10px] leading-relaxed text-text-secondary">
+              {context.currentWeekWindow}
+            </p>
           </div>
           <CopyCardPngButton exportRef={exportRef} filename="aura-predictor" />
         </div>
@@ -362,14 +365,13 @@ export function DepositAuraPredictor({
         <p className="mt-4 text-[10px] leading-relaxed text-text-secondary">
           {holdSinceActive ? (
             <>
-              Weeks {holdSinceWeek}–{context.campaignWeek} · completed weeks use full 168h · Week{" "}
-              {context.campaignWeek} projected through {context.snapshotLabel} ({timeUntilSnapshot}{" "}
-              left)
+              Weeks {holdSinceWeek}–{context.campaignWeek} · completed weeks Sat→Sat · Week{" "}
+              {context.campaignWeek} ({context.currentWeekWindow}) · {timeUntilSnapshot} left
             </>
           ) : (
             <>
               Snapshot {context.snapshotLabel} · {timeUntilSnapshot} remaining · {scenarioLabel} ·
-              proportional to USD-hours · hold until snapshot
+              Sat 13:00 UTC → Sat 13:00 UTC · hold until snapshot
             </>
           )}
         </p>
