@@ -17,8 +17,12 @@ export const WEEKLY_DEPOSIT_AURA_POOL = 850_000;
 
 /** Calibrated from on-chain deposit timelines (Jun 2026 Week 1/2 snapshots).
  * Cohort USD-hours ≈ TVL × week_hours × factor (not all TVL held the full week).
+ * Continuing holders (balance already in TVL): ~0.56. First marginal week: ~0.42.
  */
-export const COHORT_USD_HOURS_FACTOR = 0.54;
+export const COHORT_USD_HOURS_FACTOR = 0.56;
+
+/** Effective cohort factor when the deposit is new to the pool (first hold-since week / deposit now). */
+export const COHORT_USD_HOURS_FACTOR_MARGINAL = 0.42;
 
 export type DepositPredictMode = "new_deposit" | "full_week_hold";
 
@@ -149,9 +153,10 @@ export function getCurrentCampaignWeek(nowMs: number = Date.now()): number {
 
 export function computeCohortUsdHoursAtSnapshot(
   currentTvl: number,
-  hoursInWeek: number
+  hoursInWeek: number,
+  factor: number = COHORT_USD_HOURS_FACTOR
 ): number {
-  return currentTvl * hoursInWeek * COHORT_USD_HOURS_FACTOR;
+  return currentTvl * hoursInWeek * factor;
 }
 
 export function computeUserWeekUsdHours(
@@ -201,7 +206,11 @@ export function computeDepositAuraPredictContext(
     depositPool: WEEKLY_DEPOSIT_AURA_POOL,
     hoursUntilSnapshot,
     hoursInWeek,
-    cohortUsdHoursAtSnapshot: computeCohortUsdHoursAtSnapshot(currentTvl, hoursInWeek),
+    cohortUsdHoursAtSnapshot: computeCohortUsdHoursAtSnapshot(
+      currentTvl,
+      hoursInWeek,
+      COHORT_USD_HOURS_FACTOR_MARGINAL
+    ),
     nextSnapshotTimestamp,
     snapshotLabel: formatSnapshotUtc(nextSnapshotTimestamp),
     currentWeekWindow: formatCampaignWeekWindow(campaignWeek),
@@ -285,8 +294,11 @@ function predictCumulativeHoldSince(
     const weekHours = resolveHoldSinceWeekHours(week, context);
     const weekUserUsdHours = deposit * weekHours;
     const weekTvl = context.weekTvl[week] ?? context.weekTvl[context.campaignWeek];
-    const weekCohortUsdHours = computeCohortUsdHoursAtSnapshot(weekTvl, weekHours);
     const alreadyInCohort = week > holdSinceWeek;
+    const cohortFactor = alreadyInCohort
+      ? COHORT_USD_HOURS_FACTOR
+      : COHORT_USD_HOURS_FACTOR_MARGINAL;
+    const weekCohortUsdHours = computeCohortUsdHoursAtSnapshot(weekTvl, weekHours, cohortFactor);
     const weekTotalUsdHours = alreadyInCohort
       ? weekCohortUsdHours
       : weekCohortUsdHours + weekUserUsdHours;
@@ -315,7 +327,10 @@ function predictCumulativeHoldSince(
             (row.userUsdHours /
               (computeCohortUsdHoursAtSnapshot(
                 context.weekTvl[row.week] ?? 0,
-                row.hoursInPeriod
+                row.hoursInPeriod,
+                row.week > holdSinceWeek
+                  ? COHORT_USD_HOURS_FACTOR
+                  : COHORT_USD_HOURS_FACTOR_MARGINAL
               ) +
                 (row.week > holdSinceWeek ? 0 : row.userUsdHours))) *
               100,

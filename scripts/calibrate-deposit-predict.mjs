@@ -1,5 +1,6 @@
 import {
   COHORT_USD_HOURS_FACTOR,
+  COHORT_USD_HOURS_FACTOR_MARGINAL,
   WEEKLY_DEPOSIT_AURA_POOL,
   computeUserWeekUsdHours,
   predictFromCalibratedCohort,
@@ -53,28 +54,35 @@ for (const w of wallets) {
     ["Week2", WEEK2_START, WEEK2_END, w.aura.week2, W2_TVL],
   ]) {
     const actualUsdHours = usdHoursFromEvents(w.events, start, end);
-    const cohort = tvl * hoursInWeek * COHORT_USD_HOURS_FACTOR;
-    const actualPredict = predictFromCalibratedCohort(actualUsdHours, cohort);
+    const cohortMarginal = tvl * hoursInWeek * COHORT_USD_HOURS_FACTOR_MARGINAL;
+    const cohortIncumbent = tvl * hoursInWeek * COHORT_USD_HOURS_FACTOR;
+    const actualPredict = predictFromCalibratedCohort(actualUsdHours, cohortMarginal);
 
     const modelUsdHours = computeUserWeekUsdHours(
       w.balance,
       { hoursInWeek, hoursUntilSnapshot: 0 },
       "full_week_hold"
     );
-    const modelPredict = predictFromCalibratedCohort(modelUsdHours, cohort);
+    const modelPredictMarginal = predictFromCalibratedCohort(
+      modelUsdHours,
+      cohortMarginal + modelUsdHours
+    );
+    const modelPredictIncumbent = predictFromCalibratedCohort(modelUsdHours, cohortIncumbent);
 
     console.log(label, {
       actualAura: aura,
       actualUsdHours: Math.round(actualUsdHours),
       actualPredict: Math.round(actualPredict),
       modelUsdHours: Math.round(modelUsdHours),
-      modelPredict: Math.round(modelPredict),
-      cohort: Math.round(cohort),
+      modelPredictMarginal: Math.round(modelPredictMarginal),
+      modelPredictIncumbent: Math.round(modelPredictIncumbent),
+      cohortIncumbent: Math.round(cohortIncumbent),
     });
   }
 }
 
 console.log("\nConstants:", {
   COHORT_USD_HOURS_FACTOR,
+  COHORT_USD_HOURS_FACTOR_MARGINAL,
   POOL: WEEKLY_DEPOSIT_AURA_POOL,
 });
