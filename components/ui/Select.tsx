@@ -15,9 +15,10 @@ interface SelectProps {
   onChange: (value: string) => void;
   options: SelectOption[];
   className?: string;
+  compact?: boolean;
 }
 
-export function Select({ value, onChange, options, className }: SelectProps) {
+export function Select({ value, onChange, options, className, compact }: SelectProps) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -48,7 +49,8 @@ export function Select({ value, onChange, options, className }: SelectProps) {
         aria-haspopup="listbox"
         aria-expanded={open}
         className={cn(
-          "flex w-full items-center justify-between gap-2 rounded border bg-bulk-base px-3.5 py-2.5 text-left text-sm transition-colors outline-none",
+          "flex w-full items-center justify-between gap-2 rounded border bg-bulk-base text-left transition-colors outline-none",
+          compact ? "px-2.5 py-1.5 text-xs" : "px-3.5 py-2.5 text-sm",
           open
             ? "border-accent"
             : "border-[rgba(198,182,186,0.2)] hover:border-[rgba(255,181,71,0.4)]"

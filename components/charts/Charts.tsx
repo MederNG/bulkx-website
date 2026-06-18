@@ -8,6 +8,7 @@ import {
   BarChart,
   CartesianGrid,
   Cell,
+  LabelList,
   Legend,
   Line,
   LineChart,
@@ -29,6 +30,13 @@ import {
 } from "@/lib/projected-snapshot-tvl";
 import { cn, formatNumber, formatUsd } from "@/lib/utils";
 import { InfoTooltip } from "@/components/ui/InfoTooltip";
+import { Select } from "@/components/ui/Select";
+import {
+  OVERVIEW_GROUP,
+  buildCategoryGroupOptions,
+  filterCategoryBreakdown,
+  type CategoryBreakdownItem,
+} from "@/lib/aura-category-groups";
 
 const COLORS = [
   "#FFB547", // accent gold
@@ -84,7 +92,7 @@ function useInViewOnce<T extends HTMLElement>(threshold = 0.25) {
 }
 
 function renderPieLabel({ cx, cy, midAngle, outerRadius, percent }: PieLabelProps) {
-  if (!percent || percent <= 0.04) return null;
+  if (!percent || percent <= 0.02) return null;
   const RADIAN = Math.PI / 180;
   const radius = outerRadius + 16;
   const x = cx + radius * Math.cos(-midAngle * RADIAN);
@@ -573,29 +581,93 @@ export function LorenzChart({ data }: LorenzProps) {
 }
 
 interface CategoryChartsProps {
-  data: { category: string; points: number; share: number }[];
+  data: CategoryBreakdownItem[];
+}
+
+interface CategoryChartRow extends CategoryBreakdownItem {
+  groupShare: number;
+}
+
+function withGroupShares(data: CategoryBreakdownItem[]): CategoryChartRow[] {
+  const totalPoints = data.reduce((sum, item) => sum + item.points, 0);
+  return data.map((item) => ({
+    ...item,
+    groupShare: totalPoints > 0 ? (item.points / totalPoints) * 100 : 0,
+  }));
+}
+
+function collapseSmallCategories(data: CategoryChartRow[]) {
+  const TOP_N = 7;
+  const MIN_GROUP_SHARE = 2.5;
+
+  const prominent = data.filter((item) => item.groupShare >= MIN_GROUP_SHARE || item.key === "others");
+  const tiny = data.filter((item) => item.groupShare < MIN_GROUP_SHARE && item.key !== "others");
+
+  let working =
+    tiny.length > 0 && prominent.length > 0
+      ? [
+          ...prominent,
+          {
+            key: "others-small",
+            category: "Others",
+            points: tiny.reduce((sum, item) => sum + item.points, 0),
+            share: tiny.reduce((sum, item) => sum + item.share, 0),
+            groupShare: tiny.reduce((sum, item) => sum + item.groupShare, 0),
+          },
+        ]
+      : [...data];
+
+  if (working.length <= TOP_N + 1) {
+    const othersCategories =
+      tiny.length > 0
+        ? tiny.map((item) => ({ category: item.category, share: item.share, groupShare: item.groupShare }))
+        : [];
+    return { chartData: working, othersCategories };
+  }
+
+  const head = working.slice(0, TOP_N);
+  const rest = working.slice(TOP_N);
+  return {
+    chartData: [
+      ...head,
+      {
+        key: "others",
+        category: "Others",
+        points: rest.reduce((sum, item) => sum + item.points, 0),
+        share: rest.reduce((sum, item) => sum + item.share, 0),
+        groupShare: rest.reduce((sum, item) => sum + item.groupShare, 0),
+      },
+    ],
+    othersCategories: rest.map((item) => ({
+      category: item.category,
+      share: item.share,
+      groupShare: item.groupShare,
+    })),
+  };
 }
 
 export function CategoryCharts({ data }: CategoryChartsProps) {
-  const { top, othersCategories } = useMemo(() => {
-    const TOP_N = 7;
-    if (data.length <= TOP_N + 1) {
-      return { top: data, othersCategories: [] as { category: string; share: number }[] };
+  const groupOptions = useMemo(() => buildCategoryGroupOptions(data), [data]);
+  const [selectedGroup, setSelectedGroup] = useState(OVERVIEW_GROUP);
+
+  useEffect(() => {
+    if (!groupOptions.some((option) => option.value === selectedGroup)) {
+      setSelectedGroup(OVERVIEW_GROUP);
     }
-    const head = data.slice(0, TOP_N);
-    const rest = data.slice(TOP_N);
-    return {
-      top: [
-        ...head,
-        {
-          category: "Others",
-          points: rest.reduce((s, d) => s + d.points, 0),
-          share: rest.reduce((s, d) => s + d.share, 0),
-        },
-      ],
-      othersCategories: rest.map((d) => ({ category: d.category, share: d.share })),
-    };
-  }, [data]);
+  }, [groupOptions, selectedGroup]);
+
+  const filtered = useMemo(
+    () => filterCategoryBreakdown(data, selectedGroup),
+    [data, selectedGroup]
+  );
+
+  const { chartData, othersCategories } = useMemo(() => {
+    const withShares = withGroupShares(filtered);
+    return collapseSmallCategories(withShares);
+  }, [filtered]);
+
+  const isDrillDown = selectedGroup !== OVERVIEW_GROUP;
+  const barHeight = Math.max(260, chartData.length * 42);
 
   const othersInfo =
     othersCategories.length > 0 ? (
@@ -607,7 +679,9 @@ export function CategoryCharts({ data }: CategoryChartsProps) {
           {othersCategories.map((c) => (
             <span key={c.category} className="flex justify-between gap-3">
               <span>{c.category}</span>
-              <span className="tabular-nums text-text-secondary">{c.share.toFixed(2)}%</span>
+              <span className="tabular-nums text-text-secondary">
+                {c.groupShare.toFixed(1)}% · {c.share.toFixed(2)}% total
+              </span>
             </span>
           ))}
         </span>
@@ -617,24 +691,38 @@ export function CategoryCharts({ data }: CategoryChartsProps) {
   const [activeIndex, setActiveIndex] = useState<number | undefined>(undefined);
   const { ref, hasEntered } = useInViewOnce<HTMLDivElement>(0.2);
 
+  useEffect(() => {
+    setActiveIndex(undefined);
+  }, [selectedGroup]);
+
   return (
     <div ref={ref} className="grid gap-4 lg:grid-cols-2">
       <div className="card p-4 md:p-5">
-        <p className="mb-4 flex items-center gap-1.5 text-sm font-medium">
-          Source Breakdown
-          {othersInfo && <InfoTooltip text={othersInfo} panelClassName="w-72" floating />}
-        </p>
+        <div className="mb-4 flex items-start justify-between gap-3">
+          <p className="flex items-center gap-1.5 text-sm font-medium">
+            Source Breakdown
+            {othersInfo && <InfoTooltip text={othersInfo} panelClassName="w-72" floating />}
+          </p>
+          <Select
+            value={selectedGroup}
+            onChange={setSelectedGroup}
+            options={groupOptions}
+            className="w-[9.5rem] shrink-0"
+            compact
+          />
+        </div>
         <ResponsiveContainer width="100%" height={300}>
-          <PieChart key={hasEntered ? "pie-animate" : "pie-idle"}>
+          <PieChart key={`${hasEntered ? "pie-animate" : "pie-idle"}-${selectedGroup}`}>
             <Pie
-              data={top}
-              dataKey="points"
+              data={chartData}
+              dataKey="groupShare"
               nameKey="category"
               cx="50%"
               cy="50%"
               innerRadius={55}
               outerRadius={85}
-              paddingAngle={2}
+              minAngle={5}
+              paddingAngle={chartData.length > 5 ? 1 : 2}
               label={activeIndex === undefined ? renderPieLabel : undefined}
               labelLine={false}
               isAnimationActive={hasEntered}
@@ -643,7 +731,7 @@ export function CategoryCharts({ data }: CategoryChartsProps) {
               onMouseEnter={(_, i) => setActiveIndex(i)}
               onMouseLeave={() => setActiveIndex(undefined)}
             >
-              {top.map((_, i) => (
+              {chartData.map((_, i) => (
                 <Cell key={i} fill={COLORS[i % COLORS.length]} stroke="#141310" strokeWidth={1} />
               ))}
             </Pie>
@@ -661,21 +749,46 @@ export function CategoryCharts({ data }: CategoryChartsProps) {
               }}
               itemStyle={{ color: "#FFFEEF" }}
               labelStyle={{ color: "#FFFEEF" }}
-              formatter={(value: number, name: string) => [formatNumber(value), name]}
+              formatter={(value: number, name: string, item) => {
+                const row = item.payload as CategoryChartRow;
+                return [
+                  `${Number(value).toFixed(1)}% of group · ${row.share.toFixed(2)}% total · ${formatNumber(row.points)} Aura`,
+                  name,
+                ];
+              }}
             />
           </PieChart>
         </ResponsiveContainer>
       </div>
       <div className="card p-4 md:p-5">
-        <p className="mb-4 flex items-center gap-1.5 text-sm font-medium">
-          Category Share
-          {othersInfo && <InfoTooltip text={othersInfo} panelClassName="w-72" floating />}
-        </p>
-        <ResponsiveContainer width="100%" height={260}>
-          <BarChart key={hasEntered ? "cat-animate" : "cat-idle"} data={top} layout="vertical">
+        <div className="mb-4">
+          <p className="flex items-center gap-1.5 text-sm font-medium">
+            Category Share
+            {othersInfo && <InfoTooltip text={othersInfo} panelClassName="w-72" floating />}
+          </p>
+          {isDrillDown && (
+            <p className="mt-1 text-xs text-text-secondary">Share within selected group</p>
+          )}
+        </div>
+        <ResponsiveContainer width="100%" height={barHeight}>
+          <BarChart
+            key={`${hasEntered ? "cat-animate" : "cat-idle"}-${selectedGroup}`}
+            data={chartData}
+            layout="vertical"
+            margin={{ left: 4, right: 48 }}
+          >
             <CartesianGrid strokeDasharray="3 3" />
-            <XAxis type="number" tickFormatter={(v) => `${v.toFixed(0)}%`} />
-            <YAxis type="category" dataKey="category" width={100} tick={{ fontSize: 10 }} />
+            <XAxis
+              type="number"
+              domain={[0, "dataMax"]}
+              tickFormatter={(v) => `${v.toFixed(0)}%`}
+            />
+            <YAxis
+              type="category"
+              dataKey="category"
+              width={isDrillDown ? 118 : 100}
+              tick={{ fontSize: 10 }}
+            />
             <Tooltip
               cursor={false}
               contentStyle={{
@@ -686,11 +799,18 @@ export function CategoryCharts({ data }: CategoryChartsProps) {
               }}
               itemStyle={{ color: "#FFFEEF" }}
               labelStyle={{ color: "#FFFEEF" }}
-              formatter={(value: number) => [`${value.toFixed(1)}%`, "Share"]}
+              formatter={(value: number, _name, item) => {
+                const row = item.payload as CategoryChartRow;
+                return [
+                  `${Number(value).toFixed(1)}% of group · ${row.share.toFixed(2)}% total`,
+                  "Share",
+                ];
+              }}
             />
             <Bar
-              dataKey="share"
+              dataKey="groupShare"
               radius={[0, 2, 2, 0]}
+              minPointSize={3}
               isAnimationActive={hasEntered}
               activeBar={{
                 fill: "#FFC764",
@@ -699,9 +819,16 @@ export function CategoryCharts({ data }: CategoryChartsProps) {
                 filter: "drop-shadow(0 0 6px rgba(255,181,71,0.45))",
               }}
             >
-              {top.map((_, i) => (
+              {chartData.map((_, i) => (
                 <Cell key={i} fill={COLORS[i % COLORS.length]} />
               ))}
+              <LabelList
+                dataKey="groupShare"
+                position="right"
+                formatter={(value: number) => `${value.toFixed(1)}%`}
+                fill="#FFFEEF"
+                fontSize={10}
+              />
             </Bar>
           </BarChart>
         </ResponsiveContainer>

@@ -69,7 +69,7 @@ export interface DashboardMetrics {
   giniCoefficient: number;
   lorenzCurve: { cumulativeWallets: number; cumulativeAura: number }[];
   auraDistribution: { bucket: string; count: number }[];
-  categoryBreakdown: { category: string; points: number; share: number }[];
+  categoryBreakdown: { key: string; category: string; points: number; share: number }[];
   topReferrers: LeaderboardEntry[];
   referralCandidates: LeaderboardEntry[];
   topEfficiency: (LeaderboardEntry & { efficiency: number })[];

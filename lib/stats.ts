@@ -53,8 +53,9 @@ export async function computeDashboardMetrics(): Promise<DashboardMetrics> {
   }
 
   const categoryBreakdown = Object.entries(categoryTotals)
-    .map(([category, points]) => ({
-      category: categoryLabel(category),
+    .map(([key, points]) => ({
+      key,
+      category: categoryLabel(key),
       points,
       share: totalAura > 0 ? (points / totalAura) * 100 : 0,
     }))
