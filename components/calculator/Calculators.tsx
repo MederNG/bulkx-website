@@ -7,6 +7,7 @@ import type { RankTargets } from "@/types";
 import { FDV_SCENARIOS, cn, formatNumber, formatUsd } from "@/lib/utils";
 import { computeFdv } from "@/lib/percentiles";
 import { Select } from "@/components/ui/Select";
+import { CopyCardPngButton, ExportField, ToolExportSurface } from "@/components/calculator/CopyCardPngButton";
 
 const FDV_FUD_THRESHOLD = 500_000_000;
 
@@ -15,6 +16,7 @@ interface RankCalculatorProps {
 }
 
 export function RankCalculator({ targets }: RankCalculatorProps) {
+  const exportRef = useRef<HTMLDivElement>(null);
   const [currentAura, setCurrentAura] = useState(100);
   const [selectedTarget, setSelectedTarget] = useState<keyof RankTargets>("top10Percent");
 
@@ -29,29 +31,46 @@ export function RankCalculator({ targets }: RankCalculatorProps) {
 
   const required = targets[selectedTarget];
   const additional = Math.max(0, required - currentAura);
+  const targetLabel = targetOptions.find((option) => option.key === selectedTarget)?.label ?? "";
 
   return (
-    <div className="card p-4 md:p-5">
-      <p className="section-title mb-4">Rank Target Calculator</p>
-      <div className="grid gap-4 md:grid-cols-2">
-        <div>
-          <label className="mb-1 block text-xs text-text-secondary">Current Aura</label>
-          <NumericInput value={currentAura} onChange={setCurrentAura} className="input-field font-mono tabular-nums" />
+    <>
+      <div className="card p-4 md:p-5">
+        <div className="mb-4 flex items-start justify-between gap-3">
+          <p className="section-title">Rank Target Calculator</p>
+          <CopyCardPngButton exportRef={exportRef} filename="rank-target-calculator" />
         </div>
-        <div>
-          <label className="mb-1 block text-xs text-text-secondary">Target</label>
-          <Select
-            value={selectedTarget}
-            onChange={(v) => setSelectedTarget(v as keyof RankTargets)}
-            options={targetOptions.map((o) => ({ value: o.key, label: o.label }))}
-          />
+        <div className="grid gap-4 md:grid-cols-2">
+          <div>
+            <label className="mb-1 block text-xs text-text-secondary">Current Aura</label>
+            <NumericInput value={currentAura} onChange={setCurrentAura} className="input-field font-mono tabular-nums" />
+          </div>
+          <div>
+            <label className="mb-1 block text-xs text-text-secondary">Target</label>
+            <Select
+              value={selectedTarget}
+              onChange={(v) => setSelectedTarget(v as keyof RankTargets)}
+              options={targetOptions.map((o) => ({ value: o.key, label: o.label }))}
+            />
+          </div>
+        </div>
+        <div className="mt-5 grid gap-3 sm:grid-cols-2">
+          <ResultBox label="Required Aura" value={formatNumber(required)} />
+          <ResultBox label="Additional Aura Needed" value={formatNumber(additional)} accent={additional > 0} />
         </div>
       </div>
-      <div className="mt-5 grid gap-3 sm:grid-cols-2">
-        <ResultBox label="Required Aura" value={formatNumber(required)} />
-        <ResultBox label="Additional Aura Needed" value={formatNumber(additional)} accent={additional > 0} />
-      </div>
-    </div>
+      <ToolExportSurface exportRef={exportRef} width={560}>
+        <p className="section-title mb-4">Rank Target Calculator</p>
+        <div className="grid gap-4 md:grid-cols-2">
+          <ExportField label="Current Aura" value={formatNumber(currentAura)} />
+          <ExportField label="Target" value={targetLabel} />
+        </div>
+        <div className="mt-5 grid gap-3 sm:grid-cols-2">
+          <ResultBox label="Required Aura" value={formatNumber(required)} />
+          <ResultBox label="Additional Aura Needed" value={formatNumber(additional)} accent={additional > 0} />
+        </div>
+      </ToolExportSurface>
+    </>
   );
 }
 
@@ -80,32 +99,55 @@ export function FdvEstimator({
   fdvAnchorRef,
   onFudVisibilityChange,
 }: FdvEstimatorProps) {
+  const exportRef = useRef<HTMLDivElement>(null);
 
   const result = useMemo(
     () => computeFdv(userAura, fdv, allocation, auraSupply),
     [userAura, fdv, allocation, auraSupply]
   );
+  const fdvLabel = fdv >= 1_000_000_000
+    ? `${(fdv / 1_000_000_000).toFixed(fdv % 1_000_000_000 === 0 ? 0 : 1)}B`
+    : `${Math.round(fdv / 1_000_000)}M`;
 
   return (
-    <div className="card overflow-visible p-4 md:p-5">
-      <p className="section-title mb-4">FDV Estimator</p>
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Field label="Your Aura" value={userAura} onChange={setUserAura} />
-        <FdvField
-          fdv={fdv}
-          onFdvChange={setFdv}
-          anchorRef={fdvAnchorRef}
-          onFudVisibilityChange={onFudVisibilityChange}
-        />
-        <Field label="Allocation (%)" value={allocation} onChange={setAllocation} max={100} />
-        <Field label="Total Aura Supply" value={auraSupply} onChange={setAuraSupply} step={100_000} />
+    <>
+      <div className="card overflow-visible p-4 md:p-5">
+        <div className="mb-4 flex items-start justify-between gap-3">
+          <p className="section-title">FDV Estimator</p>
+          <CopyCardPngButton exportRef={exportRef} filename="fdv-estimator" />
+        </div>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <Field label="Your Aura" value={userAura} onChange={setUserAura} />
+          <FdvField
+            fdv={fdv}
+            onFdvChange={setFdv}
+            anchorRef={fdvAnchorRef}
+            onFudVisibilityChange={onFudVisibilityChange}
+          />
+          <Field label="Allocation (%)" value={allocation} onChange={setAllocation} max={100} />
+          <Field label="Total Aura Supply" value={auraSupply} onChange={setAuraSupply} step={100_000} />
+        </div>
+        <div className="mt-5 grid gap-3 sm:grid-cols-3">
+          <ResultBox label="Pool Value" value={formatUsd(result.poolValue)} />
+          <ResultBox label="Aura Value" value={`$${result.auraValue.toFixed(4)}`} />
+          <ResultBox label="Your Value" value={formatUsd(result.userValue)} accent />
+        </div>
       </div>
-      <div className="mt-5 grid gap-3 sm:grid-cols-3">
-        <ResultBox label="Pool Value" value={formatUsd(result.poolValue)} />
-        <ResultBox label="Aura Value" value={`$${result.auraValue.toFixed(4)}`} />
-        <ResultBox label="Your Value" value={formatUsd(result.userValue)} accent />
-      </div>
-    </div>
+      <ToolExportSurface exportRef={exportRef} width={720}>
+        <p className="section-title mb-4">FDV Estimator</p>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <ExportField label="Your Aura" value={formatNumber(userAura)} />
+          <ExportField label="FDV ($)" value={fdvLabel} />
+          <ExportField label="Allocation (%)" value={String(allocation)} />
+          <ExportField label="Total Aura Supply" value={formatNumber(auraSupply)} />
+        </div>
+        <div className="mt-5 grid gap-3 sm:grid-cols-3">
+          <ResultBox label="Pool Value" value={formatUsd(result.poolValue)} />
+          <ResultBox label="Aura Value" value={`$${result.auraValue.toFixed(4)}`} />
+          <ResultBox label="Your Value" value={formatUsd(result.userValue)} accent />
+        </div>
+      </ToolExportSurface>
+    </>
   );
 }
 
@@ -167,6 +209,7 @@ export function FdvMatrix({
   totalAuraSupply: number;
   allocation?: number;
 }) {
+  const exportRef = useRef<HTMLDivElement>(null);
   const rows = FDV_SCENARIOS.map((fdv) => {
     const { userValue, auraValue } = computeFdv(userAura, fdv, allocation, totalAuraSupply);
     return {
@@ -177,36 +220,58 @@ export function FdvMatrix({
   });
 
   return (
-    <div className="card overflow-hidden">
-      <div className="border-b border-[rgba(198,182,186,0.1)] p-4">
-        <p className="section-title">FDV Scenario Matrix</p>
-        <p className="mt-1 text-xs text-text-secondary">
-          Based on {userAura.toLocaleString()} Aura · {allocation}% allocation
-        </p>
+    <>
+      <div className="card">
+        <div className="flex items-start justify-between gap-3 border-b border-[rgba(198,182,186,0.1)] p-4">
+          <div>
+            <p className="section-title">FDV Scenario Matrix</p>
+            <p className="mt-1 text-xs text-text-secondary">
+              Based on {userAura.toLocaleString()} Aura · {allocation}% allocation
+            </p>
+          </div>
+          <CopyCardPngButton exportRef={exportRef} filename="fdv-scenario-matrix" />
+        </div>
+        <FdvMatrixTable rows={rows} />
       </div>
-      <div className="overflow-x-auto">
-        <table className="w-full text-left text-xs">
-          <thead>
-            <tr className="border-b border-[rgba(198,182,186,0.1)] text-text-secondary">
-              <th className="px-4 py-3 font-medium">FDV</th>
-              <th className="px-4 py-3 font-medium text-right">Aura Value</th>
-              <th className="px-4 py-3 font-medium text-right">Your Value</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((row) => (
-              <tr key={row.fdv} className="border-b border-[rgba(198,182,186,0.05)]">
-                <td className="px-4 py-2.5 font-mono font-medium">{row.fdv}</td>
-                <td className="px-4 py-2.5 text-right font-mono tabular-nums">{row.auraValue}</td>
-                <td className="px-4 py-2.5 text-right font-mono tabular-nums text-accent">
-                  {row.userValue}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      <div className="pointer-events-none fixed -left-[9999px] top-0 opacity-100" aria-hidden="true">
+        <div ref={exportRef} className="card" style={{ width: 520 }}>
+          <div className="border-b border-[rgba(198,182,186,0.1)] p-4">
+            <p className="section-title">FDV Scenario Matrix</p>
+            <p className="mt-1 text-xs text-text-secondary">
+              Based on {userAura.toLocaleString()} Aura · {allocation}% allocation
+            </p>
+          </div>
+          <FdvMatrixTable rows={rows} />
+        </div>
       </div>
-    </div>
+    </>
+  );
+}
+
+function FdvMatrixTable({
+  rows,
+}: {
+  rows: { fdv: string; auraValue: string; userValue: string }[];
+}) {
+  return (
+    <table className="w-full text-left text-xs">
+      <thead>
+        <tr className="border-b border-[rgba(198,182,186,0.1)] text-text-secondary">
+          <th className="px-4 py-3 font-medium">FDV</th>
+          <th className="px-4 py-3 font-medium text-right">Aura Value</th>
+          <th className="px-4 py-3 font-medium text-right">Your Value</th>
+        </tr>
+      </thead>
+      <tbody>
+        {rows.map((row) => (
+          <tr key={row.fdv} className="border-b border-[rgba(198,182,186,0.05)]">
+            <td className="px-4 py-2.5 font-mono font-medium">{row.fdv}</td>
+            <td className="px-4 py-2.5 text-right font-mono tabular-nums">{row.auraValue}</td>
+            <td className="px-4 py-2.5 text-right font-mono tabular-nums text-accent">{row.userValue}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
   );
 }
 
