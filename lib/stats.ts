@@ -15,6 +15,7 @@ import { getLiveTotals } from "@/lib/live-totals";
 import { getLeaderboardTop } from "@/lib/leaderboard-table";
 import { hasReferralActivity } from "@/lib/referrals";
 import { AURA_BUCKETS, categoryLabel } from "@/lib/utils";
+import { computeDepositAuraPredictContext } from "@/lib/deposit-aura-predict";
 import type {
   ChartRange,
   DashboardMetrics,
@@ -190,4 +191,13 @@ export function getChartSnapshots(range: ChartRange): Snapshot[] {
 export function getRankTargetsFromData() {
   const entries = getLeaderboard();
   return getRankTargets(entries.map((e) => e.aura));
+}
+
+export function getDepositAuraPredictContext(currentTvl: number, nowMs: number = Date.now()) {
+  return computeDepositAuraPredictContext(
+    getLeaderboard(),
+    currentTvl,
+    nowMs,
+    readSnapshots()
+  );
 }

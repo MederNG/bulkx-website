@@ -1,5 +1,5 @@
 import { ArrowUpRight } from "lucide-react";
-import { computeDashboardMetrics, getChartSnapshots, getRankTargetsFromData } from "@/lib/stats";
+import { computeDashboardMetrics, getChartSnapshots, getDepositAuraPredictContext, getRankTargetsFromData } from "@/lib/stats";
 import { computeProjectedSnapshotTvl } from "@/lib/projected-snapshot-tvl";
 import { computeTvlKpiSecondaryMetrics } from "@/lib/tvl-kpi-secondary";
 import { MetricCard, Section } from "@/components/cards/MetricCard";
@@ -45,6 +45,7 @@ export default async function HomePage() {
     metrics.totalWithdrawn,
     referenceTimeMs
   );
+  const depositPredict = getDepositAuraPredictContext(metrics.currentTvl, referenceTimeMs);
 
   return (
     <div className="mx-auto max-w-[1400px] px-4 md:px-6">
@@ -136,7 +137,11 @@ export default async function HomePage() {
 
         {/* Tools */}
         <Section id="calculator" title="Tools">
-          <CalculatorSection targets={targets} totalAuraSupply={metrics.totalAura} />
+          <CalculatorSection
+            targets={targets}
+            totalAuraSupply={metrics.totalAura}
+            depositPredict={depositPredict}
+          />
         </Section>
 
         {/* Leaderboards */}

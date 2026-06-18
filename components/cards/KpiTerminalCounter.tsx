@@ -37,7 +37,7 @@ export function KpiTerminalCounter({
   durationMs = 1000,
   className,
 }: KpiTerminalCounterProps) {
-  const [displayed, setDisplayed] = useState(0);
+  const [displayed, setDisplayed] = useState(value);
   const [counting, setCounting] = useState(false);
   const rafRef = useRef<number | null>(null);
   const hostRef = useRef<HTMLSpanElement | null>(null);
@@ -68,7 +68,7 @@ export function KpiTerminalCounter({
 
   useEffect(() => {
     if (!hasEnteredViewport) {
-      setDisplayed(0);
+      setDisplayed(value);
       setCounting(false);
       return;
     }

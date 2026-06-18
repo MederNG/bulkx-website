@@ -6,6 +6,12 @@ import { X } from "lucide-react";
 import type { RankTargets } from "@/types";
 import { FDV_SCENARIOS, cn, formatNumber, formatUsd } from "@/lib/utils";
 import { computeFdv } from "@/lib/percentiles";
+import {
+  predictDepositAura,
+  type DepositAuraPredictContext,
+  type DepositPredictMode,
+} from "@/lib/deposit-aura-predict";
+import { formatRemainingDuration } from "@/lib/projected-snapshot-tvl";
 import { Select } from "@/components/ui/Select";
 import { CopyCardPngButton, ExportField, ToolExportSurface } from "@/components/calculator/CopyCardPngButton";
 
@@ -154,9 +160,11 @@ export function FdvEstimator({
 export function CalculatorSection({
   targets,
   totalAuraSupply,
+  depositPredict,
 }: {
   targets: RankTargets;
   totalAuraSupply: number;
+  depositPredict: DepositAuraPredictContext;
 }) {
   const fdvAnchorRef = useRef<HTMLDivElement>(null);
   const fudDockRef = useRef<HTMLDivElement>(null);
@@ -190,13 +198,266 @@ export function CalculatorSection({
           onFudVisibilityChange={setShowFud}
         />
         <FdvMatrix userAura={userAura} allocation={allocation} totalAuraSupply={auraSupply} />
-        <div
-          ref={fudDockRef}
-          className="relative hidden min-h-[280px] lg:block"
-          aria-hidden="true"
+        <DepositAuraPredictor
+          context={depositPredict}
+          dockRef={fudDockRef}
         />
       </div>
     </>
+  );
+}
+
+function formatUsdHours(value: number): string {
+  if (value >= 1_000_000_000) return `${(value / 1_000_000_000).toFixed(2)}B`;
+  if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(2)}M`;
+  if (value >= 1_000) return `${(value / 1_000).toFixed(1)}K`;
+  return Math.round(value).toLocaleString("en-US");
+}
+
+export function DepositAuraPredictor({
+  context,
+  dockRef,
+}: {
+  context: DepositAuraPredictContext;
+  dockRef?: React.RefObject<HTMLDivElement | null>;
+}) {
+  const exportRef = useRef<HTMLDivElement>(null);
+  const [deposit, setDeposit] = useState(1_000);
+  const [mode, setMode] = useState<DepositPredictMode | null>("new_deposit");
+  const [holdSinceWeek, setHoldSinceWeek] = useState<number | null>(null);
+
+  const result = useMemo(
+    () =>
+      predictDepositAura(
+        deposit,
+        {
+          depositPool: context.depositPool,
+          cohortUsdHoursAtSnapshot: context.cohortUsdHoursAtSnapshot,
+          hoursUntilSnapshot: context.hoursUntilSnapshot,
+          hoursInWeek: context.hoursInWeek,
+          campaignWeek: context.campaignWeek,
+          weekTvl: context.weekTvl,
+        },
+        {
+          mode: mode ?? undefined,
+          holdSinceWeek,
+        }
+      ),
+    [deposit, context, mode, holdSinceWeek]
+  );
+
+  const holdSinceActive = holdSinceWeek != null;
+  const effectiveFullWeek = holdSinceActive || mode === "full_week_hold";
+
+  const timeUntilSnapshot = formatRemainingDuration(context.hoursUntilSnapshot * 3_600_000);
+  const scenarioLabel = holdSinceActive
+    ? `Hold since Week ${holdSinceWeek} · Weeks ${holdSinceWeek}–${context.campaignWeek}`
+    : mode === "full_week_hold"
+      ? "Full week hold"
+      : "Deposit now";
+
+  const holdSinceOptions = Array.from({ length: context.campaignWeek }, (_, i) => i + 1);
+
+  return (
+    <>
+      <div ref={dockRef} className="card">
+        <div className="flex items-start justify-between gap-3 border-b border-[rgba(198,182,186,0.1)] p-4">
+          <div>
+            <p className="section-title">Aura Predictor</p>
+            <p className="mt-1 text-xs text-text-secondary">Week {context.campaignWeek}</p>
+          </div>
+          <CopyCardPngButton exportRef={exportRef} filename="aura-predictor" />
+        </div>
+
+        <div className="p-4 md:p-5">
+        <div className="mb-4">
+          <label className="mb-1.5 block text-xs text-text-secondary">Hold scenario</label>
+          <SegmentToggle
+            value={holdSinceActive ? "" : mode ?? "new_deposit"}
+            onChange={(v) => {
+              if (!v) return;
+              setHoldSinceWeek(null);
+              setMode(v as DepositPredictMode);
+            }}
+            options={[
+              { value: "new_deposit", label: "Deposit now" },
+              { value: "full_week_hold", label: "Full week hold" },
+            ]}
+          />
+        </div>
+
+        <div className="mb-4">
+          <label className="mb-1.5 block text-xs text-text-secondary">Hold since</label>
+          <SegmentToggle
+            value={holdSinceWeek != null ? String(holdSinceWeek) : ""}
+            onChange={(v) => {
+              if (v) {
+                setMode(null);
+                setHoldSinceWeek(Number(v));
+                return;
+              }
+              setHoldSinceWeek(null);
+              setMode("new_deposit");
+            }}
+            allowDeselect
+            options={holdSinceOptions.map((week) => ({
+              value: String(week),
+              label: `Week ${week}`,
+            }))}
+          />
+          <p className="mt-1.5 text-[10px] leading-relaxed text-text-secondary">
+            {holdSinceActive
+              ? `Total Aura if you held ${formatUsd(deposit)} without interruption from Week ${holdSinceWeek} through Week ${context.campaignWeek} · Week ${context.campaignWeek} in progress (${timeUntilSnapshot} to snapshot)`
+              : "Optional · cumulative Aura if you never stopped holding from that week"}
+          </p>
+        </div>
+
+        <Field
+          label="Deposit Amount ($)"
+          value={deposit}
+          onChange={setDeposit}
+          step={100}
+        />
+
+        <div className="mt-5 grid gap-3 sm:grid-cols-2">
+          <ResultBox
+            label={holdSinceActive ? "Predicted Total Aura" : "Predicted Deposit Aura"}
+            value={formatNumber(Math.round(result.predictedAura))}
+            accent
+          />
+          <ResultBox label="Efficiency" value={`${result.efficiency.toFixed(4)} A/$`} />
+          {!holdSinceActive && (
+            <ResultBox label="Pool Share" value={`${result.poolSharePct.toFixed(4)}%`} />
+          )}
+          <ResultBox
+            label={effectiveFullWeek ? "Week USD-Hours" : "Your USD-Hours"}
+            value={formatUsdHours(result.userUsdHours)}
+          />
+        </div>
+
+        {holdSinceActive && result.weekBreakdown && result.weekBreakdown.length > 0 && (
+          <div className="mt-4 rounded border border-[rgba(198,182,186,0.08)] bg-bulk-base p-3">
+            <p className="mb-2 text-[10px] uppercase tracking-wider text-text-secondary">Per week</p>
+            <div className="space-y-1.5">
+              {result.weekBreakdown.map((row) => (
+                <div key={row.week} className="flex items-center justify-between gap-3 text-xs">
+                  <span className="text-text-secondary">
+                    Week {row.week}
+                    {row.inProgress && (
+                      <span className="text-[10px] text-text-secondary/80">
+                        {" "}
+                        · in progress · {timeUntilSnapshot} to snapshot
+                      </span>
+                    )}
+                  </span>
+                  <span className="font-mono tabular-nums text-accent">
+                    {formatNumber(Math.round(row.aura))} A
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <p className="mt-4 text-[10px] leading-relaxed text-text-secondary">
+          {holdSinceActive ? (
+            <>
+              Weeks {holdSinceWeek}–{context.campaignWeek} · completed weeks use full 168h · Week{" "}
+              {context.campaignWeek} projected through {context.snapshotLabel} ({timeUntilSnapshot}{" "}
+              left)
+            </>
+          ) : (
+            <>
+              Snapshot {context.snapshotLabel} · {timeUntilSnapshot} remaining · {scenarioLabel} ·
+              proportional to USD-hours · hold until snapshot
+            </>
+          )}
+        </p>
+        </div>
+      </div>
+      <ToolExportSurface exportRef={exportRef} width={560}>
+        <p className="section-title mb-1">Aura Predictor</p>
+        <p className="mb-4 text-xs text-text-secondary">Week {context.campaignWeek} · {scenarioLabel}</p>
+        <ExportField label="Deposit ($)" value={formatUsd(deposit)} />
+        <div className="mt-5 grid gap-3 sm:grid-cols-2">
+          <ResultBox
+            label={holdSinceActive ? "Predicted Total Aura" : "Predicted Deposit Aura"}
+            value={formatNumber(Math.round(result.predictedAura))}
+            accent
+          />
+          <ResultBox label="Efficiency" value={`${result.efficiency.toFixed(4)} A/$`} />
+          {!holdSinceActive && (
+            <ResultBox label="Pool Share" value={`${result.poolSharePct.toFixed(4)}%`} />
+          )}
+          <ResultBox label="USD-Hours" value={formatUsdHours(result.userUsdHours)} />
+        </div>
+        {holdSinceActive && result.weekBreakdown && result.weekBreakdown.length > 0 && (
+          <div className="mt-4 space-y-1">
+            {result.weekBreakdown.map((row) => (
+              <div key={row.week} className="flex justify-between text-xs">
+                <span>Week {row.week}</span>
+                <span className="font-mono">{formatNumber(Math.round(row.aura))} A</span>
+              </div>
+            ))}
+          </div>
+        )}
+        <p className="mt-4 text-[10px] text-text-secondary">
+          {holdSinceActive
+            ? `Weeks ${holdSinceWeek}–${context.campaignWeek} · uninterrupted hold`
+            : `${context.snapshotLabel} · hold until snapshot`}
+        </p>
+      </ToolExportSurface>
+    </>
+  );
+}
+
+function SegmentToggle({
+  value,
+  onChange,
+  options,
+  disabled,
+  allowDeselect,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  options: { value: string; label: string }[];
+  disabled?: boolean;
+  allowDeselect?: boolean;
+}) {
+  return (
+    <div
+      className={cn(
+        "flex rounded-md border border-[rgba(198,182,186,0.15)] bg-bulk-base p-0.5",
+        disabled && "pointer-events-none opacity-45"
+      )}
+    >
+      {options.map(({ value: optionValue, label }) => {
+        const selected = value === optionValue;
+        return (
+          <button
+            key={optionValue}
+            type="button"
+            disabled={disabled}
+            onClick={() => {
+              if (allowDeselect && selected) {
+                onChange("");
+                return;
+              }
+              onChange(optionValue);
+            }}
+            aria-pressed={selected}
+            className={cn(
+              "min-w-0 flex-1 rounded px-2 py-1.5 text-xs font-medium transition-colors",
+              selected
+                ? "bg-[rgba(255,181,71,0.14)] text-accent"
+                : "text-text-secondary hover:text-text-primary"
+            )}
+          >
+            {label}
+          </button>
+        );
+      })}
+    </div>
   );
 }
 
