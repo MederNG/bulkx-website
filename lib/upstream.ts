@@ -28,20 +28,22 @@ function parseRetryAfter(header: string | null): number | null {
 export interface UpstreamOptions {
   revalidate?: number;
   maxRetries?: number;
+  /** Skip Next.js data cache entirely (for live polling). */
+  noStore?: boolean;
 }
 
 export async function upstreamFetch(
   path: string,
   options: UpstreamOptions = {}
 ): Promise<Response> {
-  const { revalidate = 300, maxRetries = 4 } = options;
+  const { revalidate = 300, maxRetries = 4, noStore = false } = options;
   const url = `${getUpstreamBase()}${path.startsWith("/") ? path : `/${path}`}`;
 
   let attempt = 0;
   while (true) {
     const res = await fetch(url, {
       headers: { "User-Agent": "AURA-Intelligence/1.0", Accept: "application/json" },
-      next: { revalidate },
+      ...(noStore ? { cache: "no-store" as const } : { next: { revalidate } }),
     });
 
     if ((res.status !== 429 && res.status < 500) || attempt >= maxRetries) {

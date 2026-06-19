@@ -26,7 +26,7 @@ export async function getLiveTotals(options?: { fresh?: boolean }): Promise<Tota
   try {
     const res = await upstreamJson<ApiResponse>(
       "/v1/aura/predeposit/leaderboard?page=1&page_size=1",
-      { revalidate: 300 },
+      options?.fresh ? { noStore: true } : { revalidate: 300 },
     );
     const t = res?.totals ?? {};
     const tvl = Number(t.total_current_amount) || 0;
