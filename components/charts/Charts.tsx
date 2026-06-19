@@ -445,6 +445,7 @@ export function TvlChart({ data, currentTvl, projection, referenceTimeMs }: TvlC
               isAnimationActive={hasEntered}
               dot={(props) => (
                 <CurrentTvlBeaconDot
+                  key={props.key ?? `tvl-dot-${props.index}`}
                   cx={props.cx}
                   cy={props.cy}
                   payload={props.payload as TvlChartPoint | undefined}

@@ -5,6 +5,7 @@ import "./globals.css";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { CustomCursor } from "@/components/cursor/CustomCursor";
+import { CursorIdleProvider } from "@/components/cursor/CursorIdleProvider";
 import { ScrollToTop } from "@/components/layout/ScrollToTop";
 import { HashScrollOnLoad } from "@/components/layout/HashScrollOnLoad";
 
@@ -66,12 +67,14 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${ibmPlexSans.variable} ${ibmPlexMono.variable}`}>
       <body className="antialiased">
-        <CustomCursor />
-        <HashScrollOnLoad />
-        <Header />
-        <main>{children}</main>
-        <Footer />
-        <ScrollToTop />
+        <CursorIdleProvider>
+          <CustomCursor />
+          <HashScrollOnLoad />
+          <Header />
+          <main>{children}</main>
+          <Footer />
+          <ScrollToTop />
+        </CursorIdleProvider>
         <Analytics />
       </body>
     </html>

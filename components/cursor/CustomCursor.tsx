@@ -7,6 +7,10 @@ import {
   CURSOR_HOTSPOT_DISPLAY_Y,
 } from "@/lib/cursor-config";
 import { useCustomCursorPreference } from "@/components/cursor/useCustomCursorPreference";
+import {
+  CURSOR_IDLE_CHANGE_EVENT,
+  isCursorIdle,
+} from "@/components/cursor/useCursorIdleHide";
 
 const INTERACTIVE_SELECTOR =
   'a, button, [role="button"], input, select, textarea, label, summary, [data-cursor-hover]';
@@ -38,7 +42,7 @@ export function CustomCursor() {
       rafRef.current = null;
       const { x, y } = posRef.current;
       root.style.transform = `translate3d(${x - CURSOR_HOTSPOT_DISPLAY_X}px, ${y - CURSOR_HOTSPOT_DISPLAY_Y}px, 0)`;
-      root.style.opacity = visibleRef.current ? "1" : "0";
+      root.style.opacity = visibleRef.current && !isCursorIdle() ? "1" : "0";
     };
 
     const scheduleFrame = () => {
@@ -90,10 +94,15 @@ export function CustomCursor() {
       updateHover(event.clientX, event.clientY);
     };
 
+    const onIdleChange = () => {
+      scheduleFrame();
+    };
+
     window.addEventListener("pointermove", onPointerMove, { passive: true });
     window.addEventListener("mousemove", onPointerMove, { passive: true });
     window.addEventListener("pointerdown", onPointerDown, { passive: true });
     window.addEventListener("pointerup", onPointerUp, { passive: true });
+    window.addEventListener(CURSOR_IDLE_CHANGE_EVENT, onIdleChange);
     document.documentElement.addEventListener("mouseout", onPointerLeave);
     document.addEventListener("visibilitychange", onVisibilityChange);
 
@@ -103,6 +112,7 @@ export function CustomCursor() {
       window.removeEventListener("mousemove", onPointerMove);
       window.removeEventListener("pointerdown", onPointerDown);
       window.removeEventListener("pointerup", onPointerUp);
+      window.removeEventListener(CURSOR_IDLE_CHANGE_EVENT, onIdleChange);
       document.documentElement.removeEventListener("mouseout", onPointerLeave);
       document.removeEventListener("visibilitychange", onVisibilityChange);
       if (rafRef.current !== null) window.cancelAnimationFrame(rafRef.current);

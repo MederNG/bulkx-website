@@ -30,6 +30,11 @@ body {
 }
 
 @media (pointer: fine) and (hover: hover) {
+  html.cursor-idle,
+  html.cursor-idle * {
+    cursor: none !important;
+  }
+
   html:not(.custom-cursor-disabled):not(.custom-cursor-ready),
   html:not(.custom-cursor-disabled):not(.custom-cursor-ready) * {
     cursor: url("/cursor/cursor-48.png") 11 4, auto !important;
