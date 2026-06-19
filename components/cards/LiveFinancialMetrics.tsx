@@ -1,6 +1,10 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import { MetricCard, type SecondaryMetric } from "@/components/cards/MetricCard";
 import { KpiTerminalCounter } from "@/components/cards/KpiTerminalCounter";
 import { InfoTooltip } from "@/components/ui/InfoTooltip";
+import { useLiveFinancials } from "@/components/live/LiveFinancialProvider";
 import {
   formatRemainingDuration,
   formatSignedPercent,
@@ -19,7 +23,8 @@ export interface FinancialMetrics {
   updatedAt: string;
 }
 
-export function HeroTvlCard({ currentTvl }: Pick<FinancialMetrics, "currentTvl">) {
+export function HeroTvlCard() {
+  const { currentTvl } = useLiveFinancials();
   return <MetricCard label="Current TVL" value={currentTvl} format="usd-full" />;
 }
 
@@ -173,18 +178,42 @@ export function TvlSectionCards({
   );
 }
 
-export function LiveTvlInsight({
-  currentTvl,
-  depositWallets,
-}: Pick<FinancialMetrics, "currentTvl" | "depositWallets">) {
+export function LiveTvlInsight() {
+  const { currentTvl, depositWallets } = useLiveFinancials();
   return (
     <li className="flex gap-3 text-sm text-text-secondary">
       <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-accent" />
-      {`Current TVL: $${Math.round(currentTvl).toLocaleString()} across ${depositWallets.toLocaleString()} depositors.`}
+      {`Current TVL: $${Math.round(currentTvl).toLocaleString("en-US")} across ${depositWallets.toLocaleString("en-US")} depositors.`}
     </li>
   );
 }
 
-export function LiveLastUpdated({ updatedAt }: Pick<FinancialMetrics, "updatedAt">) {
-  return <>Last updated {new Date(updatedAt).toLocaleString()} · Live TVL from API</>;
+function formatRelativeUpdated(updatedAt: string, nowMs: number): string {
+  const updatedMs = Date.parse(updatedAt);
+  if (!Number.isFinite(updatedMs)) return new Date(updatedAt).toLocaleString("en-US");
+
+  const seconds = Math.max(0, Math.floor((nowMs - updatedMs) / 1000));
+  if (seconds < 10) return "just now";
+  if (seconds < 60) return `${seconds}s ago`;
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  return new Date(updatedAt).toLocaleString("en-US");
+}
+
+export function LiveLastUpdated() {
+  const { updatedAt } = useLiveFinancials();
+  const [relativeLabel, setRelativeLabel] = useState<string | null>(null);
+
+  useEffect(() => {
+    const tick = () => setRelativeLabel(formatRelativeUpdated(updatedAt, Date.now()));
+    tick();
+    const intervalId = window.setInterval(tick, 1000);
+    return () => window.clearInterval(intervalId);
+  }, [updatedAt]);
+
+  const label = relativeLabel ?? new Date(updatedAt).toLocaleString("en-US");
+
+  return <>Last updated {label} · Live TVL from API</>;
 }

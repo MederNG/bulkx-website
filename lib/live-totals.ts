@@ -18,8 +18,8 @@ let cache: { at: number; data: Totals } | null = null;
 const CACHE_MS = 300_000;
 
 /** Live TVL/deposited/withdrawn from upstream; falls back to data/totals.json. */
-export async function getLiveTotals(): Promise<Totals | null> {
-  if (cache && Date.now() - cache.at < CACHE_MS) return cache.data;
+export async function getLiveTotals(options?: { fresh?: boolean }): Promise<Totals | null> {
+  if (!options?.fresh && cache && Date.now() - cache.at < CACHE_MS) return cache.data;
 
   const local = readTotals();
 

@@ -1,30 +1,24 @@
 "use client";
 
 import type { Snapshot } from "@/types";
-import type { ProjectedSnapshotTvl } from "@/lib/projected-snapshot-tvl";
-import type { TvlKpiSecondaryMetrics } from "@/lib/tvl-kpi-secondary";
 import { TvlSectionCards } from "@/components/cards/LiveFinancialMetrics";
 import { TvlChart } from "@/components/charts/Charts";
+import { useLiveFinancials } from "@/components/live/LiveFinancialProvider";
 
 interface TvlAnalyticsProps {
   snapshots: Snapshot[];
-  currentTvl: number;
-  totalDeposited: number;
-  totalWithdrawn: number;
-  projection: ProjectedSnapshotTvl;
-  secondaryMetrics: TvlKpiSecondaryMetrics;
-  referenceTimeMs: number;
 }
 
-export function TvlAnalytics({
-  snapshots,
-  currentTvl,
-  totalDeposited,
-  totalWithdrawn,
-  projection,
-  secondaryMetrics,
-  referenceTimeMs,
-}: TvlAnalyticsProps) {
+export function TvlAnalytics({ snapshots }: TvlAnalyticsProps) {
+  const {
+    currentTvl,
+    totalDeposited,
+    totalWithdrawn,
+    projection,
+    secondaryMetrics,
+    referenceTimeMs,
+  } = useLiveFinancials();
+
   return (
     <>
       <TvlSectionCards

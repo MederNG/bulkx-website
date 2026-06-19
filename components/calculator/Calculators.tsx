@@ -11,6 +11,7 @@ import {
   type DepositAuraPredictContext,
   type DepositPredictMode,
 } from "@/lib/deposit-aura-predict";
+import { useLiveFinancials } from "@/components/live/LiveFinancialProvider";
 import { formatRemainingDuration } from "@/lib/projected-snapshot-tvl";
 import { Select } from "@/components/ui/Select";
 import { CopyCardPngButton, ExportField, ToolExportSurface } from "@/components/calculator/CopyCardPngButton";
@@ -160,12 +161,11 @@ export function FdvEstimator({
 export function CalculatorSection({
   targets,
   totalAuraSupply,
-  depositPredict,
 }: {
   targets: RankTargets;
   totalAuraSupply: number;
-  depositPredict: DepositAuraPredictContext;
 }) {
+  const { depositPredict } = useLiveFinancials();
   const fdvAnchorRef = useRef<HTMLDivElement>(null);
   const fudDockRef = useRef<HTMLDivElement>(null);
   const [showFud, setShowFud] = useState(false);

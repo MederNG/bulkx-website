@@ -28,7 +28,7 @@ import {
   formatSnapshotUtcParts,
   formatUsdCompact,
 } from "@/lib/projected-snapshot-tvl";
-import { cn, formatNumber, formatUsd } from "@/lib/utils";
+import { cn, formatNumber } from "@/lib/utils";
 import { InfoTooltip } from "@/components/ui/InfoTooltip";
 import { Select } from "@/components/ui/Select";
 import {
@@ -213,6 +213,8 @@ interface TvlChartPoint {
   tvl?: number | null;
   projectedTvl?: number | null;
   isProjectionEndpoint?: boolean;
+  /** Live TVL anchor where historical line meets the projection. */
+  isCurrentTvl?: boolean;
 }
 
 interface TvlChartProps {
@@ -243,15 +245,17 @@ function buildTvlChartData(
   const bridgeTvl = currentTvl;
 
   if (!lastHistorical || new Date(lastHistorical.timestamp).getTime() < referenceTimeMs - 60_000) {
-    points.push({ timestamp: nowIso, tvl: bridgeTvl, projectedTvl: bridgeTvl });
+    points.push({ timestamp: nowIso, tvl: bridgeTvl, projectedTvl: bridgeTvl, isCurrentTvl: true });
   } else {
     lastHistorical.tvl = bridgeTvl;
     lastHistorical.projectedTvl = bridgeTvl;
+    lastHistorical.isCurrentTvl = true;
   }
 
   const bridge = points[points.length - 1];
   if (bridge) {
     bridge.projectedTvl = bridgeTvl;
+    bridge.isCurrentTvl = true;
   }
 
   points.push({
@@ -322,6 +326,30 @@ function TvlChartTooltip({
   );
 }
 
+function CurrentTvlBeaconDot({
+  cx,
+  cy,
+  payload,
+}: {
+  cx?: number;
+  cy?: number;
+  payload?: TvlChartPoint;
+}) {
+  if (cx == null || cy == null || !payload?.isCurrentTvl) return null;
+
+  const label = formatUsdCompact(payload.tvl ?? 0);
+
+  return (
+    <g aria-label={`Current TVL ${label}`}>
+      <circle cx={cx} cy={cy} r={14} fill="#FFB547" opacity={0.18}>
+        <animate attributeName="r" values="9;16;9" dur="2.2s" repeatCount="indefinite" />
+        <animate attributeName="opacity" values="0.32;0.08;0.32" dur="2.2s" repeatCount="indefinite" />
+      </circle>
+      <circle cx={cx} cy={cy} r={5} fill="#FFB547" stroke="#141310" strokeWidth={2} />
+    </g>
+  );
+}
+
 export function TvlChart({ data, currentTvl, projection, referenceTimeMs }: TvlChartProps) {
   const [range, setRange] = useState<ChartRange>("7D");
   const ranges: ChartRange[] = ["24H", "7D", "30D", "ALL"];
@@ -332,10 +360,6 @@ export function TvlChart({ data, currentTvl, projection, referenceTimeMs }: TvlC
     () => buildTvlChartData(filtered, currentTvl, projection, referenceTimeMs),
     [filtered, currentTvl, projection, referenceTimeMs]
   );
-
-  const projectionEnd = projection.available
-    ? chartData.find((p) => p.isProjectionEndpoint)
-    : undefined;
 
   return (
     <div ref={ref} className="card p-4 md:p-5">
@@ -364,6 +388,10 @@ export function TvlChart({ data, currentTvl, projection, referenceTimeMs }: TvlC
         <div className="mb-3 flex flex-wrap items-center gap-4 text-[11px] text-text-secondary">
           <span className="inline-flex items-center gap-1.5">
             <span className="inline-block h-0.5 w-4 rounded bg-[#FFB547]" />
+            <span className="relative inline-flex h-2 w-2 shrink-0">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#FFB547] opacity-60" />
+              <span className="relative inline-flex h-2 w-2 rounded-full bg-[#FFB547]" />
+            </span>
             Historical TVL
           </span>
           <span className="inline-flex items-center gap-1.5">
@@ -371,7 +399,7 @@ export function TvlChart({ data, currentTvl, projection, referenceTimeMs }: TvlC
               className="inline-block h-0.5 w-4 rounded border-t-2 border-dashed border-[#FFB547]"
               style={{ opacity: 0.5 }}
             />
-            Projected TVL
+            Projection
           </span>
           <span className="ml-auto hidden text-text-secondary md:inline">
             Snapshot: {formatSnapshotUtc(projection.nextSnapshotTimestamp)}
@@ -415,6 +443,14 @@ export function TvlChart({ data, currentTvl, projection, referenceTimeMs }: TvlC
               strokeWidth={2}
               connectNulls={false}
               isAnimationActive={hasEntered}
+              dot={(props) => (
+                <CurrentTvlBeaconDot
+                  cx={props.cx}
+                  cy={props.cy}
+                  payload={props.payload as TvlChartPoint | undefined}
+                />
+              )}
+              activeDot={false}
             />
             {projection.available && (
               <Line
@@ -431,15 +467,6 @@ export function TvlChart({ data, currentTvl, projection, referenceTimeMs }: TvlC
             )}
           </ComposedChart>
         </ResponsiveContainer>
-
-        {projection.available && projectionEnd && (
-          <div className="pointer-events-none absolute right-2 top-6 hidden rounded border border-[rgba(255,181,71,0.35)] bg-[rgba(20,19,16,0.92)] px-2.5 py-1.5 text-right md:block">
-            <p className="text-[10px] uppercase tracking-wider text-text-secondary">Projected TVL</p>
-            <p className="font-mono text-sm font-semibold tabular-nums text-accent">
-              {formatUsd(projection.projectedTvl)}
-            </p>
-          </div>
-        )}
       </div>
 
       {projection.available && (
