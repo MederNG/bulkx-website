@@ -15,8 +15,22 @@ import { useLiveFinancials } from "@/components/live/LiveFinancialProvider";
 import { formatRemainingDuration } from "@/lib/projected-snapshot-tvl";
 import { Select } from "@/components/ui/Select";
 import { CopyCardPngButton, ExportField, ToolExportSurface } from "@/components/calculator/CopyCardPngButton";
+import { InfoTooltip } from "@/components/ui/InfoTooltip";
 
 const FDV_FUD_THRESHOLD = 500_000_000;
+
+const FDV_FIELD_INFO = {
+  yourAura:
+    "Total AURA your wallet has earned (or a target amount to model). Use Wallet Lookup or your leaderboard total.",
+  fdv: "Fully Diluted Valuation — token price × fully diluted supply (as if all tokens were unlocked). Not market cap, which uses circulating supply only. Enter your scenario in M (millions) or B (billions).",
+  allocation:
+    "Portion of the total token supply allocated to the airdrop in your scenario.",
+  totalSupply:
+    "Total AURA counted for the pool — usually the campaign-wide total across all wallets. Defaults to the live total on this site.",
+  poolValue: "FDV × Allocation% — total dollar value assigned to the AURA pool in your scenario.",
+  auraValue: "Pool Value ÷ Total Aura Supply — implied USD value of one AURA.",
+  yourValue: "Your Aura × Aura Value — estimated USD value of your position at this FDV.",
+} as const;
 
 interface RankCalculatorProps {
   targets: RankTargets;
@@ -124,20 +138,51 @@ export function FdvEstimator({
           <CopyCardPngButton exportRef={exportRef} filename="fdv-estimator" />
         </div>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <Field label="Your Aura" value={userAura} onChange={setUserAura} />
+          <Field
+            label="Your Aura"
+            info={FDV_FIELD_INFO.yourAura}
+            value={userAura}
+            onChange={setUserAura}
+          />
           <FdvField
             fdv={fdv}
             onFdvChange={setFdv}
             anchorRef={fdvAnchorRef}
             onFudVisibilityChange={onFudVisibilityChange}
+            info={FDV_FIELD_INFO.fdv}
           />
-          <Field label="Allocation (%)" value={allocation} onChange={setAllocation} max={100} />
-          <Field label="Total Aura Supply" value={auraSupply} onChange={setAuraSupply} step={100_000} />
+          <Field
+            label="Allocation (%)"
+            info={FDV_FIELD_INFO.allocation}
+            value={allocation}
+            onChange={setAllocation}
+            max={100}
+          />
+          <Field
+            label="Total Aura Supply"
+            info={FDV_FIELD_INFO.totalSupply}
+            value={auraSupply}
+            onChange={setAuraSupply}
+            step={100_000}
+          />
         </div>
         <div className="mt-5 grid gap-3 sm:grid-cols-3">
-          <ResultBox label="Pool Value" value={formatUsd(result.poolValue)} />
-          <ResultBox label="Aura Value" value={`$${result.auraValue.toFixed(4)}`} />
-          <ResultBox label="Your Value" value={formatUsd(result.userValue)} accent />
+          <ResultBox
+            label="Pool Value"
+            info={FDV_FIELD_INFO.poolValue}
+            value={formatUsd(result.poolValue)}
+          />
+          <ResultBox
+            label="Aura Value"
+            info={FDV_FIELD_INFO.auraValue}
+            value={`$${result.auraValue.toFixed(4)}`}
+          />
+          <ResultBox
+            label="Your Value"
+            info={FDV_FIELD_INFO.yourValue}
+            value={formatUsd(result.userValue)}
+            accent
+          />
         </div>
       </div>
       <ToolExportSurface exportRef={exportRef} width={720}>
@@ -538,8 +583,18 @@ function FdvMatrixTable({
   );
 }
 
+function FieldLabel({ label, info }: { label: string; info?: string }) {
+  return (
+    <span className="mb-1 flex items-center gap-1.5">
+      <span className="text-xs text-text-secondary">{label}</span>
+      {info ? <InfoTooltip text={info} floating panelClassName="w-64" /> : null}
+    </span>
+  );
+}
+
 function Field({
   label,
+  info,
   value,
   onChange,
   step,
@@ -547,6 +602,7 @@ function Field({
   disabled,
 }: {
   label: string;
+  info?: string;
   value: number;
   onChange: (v: number) => void;
   step?: number;
@@ -555,7 +611,7 @@ function Field({
 }) {
   return (
     <div>
-      <label className="mb-1 block text-xs text-text-secondary">{label}</label>
+      <FieldLabel label={label} info={info} />
       <NumericInput
         value={value}
         onChange={onChange}
@@ -586,11 +642,13 @@ function FdvField({
   onFdvChange,
   anchorRef,
   onFudVisibilityChange,
+  info,
 }: {
   fdv: number;
   onFdvChange: (v: number) => void;
   anchorRef: React.RefObject<HTMLDivElement | null>;
   onFudVisibilityChange: (visible: boolean) => void;
+  info?: string;
 }) {
   const [unit, setUnit] = useState<FdvUnit>("M");
   const [draft, setDraft] = useState(() => formatFdvDisplay(fdv / FDV_UNIT_MULTIPLIER.M));
@@ -640,7 +698,7 @@ function FdvField({
 
   return (
     <div ref={anchorRef} className="relative">
-      <label className="mb-1 block text-xs text-text-secondary">FDV ($)</label>
+      <FieldLabel label="FDV ($)" info={info} />
       <div className="flex gap-1.5">
         <input
           type="number"
@@ -881,14 +939,19 @@ function ResultBox({
   label,
   value,
   accent,
+  info,
 }: {
   label: string;
   value: string;
   accent?: boolean;
+  info?: string;
 }) {
   return (
     <div className="rounded border border-[rgba(198,182,186,0.08)] bg-bulk-base p-3">
-      <p className="text-[10px] uppercase tracking-wider text-text-secondary">{label}</p>
+      <p className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-text-secondary">
+        {label}
+        {info ? <InfoTooltip text={info} floating panelClassName="w-64" /> : null}
+      </p>
       <p className={`mt-1 font-mono text-lg font-semibold tabular-nums ${accent ? "text-accent" : ""}`}>
         {value}
       </p>
