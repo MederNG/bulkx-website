@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getWalletData } from "@/lib/stats";
 import { mergeFinancialRow } from "@/lib/leaderboard-financial-sync";
 import { upstreamJson } from "@/lib/upstream";
-import { getLeaderboard } from "@/lib/fetcher";
+import { getLeaderboardForApp } from "@/lib/live-leaderboard";
 import { computePercentile, computeEfficiency, computeHoldTimeDays } from "@/lib/percentiles";
 import type { LeaderboardEntry, WalletData } from "@/types";
 
@@ -54,7 +54,8 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Invalid wallet address format" }, { status: 400 });
   }
 
-  const allAura = getLeaderboard().map((e) => e.aura);
+  const entries = await getLeaderboardForApp({ waitMs: 5000 });
+  const allAura = entries.map((e) => e.aura);
   const local = getWalletData(address);
 
   try {

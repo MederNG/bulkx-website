@@ -1,5 +1,5 @@
 import type { DepositAuraPredictContext } from "@/lib/deposit-aura-predict";
-import { getLeaderboard } from "@/lib/fetcher";
+import { getLeaderboardForApp } from "@/lib/live-leaderboard";
 import { getLiveTotals } from "@/lib/live-totals";
 import { computeProjectedSnapshotTvl, type ProjectedSnapshotTvl } from "@/lib/projected-snapshot-tvl";
 import { getChartSnapshots, getDepositAuraPredictContext } from "@/lib/stats";
@@ -13,6 +13,8 @@ export interface LiveFinancialPayload {
   totalDeposited: number;
   totalWithdrawn: number;
   depositWallets: number;
+  totalAura: number;
+  totalWallets: number;
   updatedAt: string;
   referenceTimeMs: number;
   projection: ProjectedSnapshotTvl;
@@ -24,7 +26,7 @@ export async function buildLiveFinancialPayload(options?: {
   fresh?: boolean;
 }): Promise<LiveFinancialPayload> {
   const totals = await getLiveTotals(options);
-  const entries = getLeaderboard();
+  const entries = await getLeaderboardForApp({ waitMs: 8000 });
   const snapshots = getChartSnapshots("ALL");
 
   const currentTvl =
@@ -34,6 +36,8 @@ export async function buildLiveFinancialPayload(options?: {
   const totalWithdrawn =
     totals?.totalWithdrawn ?? entries.reduce((sum, entry) => sum + entry.withdrawn_amount, 0);
   const depositWallets = totals?.totalWallets ?? entries.length;
+  const totalAura = entries.reduce((sum, entry) => sum + entry.aura, 0);
+  const totalWallets = totals?.leaderboardWallets ?? entries.length;
   const updatedAt =
     totals?.updatedAt ??
     (snapshots.length > 0
@@ -56,6 +60,8 @@ export async function buildLiveFinancialPayload(options?: {
     totalDeposited,
     totalWithdrawn,
     depositWallets,
+    totalAura,
+    totalWallets,
     updatedAt,
     referenceTimeMs,
     projection,

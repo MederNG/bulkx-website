@@ -28,6 +28,16 @@ export function HeroTvlCard() {
   return <MetricCard label="Current TVL" value={currentTvl} format="usd-full" />;
 }
 
+export function HeroWalletsCard() {
+  const { totalWallets } = useLiveFinancials();
+  return <MetricCard label="Total Wallets" value={totalWallets} format="plain" />;
+}
+
+export function HeroAuraCard() {
+  const { totalAura } = useLiveFinancials();
+  return <MetricCard label="Total Aura" value={totalAura} format="plain" />;
+}
+
 function signedValueClass(value: number | null): string | undefined {
   if (value == null) return "text-text-secondary";
   return value >= 0 ? "text-bid-green" : "text-ask-red";

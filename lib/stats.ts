@@ -1,4 +1,5 @@
 import { getLeaderboard } from "@/lib/fetcher";
+import { getLeaderboardForApp } from "@/lib/live-leaderboard";
 import {
   computeEfficiency,
   computeDepositAura,
@@ -25,7 +26,7 @@ import type {
 } from "@/types";
 
 export async function computeDashboardMetrics(): Promise<DashboardMetrics> {
-  const entries = getLeaderboard();
+  const entries = await getLeaderboardForApp({ waitMs: 4000 });
   const snapshots = readSnapshots();
   const totals = await getLiveTotals();
   const lastUpdated =

@@ -34,7 +34,12 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Fetch latest TVL totals
+      - name: Fetch latest leaderboard (aura + TVL, fast path)
+        run: npm run fetch -- --no-snapshot
+        env:
+          BULK_API_BASE: https://indexer.bulk.trade
+
+      - name: Fetch latest TVL totals snapshot
         run: npm run fetch:totals
         env:
           BULK_API_BASE: https://indexer.bulk.trade

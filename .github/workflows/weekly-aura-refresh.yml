@@ -34,7 +34,7 @@ jobs:
         run: npm ci
 
       - name: Fetch full Aura leaderboard (with referral enrichment)
-        run: npm run fetch -- --no-snapshot
+        run: npm run fetch -- --enrich --no-snapshot
         env:
           BULK_API_BASE: https://indexer.bulk.trade
 
