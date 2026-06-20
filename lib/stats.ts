@@ -5,9 +5,7 @@ import {
   computeDepositAura,
   computeGini,
   computeLorenzCurve,
-  computePercentile,
   computeTopShare,
-  computeHoldTimeDays,
   getRankTargets,
   percentileValue,
 } from "@/lib/percentiles";
@@ -17,6 +15,7 @@ import { getLeaderboardTop } from "@/lib/leaderboard-table";
 import { hasReferralActivity } from "@/lib/referrals";
 import { AURA_BUCKETS, categoryLabel } from "@/lib/utils";
 import { computeDepositAuraPredictContext } from "@/lib/deposit-aura-predict";
+import { buildWalletData } from "@/lib/wallet-data";
 import type {
   ChartRange,
   DashboardMetrics,
@@ -167,12 +166,7 @@ export function getWalletData(address: string): WalletData | null {
   if (!entry) return null;
 
   const allAura = entries.map((e) => e.aura);
-  return {
-    ...entry,
-    percentile: computePercentile(entry.aura, allAura),
-    hold_time_days: computeHoldTimeDays(entry),
-    efficiency: computeEfficiency(entry),
-  };
+  return buildWalletData(entry, allAura);
 }
 
 export function getSortedLeaderboard(

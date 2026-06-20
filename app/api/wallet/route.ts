@@ -3,7 +3,7 @@ import { getWalletData } from "@/lib/stats";
 import { mergeFinancialRow } from "@/lib/leaderboard-financial-sync";
 import { upstreamJson } from "@/lib/upstream";
 import { getLeaderboardForApp } from "@/lib/live-leaderboard";
-import { computePercentile, computeEfficiency, computeHoldTimeDays } from "@/lib/percentiles";
+import { buildWalletData } from "@/lib/wallet-data";
 import type { LeaderboardEntry, WalletData } from "@/types";
 
 const SOLANA_ADDRESS_RE = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
@@ -37,12 +37,20 @@ function withLiveFinancials(
     updated_at: remote.updated_at ?? entry.updated_at,
   });
 
-  return {
-    ...merged,
-    percentile: computePercentile(merged.aura, allAura),
-    hold_time_days: computeHoldTimeDays(merged),
-    efficiency: computeEfficiency(merged),
-  };
+  if (remote.total_held_time_hours != null) {
+    merged.total_held_time_hours = Number(remote.total_held_time_hours) || 0;
+  }
+  if (remote.total_held_time_seconds != null) {
+    merged.total_held_time_seconds = Number(remote.total_held_time_seconds) || 0;
+  }
+  if (remote.aura != null) {
+    merged.aura = Number(remote.aura) || 0;
+  }
+  if (remote.categories) {
+    merged.categories = remote.categories;
+  }
+
+  return buildWalletData(merged, allAura);
 }
 
 export async function GET(request: NextRequest) {
@@ -84,12 +92,7 @@ export async function GET(request: NextRequest) {
         total_held_time_hours: remote.total_held_time_hours ?? 0,
         updated_at: remote.updated_at,
       };
-      const wallet: WalletData = {
-        ...entry,
-        percentile: computePercentile(entry.aura, allAura),
-        hold_time_days: computeHoldTimeDays(entry),
-        efficiency: computeEfficiency(entry),
-      };
+      const wallet = buildWalletData(entry, allAura);
       return NextResponse.json(wallet);
     }
   } catch {

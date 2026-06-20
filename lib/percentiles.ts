@@ -69,13 +69,13 @@ export function computeTopShare(values: number[], topN: number): number {
 }
 
 export function computeHoldTimeDays(entry: LeaderboardEntry): number {
-  // total_held_time_hours is amount-weighted (USD-hours = held amount × hours),
-  // per the BULK API author. Divide by the held balance to recover hours, then days.
+  // total_held_time_hours is amount-weighted (USD×hours) from the BULK API.
+  // Divide by deposited balance to recover average hold duration in days.
   const usdHours =
     entry.total_held_time_hours ??
     (entry.total_held_time_seconds ? entry.total_held_time_seconds / 3600 : 0);
   const amount =
-    entry.current_amount > 0 ? entry.current_amount : entry.deposited_amount;
+    entry.deposited_amount > 0 ? entry.deposited_amount : entry.current_amount;
   if (!usdHours || usdHours <= 0 || !amount || amount <= 0) return 0;
   return Math.round(usdHours / amount / 24);
 }

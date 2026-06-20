@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Search, Loader2 } from "lucide-react";
 import type { WalletData } from "@/types";
+import type { AuraSourceBreakdown } from "@/lib/wallet-aura-breakdown";
 import { formatNumber, formatUsd, truncateWallet } from "@/lib/utils";
 
 export function WalletLookup() {
@@ -53,22 +54,69 @@ export function WalletLookup() {
       {error && <p className="mt-3 text-sm text-ask-red">{error}</p>}
 
       {result && (
-        <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <Stat label="Wallet" value={truncateWallet(result.wallet, 6)} mono />
-          <Stat label="Aura Rank" value={`#${result.aura_rank.toLocaleString()}`} mono />
-          <Stat label="Aura" value={formatNumber(result.aura)} mono accent />
-          <Stat label="Percentile" value={`Top ${(100 - result.percentile).toFixed(1)}%`} mono />
-          <Stat label="Deposit Rank" value={`#${result.deposit_rank.toLocaleString()}`} mono />
-          <Stat label="Deposited" value={formatUsd(result.deposited_amount)} mono />
-          <Stat label="Withdrawn" value={formatUsd(result.withdrawn_amount)} mono />
-          <Stat label="Current" value={formatUsd(result.current_amount)} mono />
-          <Stat label="Referrals Sent" value={result.referrals_sent.toString()} mono />
-          <Stat label="Qualified" value={result.referrals_qualified.toString()} mono />
-          <Stat label="Rewarded" value={result.referrals_rewarded.toString()} mono />
-          <Stat label="Efficiency" value={`${result.efficiency.toFixed(3)} A/$`} mono />
-          <Stat label="Hold Time" value={`${result.hold_time_days.toLocaleString()} days`} mono />
-        </div>
+        <>
+          <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <Stat label="Wallet" value={truncateWallet(result.wallet, 6)} mono />
+            <Stat label="Aura Rank" value={`#${result.aura_rank.toLocaleString()}`} mono />
+            <Stat label="Aura" value={formatNumber(result.aura)} mono accent />
+            <Stat label="Percentile" value={`Top ${(100 - result.percentile).toFixed(1)}%`} mono />
+            <Stat label="Deposit Rank" value={`#${result.deposit_rank.toLocaleString()}`} mono />
+            <Stat label="Deposited" value={formatUsd(result.deposited_amount)} mono />
+            <Stat label="Withdrawn" value={formatUsd(result.withdrawn_amount)} mono />
+            <Stat label="Current" value={formatUsd(result.current_amount)} mono />
+            <Stat label="Referrals Sent" value={result.referrals_sent.toString()} mono />
+            <Stat label="Qualified" value={result.referrals_qualified.toString()} mono />
+            <Stat label="Rewarded" value={result.referrals_rewarded.toString()} mono />
+            <Stat label="Efficiency" value={`${result.efficiency.toFixed(3)} A/$`} mono />
+            <Stat label="Hold Time" value={`${result.hold_time_days.toLocaleString()} days`} mono />
+          </div>
+
+          <div className="mt-5 grid gap-4 lg:grid-cols-2">
+            <AuraBreakdownCard
+              title={
+                result.aura_breakdown.lastWeek != null
+                  ? `Last Week (Week ${result.aura_breakdown.lastWeek})`
+                  : "Last Week"
+              }
+              breakdown={result.aura_breakdown.lastWeekAura}
+            />
+            <AuraBreakdownCard title="Total Aura" breakdown={result.aura_breakdown.totalAura} />
+          </div>
+        </>
       )}
+    </div>
+  );
+}
+
+function AuraBreakdownCard({
+  title,
+  breakdown,
+}: {
+  title: string;
+  breakdown: AuraSourceBreakdown;
+}) {
+  const rows: { label: string; value: number; accent?: boolean }[] = [
+    { label: "Total", value: breakdown.total, accent: true },
+    { label: "Deposit", value: breakdown.deposit },
+    { label: "Referrals", value: breakdown.referral },
+    { label: "Other", value: breakdown.other },
+  ];
+
+  return (
+    <div className="rounded border border-[rgba(198,182,186,0.08)] bg-bulk-base p-4">
+      <p className="section-title mb-3">{title}</p>
+      <div className="grid grid-cols-2 gap-x-6 gap-y-2 sm:grid-cols-4">
+        {rows.map((row) => (
+          <div key={row.label}>
+            <p className="text-[10px] uppercase tracking-wider text-text-secondary">{row.label}</p>
+            <p
+              className={`mt-0.5 font-mono text-sm font-medium tabular-nums ${row.accent ? "text-accent" : ""}`}
+            >
+              {formatNumber(row.value)}
+            </p>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
