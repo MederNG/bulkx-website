@@ -9,20 +9,27 @@ const MS_PER_HOUR = 3_600_000;
 const MS_PER_DAY = 86_400_000;
 const MS_PER_WEEK = 7 * MS_PER_DAY;
 
-/** Week-1 snapshot (Sat 13:00 UTC) — anchor for campaign week numbering. */
-const CAMPAIGN_WEEK1_SNAPSHOT_MS = Date.parse("2026-06-06T13:00:00.000Z");
+/** Campaign launch — start of Week 1 (partial week until first snapshot). */
+export const CAMPAIGN_LAUNCH_MS = Date.parse("2026-06-01T00:00:00.000Z");
+
+/** First Sat 13:00 UTC snapshot — end of Week 1; Week 2+ are Sat→Sat. */
+export const CAMPAIGN_WEEK1_SNAPSHOT_MS = Date.parse("2026-06-06T13:00:00.000Z");
 
 /** 85% of the ~1M weekly Aura distribution allocated to deposit holding. */
 export const WEEKLY_DEPOSIT_AURA_POOL = 850_000;
 
-/** Calibrated from on-chain deposit timelines (Jun 2026 Week 1/2 snapshots).
- * Cohort USD-hours ≈ TVL × week_hours × factor (not all TVL held the full week).
- * Continuing holders (balance already in TVL): ~0.56. First marginal week: ~0.42.
- */
-export const COHORT_USD_HOURS_FACTOR = 0.56;
+/** Observed TVL at Sat 13:00 UTC snapshot for completed campaign weeks. */
+export const CAMPAIGN_WEEK_TVL_SNAPSHOT: Record<number, number> = {
+  1: 21_000_000,
+  2: 30_000_000,
+  3: 40_600_000,
+};
 
-/** Effective cohort factor when the deposit is new to the pool (first hold-since week / deposit now). */
-export const COHORT_USD_HOURS_FACTOR_MARGINAL = 0.42;
+/** Effective share of TVL×hours that becomes cohort USD-hours (backtested W1–W3 Jun 2026). */
+export const COHORT_USD_HOURS_FACTOR = 0.68;
+
+/** @deprecated Use {@link COHORT_USD_HOURS_FACTOR} — marginal/continuing split removed. */
+export const COHORT_USD_HOURS_FACTOR_MARGINAL = COHORT_USD_HOURS_FACTOR;
 
 export type DepositPredictMode = "new_deposit" | "full_week_hold";
 
@@ -34,7 +41,7 @@ export interface DepositAuraPredictContext {
   cohortUsdHoursAtSnapshot: number;
   nextSnapshotTimestamp: number;
   snapshotLabel: string;
-  /** Sat 13:00 UTC → Sat 13:00 UTC window for the active campaign week. */
+  /** Week window for the active campaign week (W1: launch → first snapshot). */
   currentWeekWindow: string;
   currentTvl: number;
   /** TVL anchor per campaign week (for Hold since Week N). */
@@ -68,16 +75,18 @@ export interface DepositAuraPrediction {
 }
 
 export function getCampaignWeek1StartMs(): number {
-  return getPreviousSnapshotTimestamp(CAMPAIGN_WEEK1_SNAPSHOT_MS);
+  return CAMPAIGN_LAUNCH_MS;
 }
 
-/** Saturday 13:00 UTC when campaign Week N begins (same instant Week N−1 ends). */
+/** Campaign Week N start (W1 = Jun 1 launch; W2+ = Sat 13:00 UTC snapshots). */
 export function getCampaignWeekStartMs(week: number): number {
-  return getCampaignWeek1StartMs() + (week - 1) * MS_PER_WEEK;
+  if (week <= 1) return CAMPAIGN_LAUNCH_MS;
+  return CAMPAIGN_WEEK1_SNAPSHOT_MS + (week - 2) * MS_PER_WEEK;
 }
 
-/** Saturday 13:00 UTC snapshot at the end of campaign Week N. */
+/** Campaign Week N end (W1 = first snapshot; W2+ = next Sat 13:00 UTC). */
 export function getCampaignWeekEndMs(week: number): number {
+  if (week === 1) return CAMPAIGN_WEEK1_SNAPSHOT_MS;
   return getCampaignWeekStartMs(week) + MS_PER_WEEK;
 }
 
@@ -85,17 +94,35 @@ export function getCampaignWeekHours(week: number): number {
   return (getCampaignWeekEndMs(week) - getCampaignWeekStartMs(week)) / MS_PER_HOUR;
 }
 
-export function formatCampaignWeekWindow(week: number): string {
-  return `${formatSnapshotUtc(getCampaignWeekStartMs(week))} → ${formatSnapshotUtc(getCampaignWeekEndMs(week))}`;
+function formatCampaignLaunchUtc(timestampMs: number): string {
+  const date = new Date(timestampMs).toLocaleDateString("en-US", {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+    timeZone: "UTC",
+  });
+  return `${date}, 00:00 UTC`;
 }
 
-/** TVL at or just after the Week N snapshot boundary. */
+export function formatCampaignWeekWindow(week: number): string {
+  const startMs = getCampaignWeekStartMs(week);
+  const startLabel =
+    week === 1 ? formatCampaignLaunchUtc(startMs) : formatSnapshotUtc(startMs);
+  return `${startLabel} → ${formatSnapshotUtc(getCampaignWeekEndMs(week))}`;
+}
+
+/** TVL at Sat 13:00 UTC snapshot for campaign Week N. */
 export function resolveWeekTvl(
   week: number,
   currentWeek: number,
   currentTvl: number,
   snapshots: Snapshot[]
 ): number {
+  const anchored = CAMPAIGN_WEEK_TVL_SNAPSHOT[week];
+  if (anchored != null && week < currentWeek) {
+    return anchored;
+  }
+
   if (week >= currentWeek) return currentTvl;
 
   const targetMs = getCampaignWeekEndMs(week);
@@ -142,13 +169,11 @@ export function buildWeekTvlMap(
   return map;
 }
 
-/** Active campaign week from the Sat 13:00 UTC snapshot calendar. */
+/** Active campaign week (W1 from Jun 1 → Jun 6 snapshot; W2+ Sat→Sat). */
 export function getCurrentCampaignWeek(nowMs: number = Date.now()): number {
-  const week1Start = getCampaignWeek1StartMs();
-  if (nowMs < week1Start) return 1;
-
-  const periodStartMs = getPreviousSnapshotTimestamp(getNextSnapshotTimestamp(nowMs));
-  return Math.floor((periodStartMs - week1Start) / MS_PER_WEEK) + 1;
+  if (nowMs < CAMPAIGN_LAUNCH_MS) return 1;
+  if (nowMs < CAMPAIGN_WEEK1_SNAPSHOT_MS) return 1;
+  return 2 + Math.floor((nowMs - CAMPAIGN_WEEK1_SNAPSHOT_MS) / MS_PER_WEEK);
 }
 
 export function computeCohortUsdHoursAtSnapshot(
@@ -200,6 +225,8 @@ export function computeDepositAuraPredictContext(
   const hoursUntilSnapshot = Math.max(0, (nextSnapshotTimestamp - nowMs) / MS_PER_HOUR);
   const hoursInWeek = (nextSnapshotTimestamp - previousSnapshotTimestamp) / MS_PER_HOUR;
   const campaignWeek = getCurrentCampaignWeek(nowMs);
+  const weekTvl = buildWeekTvlMap(campaignWeek, currentTvl, snapshots);
+  const snapshotTvl = weekTvl[campaignWeek] ?? currentTvl;
 
   return {
     campaignWeek,
@@ -207,15 +234,15 @@ export function computeDepositAuraPredictContext(
     hoursUntilSnapshot,
     hoursInWeek,
     cohortUsdHoursAtSnapshot: computeCohortUsdHoursAtSnapshot(
-      currentTvl,
+      snapshotTvl,
       hoursInWeek,
-      COHORT_USD_HOURS_FACTOR_MARGINAL
+      COHORT_USD_HOURS_FACTOR
     ),
     nextSnapshotTimestamp,
     snapshotLabel: formatSnapshotUtc(nextSnapshotTimestamp),
     currentWeekWindow: formatCampaignWeekWindow(campaignWeek),
     currentTvl,
-    weekTvl: buildWeekTvlMap(campaignWeek, currentTvl, snapshots),
+    weekTvl,
   };
 }
 
@@ -251,7 +278,12 @@ export function predictDepositAura(
     };
   }
 
-  const totalUsdHours = context.cohortUsdHoursAtSnapshot + userUsdHours;
+  // Marginal deposit: user USD-hours are not yet in snapshot TVL cohort.
+  // Full-week / continuing holder: balance is already represented in TVL × factor.
+  const totalUsdHours =
+    mode === "new_deposit"
+      ? context.cohortUsdHoursAtSnapshot + userUsdHours
+      : context.cohortUsdHoursAtSnapshot;
   const predictedAura =
     totalUsdHours > 0 ? (userUsdHours / totalUsdHours) * context.depositPool : 0;
 
@@ -294,14 +326,11 @@ function predictCumulativeHoldSince(
     const weekHours = resolveHoldSinceWeekHours(week, context);
     const weekUserUsdHours = deposit * weekHours;
     const weekTvl = context.weekTvl[week] ?? context.weekTvl[context.campaignWeek];
-    const alreadyInCohort = week > holdSinceWeek;
-    const cohortFactor = alreadyInCohort
-      ? COHORT_USD_HOURS_FACTOR
-      : COHORT_USD_HOURS_FACTOR_MARGINAL;
-    const weekCohortUsdHours = computeCohortUsdHoursAtSnapshot(weekTvl, weekHours, cohortFactor);
-    const weekTotalUsdHours = alreadyInCohort
-      ? weekCohortUsdHours
-      : weekCohortUsdHours + weekUserUsdHours;
+    const weekTotalUsdHours = computeCohortUsdHoursAtSnapshot(
+      weekTvl,
+      weekHours,
+      COHORT_USD_HOURS_FACTOR
+    );
     const weekAura =
       weekTotalUsdHours > 0
         ? (weekUserUsdHours / weekTotalUsdHours) * context.depositPool
@@ -322,18 +351,14 @@ function predictCumulativeHoldSince(
   const avgPoolShare =
     weekBreakdown.length > 0
       ? weekBreakdown.reduce(
-          (sum, row) =>
-            sum +
-            (row.userUsdHours /
-              (computeCohortUsdHoursAtSnapshot(
-                context.weekTvl[row.week] ?? 0,
-                row.hoursInPeriod,
-                row.week > holdSinceWeek
-                  ? COHORT_USD_HOURS_FACTOR
-                  : COHORT_USD_HOURS_FACTOR_MARGINAL
-              ) +
-                (row.week > holdSinceWeek ? 0 : row.userUsdHours))) *
-              100,
+          (sum, row) => {
+            const cohort = computeCohortUsdHoursAtSnapshot(
+              context.weekTvl[row.week] ?? 0,
+              row.hoursInPeriod,
+              COHORT_USD_HOURS_FACTOR
+            );
+            return sum + (cohort > 0 ? (row.userUsdHours / cohort) * 100 : 0);
+          },
           0
         ) / weekBreakdown.length
       : 0;

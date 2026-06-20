@@ -7,10 +7,10 @@ import {
   usdHoursFromEvents,
 } from "../lib/deposit-aura-predict.ts";
 
+const WEEK1_START = Date.parse("2026-06-01T00:00:00.000Z");
 const WEEK1_END = Date.parse("2026-06-06T13:00:00.000Z");
-const WEEK1_START = WEEK1_END - 7 * 24 * 3600 * 1000;
-const WEEK2_END = Date.parse("2026-06-13T13:00:00.000Z");
 const WEEK2_START = WEEK1_END;
+const WEEK2_END = Date.parse("2026-06-13T13:00:00.000Z");
 
 function parseDate(s) {
   const [d, t] = s.split(" ");
@@ -18,8 +18,8 @@ function parseDate(s) {
   return Date.parse(`${yyyy}-${mm}-${dd}T${t}.000Z`);
 }
 
-const W2_TVL = 35_351_496;
-const W1_TVL = 34_105_354;
+const W2_TVL = 30_000_000;
+const W1_TVL = 21_000_000;
 
 const wallets = [
   {

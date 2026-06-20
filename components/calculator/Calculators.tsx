@@ -371,7 +371,7 @@ export function DepositAuraPredictor({
           ) : (
             <>
               Snapshot {context.snapshotLabel} · {timeUntilSnapshot} remaining · {scenarioLabel} ·
-              Sat 13:00 UTC → Sat 13:00 UTC · hold until snapshot
+              Week 1: Jun 1 → first snapshot · Week 2+: Sat 13:00 UTC → Sat 13:00 UTC
             </>
           )}
         </p>
