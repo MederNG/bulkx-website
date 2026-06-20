@@ -3,21 +3,49 @@
 import type { AnchorHTMLAttributes, MouseEvent } from "react";
 
 const HEADER_OFFSET = 72;
-const RETRY_DELAYS_MS = [150, 400, 900, 1500];
+const WAIT_FOR_MOUNT_MS = 2500;
+
+let scrollSession = 0;
+let activeObserver: MutationObserver | null = null;
+let activeTimeout: number | null = null;
+
+function clearPendingScroll() {
+  activeObserver?.disconnect();
+  activeObserver = null;
+  if (activeTimeout !== null) {
+    window.clearTimeout(activeTimeout);
+    activeTimeout = null;
+  }
+}
 
 export function scrollToSection(id: string) {
-  const run = () => {
+  scrollSession += 1;
+  const session = scrollSession;
+  clearPendingScroll();
+
+  const attempt = (): boolean => {
+    if (session !== scrollSession) return false;
     const el = document.getElementById(id);
-    if (!el) return;
+    if (!el) return false;
+
     const top = el.getBoundingClientRect().top + window.scrollY - HEADER_OFFSET;
-    window.scrollTo({ top: Math.max(0, top), behavior: "auto" });
+    window.scrollTo({ top: Math.max(0, top), behavior: "instant" });
+    return true;
   };
 
-  run();
-  requestAnimationFrame(run);
-  for (const delay of RETRY_DELAYS_MS) {
-    window.setTimeout(run, delay);
-  }
+  if (attempt()) return;
+
+  activeObserver = new MutationObserver(() => {
+    if (attempt()) clearPendingScroll();
+  });
+  activeObserver.observe(document.body, { childList: true, subtree: true });
+
+  activeTimeout = window.setTimeout(() => {
+    if (session === scrollSession) {
+      attempt();
+      clearPendingScroll();
+    }
+  }, WAIT_FOR_MOUNT_MS);
 }
 
 type AnchorLinkProps = AnchorHTMLAttributes<HTMLAnchorElement> & {
