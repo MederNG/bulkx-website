@@ -248,5 +248,13 @@
     "wallets": 54138,
     "totalDeposited": 69543831.19614318,
     "totalWithdrawn": 31540334.734803975
+  },
+  {
+    "timestamp": "2026-07-10T02:09:52.323Z",
+    "tvl": 38160858.43839189,
+    "totalAura": 5613848,
+    "wallets": 54182,
+    "totalDeposited": 69967590.2668672,
+    "totalWithdrawn": 31806731.82847496
   }
 ]
