@@ -53,14 +53,6 @@ const COLORS = [
   "#7A9CC6", // dusty blue
 ];
 
-interface PieLabelProps {
-  cx: number;
-  cy: number;
-  midAngle: number;
-  outerRadius: number;
-  percent: number;
-}
-
 function useInViewOnce<T extends HTMLElement>(threshold = 0.25) {
   const ref = useRef<T | null>(null);
   const [hasEntered, setHasEntered] = useState(false);
@@ -91,24 +83,56 @@ function useInViewOnce<T extends HTMLElement>(threshold = 0.25) {
   return { ref, hasEntered };
 }
 
-function renderPieLabel({ cx, cy, midAngle, outerRadius, percent }: PieLabelProps) {
-  if (!percent || percent <= 0.02) return null;
-  const RADIAN = Math.PI / 180;
-  const radius = outerRadius + 16;
-  const x = cx + radius * Math.cos(-midAngle * RADIAN);
-  const y = cy + radius * Math.sin(-midAngle * RADIAN);
-  return (
-    <text
-      x={x}
-      y={y}
-      fill="#FFFEEF"
-      fontSize={11}
-      textAnchor={x > cx ? "start" : "end"}
-      dominantBaseline="central"
-    >
-      {`${(percent * 100).toFixed(0)}%`}
-    </text>
-  );
+interface PieLabelProps {
+  cx: number;
+  cy: number;
+  midAngle: number;
+  outerRadius: number;
+  percent: number;
+  index?: number;
+}
+
+const PIE_ANIMATION_BEGIN_MS = 0;
+const PIE_ANIMATION_DURATION_MS = 1100;
+
+function renderPieLabelFactory(shares: number[], animate: boolean) {
+  const total = shares.reduce((sum, share) => sum + share, 0);
+
+  return function renderPieLabel({ cx, cy, midAngle, outerRadius, percent, index = 0 }: PieLabelProps) {
+    if (!percent || percent <= 0.02 || total <= 0) return null;
+
+    const before = shares.slice(0, index).reduce((sum, share) => sum + share, 0);
+    const sectorMid = (before + (shares[index] ?? 0) / 2) / total;
+    const delayMs = animate
+      ? Math.round(PIE_ANIMATION_BEGIN_MS + sectorMid * PIE_ANIMATION_DURATION_MS)
+      : 0;
+
+    const RADIAN = Math.PI / 180;
+    const radius = outerRadius + 16;
+    const x = cx + radius * Math.cos(-midAngle * RADIAN);
+    const y = cy + radius * Math.sin(-midAngle * RADIAN);
+
+    return (
+      <text
+        x={x}
+        y={y}
+        fill="#FFFEEF"
+        fontSize={11}
+        textAnchor={x > cx ? "start" : "end"}
+        dominantBaseline="central"
+        opacity={animate ? 0 : 1}
+        style={
+          animate
+            ? {
+                animation: `pie-label-fade 220ms ease-out ${delayMs}ms forwards`,
+              }
+            : undefined
+        }
+      >
+        {`${(percent * 100).toFixed(0)}%`}
+      </text>
+    );
+  };
 }
 
 interface ActiveShapeProps {
@@ -718,6 +742,14 @@ export function CategoryCharts({ data }: CategoryChartsProps) {
 
   const [activeIndex, setActiveIndex] = useState<number | undefined>(undefined);
   const { ref, hasEntered } = useInViewOnce<HTMLDivElement>(0.2);
+  const pieLabel = useMemo(
+    () =>
+      renderPieLabelFactory(
+        chartData.map((row) => row.groupShare),
+        hasEntered
+      ),
+    [chartData, hasEntered]
+  );
 
   useEffect(() => {
     setActiveIndex(undefined);
@@ -751,9 +783,12 @@ export function CategoryCharts({ data }: CategoryChartsProps) {
               outerRadius={85}
               minAngle={5}
               paddingAngle={chartData.length > 5 ? 1 : 2}
-              label={activeIndex === undefined ? renderPieLabel : undefined}
+              label={activeIndex === undefined ? pieLabel : undefined}
               labelLine={false}
               isAnimationActive={hasEntered}
+              animationBegin={PIE_ANIMATION_BEGIN_MS}
+              animationDuration={PIE_ANIMATION_DURATION_MS}
+              animationEasing="ease-out"
               activeIndex={activeIndex}
               activeShape={renderActiveShape}
               onMouseEnter={(_, i) => setActiveIndex(i)}

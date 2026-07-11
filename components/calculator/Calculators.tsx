@@ -54,9 +54,9 @@ export function RankCalculator({ targets }: RankCalculatorProps) {
   const targetLabel = targetOptions.find((option) => option.key === selectedTarget)?.label ?? "";
 
   return (
-    <>
-      <div className="card p-4 md:p-5">
-        <div className="mb-4 flex items-start justify-between gap-3">
+    <div className="min-w-0 lg:row-span-3">
+      <div className="card tool-pair-card flex h-full flex-col gap-5 overflow-visible p-4 md:p-5">
+        <div className="flex items-start justify-between gap-3">
           <p className="section-title">Rank Target Calculator</p>
           <CopyCardPngButton exportRef={exportRef} filename="rank-target-calculator" />
         </div>
@@ -74,7 +74,7 @@ export function RankCalculator({ targets }: RankCalculatorProps) {
             />
           </div>
         </div>
-        <div className="mt-5 grid gap-3 sm:grid-cols-2">
+        <div className="mt-auto grid gap-4 sm:grid-cols-2">
           <ResultBox label="Required Aura" value={formatNumber(required)} />
           <ResultBox label="Additional Aura Needed" value={formatNumber(additional)} accent={additional > 0} />
         </div>
@@ -85,12 +85,12 @@ export function RankCalculator({ targets }: RankCalculatorProps) {
           <ExportField label="Current Aura" value={formatNumber(currentAura)} />
           <ExportField label="Target" value={targetLabel} />
         </div>
-        <div className="mt-5 grid gap-3 sm:grid-cols-2">
+        <div className="mt-5 grid gap-4 sm:grid-cols-2">
           <ResultBox label="Required Aura" value={formatNumber(required)} />
           <ResultBox label="Additional Aura Needed" value={formatNumber(additional)} accent={additional > 0} />
         </div>
       </ToolExportSurface>
-    </>
+    </div>
   );
 }
 
@@ -147,9 +147,9 @@ export function FdvEstimator({
   };
 
   return (
-    <>
-      <div className="card overflow-visible p-4 md:p-5">
-        <div className="mb-4 flex items-start justify-between gap-3">
+    <div className="min-w-0 lg:row-span-3">
+      <div className="card tool-pair-card flex h-full flex-col gap-5 overflow-visible p-4 md:p-5">
+        <div className="flex items-start justify-between gap-3">
           <p className="section-title">FDV Estimator</p>
           <CopyCardPngButton exportRef={exportRef} filename="fdv-estimator" />
         </div>
@@ -176,7 +176,7 @@ export function FdvEstimator({
             step={100_000}
           />
         </div>
-        <div className="mt-5 grid gap-3 sm:grid-cols-3">
+        <div className="mt-auto grid gap-4 sm:grid-cols-3">
           <EditableMoneyBox
             label="Effective Market Cap"
             info={FDV_FIELD_INFO.poolValue}
@@ -206,13 +206,13 @@ export function FdvEstimator({
           <ExportField label="Allocation (%)" value={String(allocation)} />
           <ExportField label="Total Aura Supply" value={formatNumber(auraSupply)} />
         </div>
-        <div className="mt-5 grid gap-3 sm:grid-cols-3">
+        <div className="mt-5 grid gap-4 sm:grid-cols-3">
           <ResultBox label="Effective Market Cap" value={formatUsd(result.poolValue)} />
           <ResultBox label="Aura Value" value={`$${result.auraValue.toFixed(4)}`} />
           <ResultBox label="Your Value" value={formatUsd(result.userValue)} accent />
         </div>
       </ToolExportSurface>
-    </>
+    </div>
   );
 }
 
@@ -230,20 +230,24 @@ export function CalculatorSection({
   const [auraSupply, setAuraSupply] = useState(Math.round(totalAuraSupply));
 
   return (
-    <div className="grid gap-4 lg:grid-cols-2">
-      <RankCalculator targets={targets} />
-      <FdvEstimator
-        userAura={userAura}
-        setUserAura={setUserAura}
-        fdv={fdv}
-        setFdv={setFdv}
-        allocation={allocation}
-        setAllocation={setAllocation}
-        auraSupply={auraSupply}
-        setAuraSupply={setAuraSupply}
-      />
-      <FdvMatrix userAura={userAura} allocation={allocation} totalAuraSupply={auraSupply} />
-      <DepositAuraPredictor context={depositPredict} />
+    <div className="flex flex-col gap-4">
+      <div className="grid gap-4 lg:grid-cols-2 lg:items-stretch">
+        <RankCalculator targets={targets} />
+        <FdvEstimator
+          userAura={userAura}
+          setUserAura={setUserAura}
+          fdv={fdv}
+          setFdv={setFdv}
+          allocation={allocation}
+          setAllocation={setAllocation}
+          auraSupply={auraSupply}
+          setAuraSupply={setAuraSupply}
+        />
+      </div>
+      <div className="grid gap-4 lg:grid-cols-2 lg:items-stretch">
+        <FdvMatrix userAura={userAura} allocation={allocation} totalAuraSupply={auraSupply} />
+        <DepositAuraPredictor context={depositPredict} />
+      </div>
     </div>
   );
 }
@@ -298,9 +302,9 @@ export function DepositAuraPredictor({
   const holdSinceOptions = Array.from({ length: context.campaignWeek }, (_, i) => i + 1);
 
   return (
-    <>
-      <div className="card">
-        <div className="flex items-start justify-between gap-3 border-b border-[rgba(198,182,186,0.1)] p-4">
+    <div className="min-w-0 h-full">
+      <div className="card flex h-full flex-col">
+        <div className="flex min-h-[5.25rem] items-start justify-between gap-3 border-b border-[rgba(198,182,186,0.1)] p-4">
           <div>
             <p className="section-title">Aura Predictor</p>
             <p className="mt-1 text-xs text-text-secondary">Week {context.campaignWeek}</p>
@@ -311,7 +315,7 @@ export function DepositAuraPredictor({
           <CopyCardPngButton exportRef={exportRef} filename="aura-predictor" />
         </div>
 
-        <div className="p-4 md:p-5">
+        <div className="flex flex-1 flex-col p-4 md:p-5">
         <div className="mb-4">
           <label className="mb-1.5 block text-xs text-text-secondary">Hold scenario</label>
           <SegmentToggle
@@ -418,7 +422,9 @@ export function DepositAuraPredictor({
       </div>
       <ToolExportSurface exportRef={exportRef} width={560}>
         <p className="section-title mb-1">Aura Predictor</p>
-        <p className="mb-4 text-xs text-text-secondary">Week {context.campaignWeek} · {scenarioLabel}</p>
+        <p className="mb-4 text-xs text-text-secondary">
+          Week {context.campaignWeek} · {scenarioLabel}
+        </p>
         <ExportField label="Deposit ($)" value={formatUsd(deposit)} />
         <div className="mt-5 grid gap-3 sm:grid-cols-2">
           <ResultBox
@@ -448,7 +454,7 @@ export function DepositAuraPredictor({
             : `${context.snapshotLabel} · hold until snapshot`}
         </p>
       </ToolExportSurface>
-    </>
+    </div>
   );
 }
 
@@ -522,58 +528,72 @@ export function FdvMatrix({
   });
 
   return (
-    <>
-      <div className="card">
-        <div className="flex items-start justify-between gap-3 border-b border-[rgba(198,182,186,0.1)] p-4">
+    <div className="min-w-0 h-full">
+      <div className="card flex h-full flex-col">
+        <div className="flex min-h-[5.25rem] items-start justify-between gap-3 border-b border-[rgba(198,182,186,0.1)] p-4">
           <div>
             <p className="section-title">FDV Scenario Matrix</p>
             <p className="mt-1 text-xs text-text-secondary">
-              Based on {userAura.toLocaleString()} Aura · {allocation}% allocation
+              Based on {userAura.toLocaleString()} Aura
+            </p>
+            <p className="mt-0.5 text-[10px] leading-relaxed text-text-secondary">
+              {allocation}% allocation · scenario payouts by FDV
             </p>
           </div>
           <CopyCardPngButton exportRef={exportRef} filename="fdv-scenario-matrix" />
         </div>
-        <FdvMatrixTable rows={rows} />
+        <div className="flex min-h-0 flex-1 flex-col">
+          <FdvMatrixTable rows={rows} fill />
+        </div>
       </div>
       <div className="pointer-events-none fixed -left-[9999px] top-0 opacity-100" aria-hidden="true">
         <div ref={exportRef} className="card" style={{ width: 520 }}>
           <div className="border-b border-[rgba(198,182,186,0.1)] p-4">
             <p className="section-title">FDV Scenario Matrix</p>
             <p className="mt-1 text-xs text-text-secondary">
-              Based on {userAura.toLocaleString()} Aura · {allocation}% allocation
+              Based on {userAura.toLocaleString()} Aura
+            </p>
+            <p className="mt-0.5 text-[10px] leading-relaxed text-text-secondary">
+              {allocation}% allocation · scenario payouts by FDV
             </p>
           </div>
           <FdvMatrixTable rows={rows} />
         </div>
       </div>
-    </>
+    </div>
   );
 }
 
 function FdvMatrixTable({
   rows,
+  fill = false,
 }: {
   rows: { fdv: string; auraValue: string; userValue: string }[];
+  fill?: boolean;
 }) {
   return (
-    <table className="w-full text-left text-xs">
-      <thead>
-        <tr className="border-b border-[rgba(198,182,186,0.1)] text-text-secondary">
-          <th className="px-4 py-3 font-medium">FDV</th>
-          <th className="px-4 py-3 font-medium text-right">Aura Value</th>
-          <th className="px-4 py-3 font-medium text-right">Your Value</th>
-        </tr>
-      </thead>
-      <tbody>
+    <div className={cn("flex min-h-0 flex-col", fill && "h-full flex-1")}>
+      <div className="grid grid-cols-3 border-b border-[rgba(198,182,186,0.1)] px-4 py-3 text-xs text-text-secondary">
+        <span className="font-medium">FDV</span>
+        <span className="text-right font-medium">Aura Value</span>
+        <span className="text-right font-medium">Your Value</span>
+      </div>
+      <div className={cn("flex min-h-0 flex-col", fill && "flex-1")}>
         {rows.map((row) => (
-          <tr key={row.fdv} className="border-b border-[rgba(198,182,186,0.05)]">
-            <td className="px-4 py-2.5 font-mono font-medium">{row.fdv}</td>
-            <td className="px-4 py-2.5 text-right font-mono tabular-nums">{row.auraValue}</td>
-            <td className="px-4 py-2.5 text-right font-mono tabular-nums text-accent">{row.userValue}</td>
-          </tr>
+          <div
+            key={row.fdv}
+            className={cn(
+              "grid grid-cols-3 items-center border-b border-[rgba(198,182,186,0.05)] px-4 text-xs",
+              fill ? "flex-1 py-2" : "py-2.5"
+            )}
+          >
+            <span className="font-mono font-medium">{row.fdv}</span>
+            <span className="text-right font-mono tabular-nums">{row.auraValue}</span>
+            <span className="text-right font-mono tabular-nums text-accent">{row.userValue}</span>
+          </div>
         ))}
-      </tbody>
-    </table>
+      </div>
+    </div>
   );
 }
 
@@ -951,11 +971,8 @@ function EditableMoneyBox({
   };
 
   return (
-    <div className="rounded border border-[rgba(198,182,186,0.08)] bg-bulk-base p-3">
-      <p className="mb-1.5 flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-text-secondary">
-        {label}
-        {info ? <InfoTooltip text={info} floating panelClassName="w-64" /> : null}
-      </p>
+    <div className="relative min-w-0">
+      <FieldLabel label={label} info={info} />
       <div className="flex gap-1.5">
         <input
           ref={inputRef}
@@ -992,7 +1009,7 @@ function EditableMoneyBox({
             });
           }}
           className={cn(
-            "input-field min-w-0 flex-1 font-mono text-lg font-semibold tabular-nums",
+            "input-field min-w-0 flex-1 font-mono tabular-nums",
             accent && "text-accent"
           )}
         />
@@ -1003,7 +1020,7 @@ function EditableMoneyBox({
               type="button"
               onClick={() => selectUnit(key)}
               className={cn(
-                "btn-ghost !min-w-[2.25rem] !px-2 !py-0 font-mono text-xs font-semibold",
+                "btn-ghost !min-w-[2rem] !px-1.5 !py-0 font-mono text-xs font-semibold",
                 unit === key && "active"
               )}
               aria-pressed={unit === key}
@@ -1015,7 +1032,10 @@ function EditableMoneyBox({
         </div>
       </div>
       <p className="mt-1 text-[10px] text-text-secondary">
-        {unit === "M" ? "Millions USD" : "Billions USD"} · ${formatNumber(value)}
+        {unit === "M" ? "Millions USD" : "Billions USD"} · $
+        {unit === "B"
+          ? `${(value / 1_000_000_000).toFixed(2)}B`
+          : `${(value / 1_000_000).toFixed(2)}M`}
       </p>
     </div>
   );
@@ -1050,15 +1070,12 @@ function EditableDollarBox({
   };
 
   return (
-    <div className="rounded border border-[rgba(198,182,186,0.08)] bg-bulk-base p-3">
-      <p className="mb-1.5 flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-text-secondary">
-        {label}
-        {info ? <InfoTooltip text={info} floating panelClassName="w-64" /> : null}
-      </p>
+    <div>
+      <FieldLabel label={label} info={info} />
       <div className="relative">
         <span
           className={cn(
-            "pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 font-mono text-lg",
+            "pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 font-mono text-sm",
             accent ? "text-accent" : "text-text-secondary"
           )}
         >
@@ -1100,7 +1117,7 @@ function EditableDollarBox({
             });
           }}
           className={cn(
-            "input-field font-mono text-lg font-semibold tabular-nums !pl-7",
+            "input-field font-mono tabular-nums !pl-7",
             accent && "text-accent"
           )}
         />
@@ -1136,13 +1153,10 @@ function EditableAuraValueBox({
   };
 
   return (
-    <div className="rounded border border-[rgba(198,182,186,0.08)] bg-bulk-base p-3">
-      <p className="mb-1.5 flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-text-secondary">
-        {label}
-        {info ? <InfoTooltip text={info} floating panelClassName="w-64" /> : null}
-      </p>
+    <div>
+      <FieldLabel label={label} info={info} />
       <div className="relative">
-        <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 font-mono text-lg text-text-secondary">
+        <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 font-mono text-sm text-text-secondary">
           $
         </span>
         <input
@@ -1180,7 +1194,7 @@ function EditableAuraValueBox({
               if (inputRef.current) restoreCommaCursor(inputRef.current, formatted, digitsBeforeCursor);
             });
           }}
-          className="input-field font-mono text-lg font-semibold tabular-nums !pl-7"
+          className="input-field font-mono tabular-nums !pl-7"
         />
       </div>
     </div>
@@ -1199,14 +1213,16 @@ function ResultBox({
   info?: string;
 }) {
   return (
-    <div className="rounded border border-[rgba(198,182,186,0.08)] bg-bulk-base p-3">
-      <p className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-text-secondary">
-        {label}
-        {info ? <InfoTooltip text={info} floating panelClassName="w-64" /> : null}
-      </p>
-      <p className={`mt-1 font-mono text-lg font-semibold tabular-nums ${accent ? "text-accent" : ""}`}>
+    <div>
+      <FieldLabel label={label} info={info} />
+      <div
+        className={cn(
+          "input-field flex min-h-[2.625rem] items-center font-mono tabular-nums",
+          accent && "text-accent"
+        )}
+      >
         {value}
-      </p>
+      </div>
     </div>
   );
 }

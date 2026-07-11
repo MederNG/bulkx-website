@@ -50,7 +50,7 @@ export function Select({ value, onChange, options, className, compact }: SelectP
         aria-expanded={open}
         className={cn(
           "flex w-full items-center justify-between gap-2 rounded border bg-bulk-base text-left transition-colors outline-none",
-          compact ? "px-2.5 py-1.5 text-xs" : "px-3.5 py-2.5 text-sm",
+          compact ? "px-2.5 py-1.5 text-xs" : "px-[0.875rem] py-[0.625rem] text-sm",
           open
             ? "border-accent"
             : "border-[rgba(198,182,186,0.2)] hover:border-[rgba(255,181,71,0.4)]"

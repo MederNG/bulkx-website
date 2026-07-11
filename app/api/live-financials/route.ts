@@ -6,7 +6,7 @@ export const revalidate = 0;
 
 export async function GET() {
   try {
-    const payload = await buildLiveFinancialPayload({ fresh: true });
+    const payload = await buildLiveFinancialPayload({ fresh: true, waitMs: 1_200 });
     return NextResponse.json(payload, {
       headers: { "Cache-Control": "no-store, max-age=0" },
     });

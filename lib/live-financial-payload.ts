@@ -24,9 +24,14 @@ export interface LiveFinancialPayload {
 
 export async function buildLiveFinancialPayload(options?: {
   fresh?: boolean;
+  /** Max wait for upstream leaderboard before disk fallback. Default 1500ms. */
+  waitMs?: number;
 }): Promise<LiveFinancialPayload> {
-  const totals = await getLiveTotals(options);
-  const entries = await getLeaderboardForApp({ waitMs: 8000 });
+  const waitMs = options?.waitMs ?? 1_500;
+  const [totals, entries] = await Promise.all([
+    getLiveTotals(options),
+    getLeaderboardForApp({ waitMs }),
+  ]);
   const snapshots = getChartSnapshots("ALL");
 
   const currentTvl =
