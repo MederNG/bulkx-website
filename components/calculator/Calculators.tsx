@@ -1,8 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { createPortal } from "react-dom";
-import { X } from "lucide-react";
 import type { RankTargets } from "@/types";
 import { FDV_SCENARIOS, cn, formatNumber, formatUsd } from "@/lib/utils";
 import { computeFdv } from "@/lib/percentiles";
@@ -17,8 +15,6 @@ import { Select } from "@/components/ui/Select";
 import { CopyCardPngButton, ExportField, ToolExportSurface } from "@/components/calculator/CopyCardPngButton";
 import { InfoTooltip } from "@/components/ui/InfoTooltip";
 
-const FDV_FUD_THRESHOLD = 500_000_000;
-
 const FDV_FIELD_INFO = {
   yourAura:
     "Total AURA your wallet has earned (or a target amount to model). Use Wallet Lookup or your leaderboard total.",
@@ -27,9 +23,12 @@ const FDV_FIELD_INFO = {
     "Portion of the total token supply allocated to the airdrop in your scenario.",
   totalSupply:
     "Total AURA counted for the pool — usually the campaign-wide total across all wallets. Defaults to the live total on this site.",
-  poolValue: "FDV × Allocation% — market cap of the airdrop allocation in your scenario.",
-  auraValue: "Market Cap ÷ Total Aura Supply — implied USD value of one AURA.",
-  yourValue: "Your Aura × Aura Value — estimated USD value of your position at this FDV.",
+  poolValue:
+    "FDV × Allocation% — airdrop allocation market cap. Edit to target a market cap; FDV, Aura Value, and Your Value update.",
+  auraValue:
+    "Market Cap ÷ Total Aura Supply — USD per AURA. Edit to set a price; Market Cap, FDV, and Your Value update.",
+  yourValue:
+    "Your Aura × Aura Value — your estimated payout. Edit to set a target; Aura Value, Market Cap, and FDV update.",
 } as const;
 
 interface RankCalculatorProps {
@@ -104,8 +103,6 @@ interface FdvEstimatorProps {
   setAllocation: (v: number) => void;
   auraSupply: number;
   setAuraSupply: (v: number) => void;
-  fdvAnchorRef: React.RefObject<HTMLDivElement | null>;
-  onFudVisibilityChange: (visible: boolean) => void;
 }
 
 export function FdvEstimator({
@@ -117,8 +114,6 @@ export function FdvEstimator({
   setAllocation,
   auraSupply,
   setAuraSupply,
-  fdvAnchorRef,
-  onFudVisibilityChange,
 }: FdvEstimatorProps) {
   const exportRef = useRef<HTMLDivElement>(null);
 
@@ -129,6 +124,27 @@ export function FdvEstimator({
   const fdvLabel = fdv >= 1_000_000_000
     ? `${(fdv / 1_000_000_000).toFixed(fdv % 1_000_000_000 === 0 ? 0 : 1)}B`
     : `${Math.round(fdv / 1_000_000)}M`;
+
+  const applyFdvFromDerived = (nextFdv: number) => {
+    const safe = Number.isFinite(nextFdv) && nextFdv >= 0 ? nextFdv : 0;
+    setFdv(safe);
+  };
+
+  const setMarketCap = (marketCap: number) => {
+    if (allocation <= 0) return;
+    applyFdvFromDerived(marketCap / (allocation / 100));
+  };
+
+  const setAuraValue = (auraValue: number) => {
+    if (auraSupply <= 0 || allocation <= 0) return;
+    applyFdvFromDerived((auraValue * auraSupply) / (allocation / 100));
+  };
+
+  const setYourValue = (yourValue: number) => {
+    if (userAura <= 0 || auraSupply <= 0 || allocation <= 0) return;
+    const auraValue = yourValue / userAura;
+    applyFdvFromDerived((auraValue * auraSupply) / (allocation / 100));
+  };
 
   return (
     <>
@@ -144,13 +160,7 @@ export function FdvEstimator({
             value={userAura}
             onChange={setUserAura}
           />
-          <FdvField
-            fdv={fdv}
-            onFdvChange={setFdv}
-            anchorRef={fdvAnchorRef}
-            onFudVisibilityChange={onFudVisibilityChange}
-            info={FDV_FIELD_INFO.fdv}
-          />
+          <FdvField fdv={fdv} onFdvChange={setFdv} info={FDV_FIELD_INFO.fdv} />
           <Field
             label="Allocation (%)"
             info={FDV_FIELD_INFO.allocation}
@@ -167,20 +177,23 @@ export function FdvEstimator({
           />
         </div>
         <div className="mt-5 grid gap-3 sm:grid-cols-3">
-          <ResultBox
+          <EditableMoneyBox
             label="Market Cap"
             info={FDV_FIELD_INFO.poolValue}
-            value={formatUsd(result.poolValue)}
+            value={result.poolValue}
+            onChange={setMarketCap}
           />
-          <ResultBox
+          <EditableAuraValueBox
             label="Aura Value"
             info={FDV_FIELD_INFO.auraValue}
-            value={`$${result.auraValue.toFixed(4)}`}
+            value={result.auraValue}
+            onChange={setAuraValue}
           />
-          <ResultBox
+          <EditableDollarBox
             label="Your Value"
             info={FDV_FIELD_INFO.yourValue}
-            value={formatUsd(result.userValue)}
+            value={result.userValue}
+            onChange={setYourValue}
             accent
           />
         </div>
@@ -211,44 +224,27 @@ export function CalculatorSection({
   totalAuraSupply: number;
 }) {
   const { depositPredict } = useLiveFinancials();
-  const fdvAnchorRef = useRef<HTMLDivElement>(null);
-  const fudDockRef = useRef<HTMLDivElement>(null);
-  const [showFud, setShowFud] = useState(false);
   const [userAura, setUserAura] = useState(500);
   const [fdv, setFdv] = useState(500_000_000);
   const [allocation, setAllocation] = useState(30);
   const [auraSupply, setAuraSupply] = useState(Math.round(totalAuraSupply));
 
   return (
-    <>
-      {showFud && (
-        <FudWarningModal
-          startAnchorRef={fdvAnchorRef}
-          endAnchorRef={fudDockRef}
-          onClose={() => setShowFud(false)}
-        />
-      )}
-      <div className="grid gap-4 lg:grid-cols-2">
-        <RankCalculator targets={targets} />
-        <FdvEstimator
-          userAura={userAura}
-          setUserAura={setUserAura}
-          fdv={fdv}
-          setFdv={setFdv}
-          allocation={allocation}
-          setAllocation={setAllocation}
-          auraSupply={auraSupply}
-          setAuraSupply={setAuraSupply}
-          fdvAnchorRef={fdvAnchorRef}
-          onFudVisibilityChange={setShowFud}
-        />
-        <FdvMatrix userAura={userAura} allocation={allocation} totalAuraSupply={auraSupply} />
-        <DepositAuraPredictor
-          context={depositPredict}
-          dockRef={fudDockRef}
-        />
-      </div>
-    </>
+    <div className="grid gap-4 lg:grid-cols-2">
+      <RankCalculator targets={targets} />
+      <FdvEstimator
+        userAura={userAura}
+        setUserAura={setUserAura}
+        fdv={fdv}
+        setFdv={setFdv}
+        allocation={allocation}
+        setAllocation={setAllocation}
+        auraSupply={auraSupply}
+        setAuraSupply={setAuraSupply}
+      />
+      <FdvMatrix userAura={userAura} allocation={allocation} totalAuraSupply={auraSupply} />
+      <DepositAuraPredictor context={depositPredict} />
+    </div>
   );
 }
 
@@ -261,10 +257,8 @@ function formatUsdHours(value: number): string {
 
 export function DepositAuraPredictor({
   context,
-  dockRef,
 }: {
   context: DepositAuraPredictContext;
-  dockRef?: React.RefObject<HTMLDivElement | null>;
 }) {
   const exportRef = useRef<HTMLDivElement>(null);
   const [deposit, setDeposit] = useState(1_000);
@@ -305,7 +299,7 @@ export function DepositAuraPredictor({
 
   return (
     <>
-      <div ref={dockRef} className="card">
+      <div className="card">
         <div className="flex items-start justify-between gap-3 border-b border-[rgba(198,182,186,0.1)] p-4">
           <div>
             <p className="section-title">Aura Predictor</p>
@@ -631,97 +625,171 @@ const FDV_UNIT_MULTIPLIER: Record<FdvUnit, number> = {
   B: 1_000_000_000,
 };
 
+function formatCommaNumber(value: number, maxFractionDigits = 0): string {
+  if (!Number.isFinite(value)) return "0";
+  if (value === 0) return "0";
+  return value.toLocaleString("en-US", {
+    maximumFractionDigits: maxFractionDigits,
+    minimumFractionDigits: 0,
+  });
+}
+
+function formatCommaInput(raw: string, maxFractionDigits = 6): string {
+  const cleaned = raw.replace(/[^\d.]/g, "");
+  if (cleaned === "" || cleaned === ".") return cleaned;
+
+  const [intPart = "", decPart] = cleaned.split(".");
+  const normalizedInt = intPart.replace(/^0+(?=\d)/, "") || "0";
+  const withCommas = normalizedInt.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+
+  if (cleaned.includes(".")) {
+    return `${withCommas}.${(decPart ?? "").slice(0, maxFractionDigits)}`;
+  }
+  return withCommas;
+}
+
+function parseCommaNumber(raw: string): number | null {
+  const cleaned = raw.replace(/,/g, "").trim();
+  if (cleaned === "" || cleaned === ".") return null;
+  const parsed = Number(cleaned);
+  if (!Number.isFinite(parsed) || parsed < 0) return null;
+  return parsed;
+}
+
+function restoreCommaCursor(el: HTMLInputElement, formatted: string, digitsBefore: number) {
+  let pos = 0;
+  let seen = 0;
+  while (pos < formatted.length && seen < digitsBefore) {
+    if (/[\d.]/.test(formatted[pos]!)) seen += 1;
+    pos += 1;
+  }
+  el.setSelectionRange(pos, pos);
+}
+
+function formatFdvUnitDisplay(unitValue: number): string {
+  return formatCommaNumber(Math.max(0, Math.round(unitValue)), 0);
+}
+
 function formatFdvDisplay(value: number): string {
   if (!Number.isFinite(value)) return "0";
   const rounded = Math.round(value * 1000) / 1000;
-  return Number.isInteger(rounded) ? String(rounded) : String(rounded);
+  return formatCommaNumber(rounded, 3);
+}
+
+function resolveFdvUnit(absoluteFdv: number): FdvUnit {
+  return absoluteFdv >= 1_000_000_000 ? "B" : "M";
 }
 
 function FdvField({
   fdv,
   onFdvChange,
-  anchorRef,
-  onFudVisibilityChange,
   info,
 }: {
   fdv: number;
   onFdvChange: (v: number) => void;
-  anchorRef: React.RefObject<HTMLDivElement | null>;
-  onFudVisibilityChange: (visible: boolean) => void;
   info?: string;
 }) {
-  const [unit, setUnit] = useState<FdvUnit>("M");
-  const [draft, setDraft] = useState(() => formatFdvDisplay(fdv / FDV_UNIT_MULTIPLIER.M));
+  const [unit, setUnit] = useState<FdvUnit>(() => resolveFdvUnit(fdv));
+  const [draft, setDraft] = useState(() =>
+    formatFdvUnitDisplay(fdv / FDV_UNIT_MULTIPLIER[resolveFdvUnit(fdv)])
+  );
   const [isFocused, setIsFocused] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (!isFocused) {
-      setDraft(formatFdvDisplay(fdv / FDV_UNIT_MULTIPLIER[unit]));
-    }
-  }, [fdv, unit, isFocused]);
+    if (isFocused) return;
+    const nextUnit = resolveFdvUnit(fdv);
+    setUnit(nextUnit);
+    setDraft(formatFdvUnitDisplay(fdv / FDV_UNIT_MULTIPLIER[nextUnit]));
+  }, [fdv, isFocused]);
 
-  useEffect(() => {
-    if (fdv >= FDV_FUD_THRESHOLD) {
-      onFudVisibilityChange(false);
-    }
-  }, [fdv, onFudVisibilityChange]);
-
-  const applyFdv = (nextFdv: number) => {
-    onFdvChange(nextFdv);
-    if (nextFdv >= FDV_FUD_THRESHOLD || nextFdv <= 0) {
-      onFudVisibilityChange(false);
-    } else if (nextFdv < FDV_FUD_THRESHOLD) {
-      onFudVisibilityChange(true);
-    }
+  const applyAbsoluteFdv = (absolute: number) => {
+    const safe = Math.max(0, Math.round(absolute));
+    const nextUnit = resolveFdvUnit(safe);
+    const unitValue = Math.round(safe / FDV_UNIT_MULTIPLIER[nextUnit]);
+    const snapped = unitValue * FDV_UNIT_MULTIPLIER[nextUnit];
+    setUnit(nextUnit);
+    setDraft(formatFdvUnitDisplay(unitValue));
+    onFdvChange(snapped);
+    return { nextUnit, unitValue, snapped };
   };
 
   const commitDraft = (nextDraft: string, nextUnit: FdvUnit = unit) => {
     const trimmed = nextDraft.trim();
     if (trimmed === "") {
-      applyFdv(0);
+      applyAbsoluteFdv(0);
       return;
     }
-    const parsed = Number(trimmed);
-    if (!Number.isFinite(parsed) || parsed < 0) return;
-    applyFdv(parsed * FDV_UNIT_MULTIPLIER[nextUnit]);
+    const parsed = parseCommaNumber(trimmed);
+    if (parsed == null) return;
+    applyAbsoluteFdv(Math.round(parsed) * FDV_UNIT_MULTIPLIER[nextUnit]);
   };
 
   const selectUnit = (nextUnit: FdvUnit) => {
     if (nextUnit === unit) return;
-    setUnit(nextUnit);
     if (isFocused && draft.trim() !== "") {
       commitDraft(draft, nextUnit);
       return;
     }
-    setDraft(formatFdvDisplay(fdv / FDV_UNIT_MULTIPLIER[nextUnit]));
+    setUnit(nextUnit);
+    setDraft(formatFdvUnitDisplay(fdv / FDV_UNIT_MULTIPLIER[nextUnit]));
   };
 
   return (
-    <div ref={anchorRef} className="relative">
+    <div className="relative">
       <FieldLabel label="FDV ($)" info={info} />
       <div className="flex gap-1.5">
         <input
-          type="number"
+          ref={inputRef}
+          type="text"
+          inputMode="numeric"
           value={draft}
-          min={0}
-          step={unit === "M" ? 1 : 0.1}
           onFocus={() => setIsFocused(true)}
           onBlur={() => {
             setIsFocused(false);
             if (draft.trim() === "") {
-              setDraft("0");
-              applyFdv(0);
+              applyAbsoluteFdv(0);
               return;
             }
             commitDraft(draft);
           }}
           onChange={(e) => {
-            const next = e.target.value;
-            setDraft(next);
-            if (next.trim() === "") return;
-            const parsed = Number(next);
-            if (!Number.isFinite(parsed) || parsed < 0) return;
-            applyFdv(parsed * FDV_UNIT_MULTIPLIER[unit]);
+            const input = e.target;
+            const nextRaw = input.value;
+            if (nextRaw !== "" && !/^[\d,]*$/.test(nextRaw)) return;
+
+            const cursor = input.selectionStart ?? nextRaw.length;
+            const digitsBeforeCursor = nextRaw.slice(0, cursor).replace(/\D/g, "").length;
+            const formatted = formatCommaInput(nextRaw, 0);
+
+            const parsed = parseCommaNumber(formatted);
+            if (parsed == null) {
+              setDraft(formatted);
+              requestAnimationFrame(() => {
+                if (inputRef.current) restoreCommaCursor(inputRef.current, formatted, digitsBeforeCursor);
+              });
+              return;
+            }
+
+            const { nextUnit, unitValue } = applyAbsoluteFdv(
+              Math.round(parsed) * FDV_UNIT_MULTIPLIER[unit]
+            );
+            const display = formatFdvUnitDisplay(unitValue);
+
+            // If we auto-switched M → B, draft is already updated by applyAbsoluteFdv.
+            if (nextUnit !== unit) {
+              requestAnimationFrame(() => {
+                const el = inputRef.current;
+                if (!el) return;
+                el.setSelectionRange(display.length, display.length);
+              });
+              return;
+            }
+
+            setDraft(display);
+            requestAnimationFrame(() => {
+              if (inputRef.current) restoreCommaCursor(inputRef.current, display, digitsBeforeCursor);
+            });
           }}
           className="input-field min-w-0 flex-1 font-mono tabular-nums"
         />
@@ -750,131 +818,6 @@ function FdvField({
   );
 }
 
-function useFudScrollPosition(
-  startAnchorRef: React.RefObject<HTMLDivElement | null>,
-  endAnchorRef: React.RefObject<HTMLDivElement | null>
-) {
-  const [position, setPosition] = useState({ top: 0, left: 0, progress: 0 });
-
-  useEffect(() => {
-    const updatePosition = () => {
-      const start = startAnchorRef.current;
-      const end = endAnchorRef.current;
-      if (!start) return;
-
-      const startRect = start.getBoundingClientRect();
-      const isDesktop = window.matchMedia("(min-width: 1024px)").matches;
-      const startPoint = isDesktop
-        ? {
-            top: startRect.bottom + 56,
-            left: startRect.right + 64,
-          }
-        : {
-            top: startRect.bottom + 32,
-            left: startRect.left + startRect.width / 2,
-          };
-      let progress = 0;
-      let endPoint = startPoint;
-
-      if (isDesktop && end) {
-        const endRect = end.getBoundingClientRect();
-        endPoint = {
-          top: endRect.top + endRect.height * 0.42,
-          left: endRect.left + endRect.width * 0.5,
-        };
-
-        const section = document.getElementById("calculator");
-        if (section) {
-          const sectionRect = section.getBoundingClientRect();
-          const scrollRange = Math.max(section.offsetHeight - window.innerHeight * 0.45, 1);
-          const scrolled = Math.min(Math.max(-sectionRect.top + 80, 0), scrollRange);
-          progress = scrolled / scrollRange;
-        }
-      }
-
-      setPosition({
-        top: startPoint.top + (endPoint.top - startPoint.top) * progress,
-        left: startPoint.left + (endPoint.left - startPoint.left) * progress,
-        progress,
-      });
-    };
-
-    updatePosition();
-    window.addEventListener("scroll", updatePosition, { passive: true, capture: true });
-    window.addEventListener("resize", updatePosition);
-    return () => {
-      window.removeEventListener("scroll", updatePosition, { capture: true });
-      window.removeEventListener("resize", updatePosition);
-    };
-  }, [startAnchorRef, endAnchorRef]);
-
-  return position;
-}
-
-function FudWarningModal({
-  startAnchorRef,
-  endAnchorRef,
-  onClose,
-}: {
-  startAnchorRef: React.RefObject<HTMLDivElement | null>;
-  endAnchorRef: React.RefObject<HTMLDivElement | null>;
-  onClose: () => void;
-}) {
-  const [mounted, setMounted] = useState(false);
-  const { top, left, progress } = useFudScrollPosition(startAnchorRef, endAnchorRef);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  if (!mounted) return null;
-
-  const translateY = -50 * progress;
-
-  return createPortal(
-    <div
-      className="pointer-events-none fixed z-[120] w-[min(92vw,520px)] transition-[top,left] duration-150 ease-out"
-      style={{
-        top,
-        left,
-        transform: `translate(-50%, ${translateY}%)`,
-      }}
-      role="dialog"
-      aria-modal="false"
-      aria-label="Low FDV warning"
-    >
-      <div className="fud-float-inner relative flex items-start justify-center gap-3 sm:gap-4">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src="/fud-popup.png"
-          alt=""
-          className="fud-figure h-[240px] w-auto max-w-[200px] shrink-0 object-contain object-bottom sm:h-[300px] sm:max-w-[250px]"
-          draggable={false}
-        />
-
-        <div className="pointer-events-auto relative mt-6 max-w-[280px] rounded-2xl border border-[rgba(198,182,186,0.22)] bg-[rgba(27,26,20,0.88)] px-5 py-4 shadow-xl backdrop-blur-sm sm:mt-10">
-          <div
-            className="absolute -left-2 top-12 hidden h-3 w-3 rotate-45 border-b border-l border-[rgba(198,182,186,0.22)] bg-[rgba(27,26,20,0.88)] sm:block"
-            aria-hidden="true"
-          />
-          <p className="text-[1.75rem] leading-snug text-text-primary">
-            are you fudding me here, son? Delete it now
-          </p>
-          <button
-            type="button"
-            onClick={onClose}
-            className="absolute -right-2 -top-2 rounded-full border border-[rgba(198,182,186,0.2)] bg-[rgba(27,26,20,0.95)] p-1.5 text-text-secondary transition hover:text-text-primary"
-            aria-label="Close"
-          >
-            <X className="h-3.5 w-3.5" />
-          </button>
-        </div>
-      </div>
-    </div>,
-    document.body
-  );
-}
-
 function NumericInput({
   value,
   onChange,
@@ -890,48 +833,356 @@ function NumericInput({
   max?: number;
   disabled?: boolean;
 }) {
-  const [draft, setDraft] = useState(String(value));
+  const maxFractionDigits =
+    typeof step === "number" && step > 0 && step < 1
+      ? Math.min(6, Math.ceil(-Math.log10(step)))
+      : 0;
+  const [draft, setDraft] = useState(() => formatCommaNumber(value, maxFractionDigits));
   const [isFocused, setIsFocused] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!isFocused) {
-      setDraft(String(value));
+      setDraft(formatCommaNumber(value, maxFractionDigits));
     }
-  }, [value, isFocused]);
+  }, [value, isFocused, maxFractionDigits]);
 
   return (
     <input
-      type="number"
+      ref={inputRef}
+      type="text"
+      inputMode="decimal"
       value={draft}
-      step={step}
-      max={max}
       disabled={disabled}
       onFocus={() => setIsFocused(true)}
       onBlur={() => {
         setIsFocused(false);
-        if (draft.trim() === "") {
+        if (draft.trim() === "" || draft.trim() === ".") {
           setDraft("0");
           onChange(0);
+          return;
         }
+        const parsed = parseCommaNumber(draft);
+        if (parsed == null) return;
+        const next = typeof max === "number" ? Math.min(parsed, max) : parsed;
+        onChange(next);
+        setDraft(formatCommaNumber(next, maxFractionDigits));
       }}
       onChange={(e) => {
-        const next = e.target.value;
-        setDraft(next);
-        if (next.trim() === "") {
-          return;
+        const input = e.target;
+        const nextRaw = input.value;
+        if (nextRaw !== "" && !/^[\d,]*\.?\d*$/.test(nextRaw)) return;
+
+        const cursor = input.selectionStart ?? nextRaw.length;
+        const digitsBeforeCursor = nextRaw.slice(0, cursor).replace(/[^\d.]/g, "").length;
+        const formatted = formatCommaInput(nextRaw, Math.max(maxFractionDigits, 6));
+        setDraft(formatted);
+
+        const parsed = parseCommaNumber(formatted);
+        if (parsed != null) {
+          onChange(typeof max === "number" ? Math.min(parsed, max) : parsed);
         }
-        const parsed = Number(next);
-        if (!Number.isFinite(parsed)) {
-          return;
-        }
-        if (typeof max === "number") {
-          onChange(Math.min(parsed, max));
-          return;
-        }
-        onChange(parsed);
+
+        requestAnimationFrame(() => {
+          if (inputRef.current) restoreCommaCursor(inputRef.current, formatted, digitsBeforeCursor);
+        });
       }}
       className={className}
     />
+  );
+}
+
+function pickUsdUnit(value: number): FdvUnit {
+  return value >= 1_000_000_000 ? "B" : "M";
+}
+
+function EditableMoneyBox({
+  label,
+  info,
+  value,
+  onChange,
+  accent,
+}: {
+  label: string;
+  info?: string;
+  value: number;
+  onChange: (v: number) => void;
+  accent?: boolean;
+}) {
+  const [unit, setUnit] = useState<FdvUnit>(() => pickUsdUnit(value));
+  const [draft, setDraft] = useState(() =>
+    formatFdvDisplay(value / FDV_UNIT_MULTIPLIER[pickUsdUnit(value)])
+  );
+  const [isFocused, setIsFocused] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (isFocused) return;
+    const nextUnit = pickUsdUnit(value);
+    setUnit(nextUnit);
+    setDraft(formatFdvDisplay(value / FDV_UNIT_MULTIPLIER[nextUnit]));
+  }, [value, isFocused]);
+
+  const applyValue = (next: number) => {
+    if (!Number.isFinite(next) || next < 0) return;
+    onChange(next);
+  };
+
+  const commitDraft = (nextDraft: string, nextUnit: FdvUnit = unit) => {
+    const trimmed = nextDraft.trim();
+    if (trimmed === "" || trimmed === ".") {
+      applyValue(0);
+      return;
+    }
+    const parsed = parseCommaNumber(trimmed);
+    if (parsed == null) return;
+    applyValue(parsed * FDV_UNIT_MULTIPLIER[nextUnit]);
+  };
+
+  const selectUnit = (nextUnit: FdvUnit) => {
+    if (nextUnit === unit) return;
+    setUnit(nextUnit);
+    if (isFocused && draft.trim() !== "") {
+      commitDraft(draft, nextUnit);
+      return;
+    }
+    setDraft(formatFdvDisplay(value / FDV_UNIT_MULTIPLIER[nextUnit]));
+  };
+
+  return (
+    <div className="rounded border border-[rgba(198,182,186,0.08)] bg-bulk-base p-3">
+      <p className="mb-1.5 flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-text-secondary">
+        {label}
+        {info ? <InfoTooltip text={info} floating panelClassName="w-64" /> : null}
+      </p>
+      <div className="flex gap-1.5">
+        <input
+          ref={inputRef}
+          type="text"
+          inputMode="decimal"
+          value={draft}
+          onFocus={() => setIsFocused(true)}
+          onBlur={() => {
+            setIsFocused(false);
+            if (draft.trim() === "" || draft.trim() === ".") {
+              setDraft("0");
+              applyValue(0);
+              return;
+            }
+            commitDraft(draft);
+            const parsed = parseCommaNumber(draft);
+            if (parsed != null) setDraft(formatFdvDisplay(parsed));
+          }}
+          onChange={(e) => {
+            const input = e.target;
+            const nextRaw = input.value;
+            if (nextRaw !== "" && !/^[\d,]*\.?\d*$/.test(nextRaw)) return;
+
+            const cursor = input.selectionStart ?? nextRaw.length;
+            const digitsBeforeCursor = nextRaw.slice(0, cursor).replace(/[^\d.]/g, "").length;
+            const formatted = formatCommaInput(nextRaw, 3);
+            setDraft(formatted);
+
+            const parsed = parseCommaNumber(formatted);
+            if (parsed != null) applyValue(parsed * FDV_UNIT_MULTIPLIER[unit]);
+
+            requestAnimationFrame(() => {
+              if (inputRef.current) restoreCommaCursor(inputRef.current, formatted, digitsBeforeCursor);
+            });
+          }}
+          className={cn(
+            "input-field min-w-0 flex-1 font-mono text-lg font-semibold tabular-nums",
+            accent && "text-accent"
+          )}
+        />
+        <div className="flex shrink-0 gap-0.5">
+          {(["M", "B"] as const).map((key) => (
+            <button
+              key={key}
+              type="button"
+              onClick={() => selectUnit(key)}
+              className={cn(
+                "btn-ghost !min-w-[2.25rem] !px-2 !py-0 font-mono text-xs font-semibold",
+                unit === key && "active"
+              )}
+              aria-pressed={unit === key}
+              title={key === "M" ? "Millions" : "Billions"}
+            >
+              {key}
+            </button>
+          ))}
+        </div>
+      </div>
+      <p className="mt-1 text-[10px] text-text-secondary">
+        {unit === "M" ? "Millions USD" : "Billions USD"} · ${formatNumber(value)}
+      </p>
+    </div>
+  );
+}
+
+function EditableDollarBox({
+  label,
+  info,
+  value,
+  onChange,
+  accent,
+}: {
+  label: string;
+  info?: string;
+  value: number;
+  onChange: (v: number) => void;
+  accent?: boolean;
+}) {
+  const [draft, setDraft] = useState(() => formatCommaNumber(value, 2));
+  const [isFocused, setIsFocused] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!isFocused) {
+      setDraft(formatCommaNumber(value, 2));
+    }
+  }, [value, isFocused]);
+
+  const applyValue = (next: number) => {
+    if (!Number.isFinite(next) || next < 0) return;
+    onChange(next);
+  };
+
+  return (
+    <div className="rounded border border-[rgba(198,182,186,0.08)] bg-bulk-base p-3">
+      <p className="mb-1.5 flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-text-secondary">
+        {label}
+        {info ? <InfoTooltip text={info} floating panelClassName="w-64" /> : null}
+      </p>
+      <div className="relative">
+        <span
+          className={cn(
+            "pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 font-mono text-lg",
+            accent ? "text-accent" : "text-text-secondary"
+          )}
+        >
+          $
+        </span>
+        <input
+          ref={inputRef}
+          type="text"
+          inputMode="decimal"
+          value={draft}
+          onFocus={() => setIsFocused(true)}
+          onBlur={() => {
+            setIsFocused(false);
+            if (draft.trim() === "" || draft.trim() === ".") {
+              setDraft("0");
+              applyValue(0);
+              return;
+            }
+            const parsed = parseCommaNumber(draft);
+            if (parsed == null) return;
+            applyValue(parsed);
+            setDraft(formatCommaNumber(parsed, 2));
+          }}
+          onChange={(e) => {
+            const input = e.target;
+            const nextRaw = input.value;
+            if (nextRaw !== "" && !/^[\d,]*\.?\d*$/.test(nextRaw)) return;
+
+            const cursor = input.selectionStart ?? nextRaw.length;
+            const digitsBeforeCursor = nextRaw.slice(0, cursor).replace(/[^\d.]/g, "").length;
+            const formatted = formatCommaInput(nextRaw, 2);
+            setDraft(formatted);
+
+            const parsed = parseCommaNumber(formatted);
+            if (parsed != null) applyValue(parsed);
+
+            requestAnimationFrame(() => {
+              if (inputRef.current) restoreCommaCursor(inputRef.current, formatted, digitsBeforeCursor);
+            });
+          }}
+          className={cn(
+            "input-field font-mono text-lg font-semibold tabular-nums !pl-7",
+            accent && "text-accent"
+          )}
+        />
+      </div>
+    </div>
+  );
+}
+
+function EditableAuraValueBox({
+  label,
+  info,
+  value,
+  onChange,
+}: {
+  label: string;
+  info?: string;
+  value: number;
+  onChange: (v: number) => void;
+}) {
+  const [draft, setDraft] = useState(() => formatCommaNumber(value, 4));
+  const [isFocused, setIsFocused] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!isFocused) {
+      setDraft(formatCommaNumber(value, 4));
+    }
+  }, [value, isFocused]);
+
+  const applyValue = (next: number) => {
+    if (!Number.isFinite(next) || next < 0) return;
+    onChange(next);
+  };
+
+  return (
+    <div className="rounded border border-[rgba(198,182,186,0.08)] bg-bulk-base p-3">
+      <p className="mb-1.5 flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-text-secondary">
+        {label}
+        {info ? <InfoTooltip text={info} floating panelClassName="w-64" /> : null}
+      </p>
+      <div className="relative">
+        <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 font-mono text-lg text-text-secondary">
+          $
+        </span>
+        <input
+          ref={inputRef}
+          type="text"
+          inputMode="decimal"
+          value={draft}
+          onFocus={() => setIsFocused(true)}
+          onBlur={() => {
+            setIsFocused(false);
+            if (draft.trim() === "" || draft.trim() === ".") {
+              setDraft("0");
+              applyValue(0);
+              return;
+            }
+            const parsed = parseCommaNumber(draft);
+            if (parsed == null) return;
+            applyValue(parsed);
+            setDraft(formatCommaNumber(parsed, 4));
+          }}
+          onChange={(e) => {
+            const input = e.target;
+            const nextRaw = input.value;
+            if (nextRaw !== "" && !/^[\d,]*\.?\d*$/.test(nextRaw)) return;
+
+            const cursor = input.selectionStart ?? nextRaw.length;
+            const digitsBeforeCursor = nextRaw.slice(0, cursor).replace(/[^\d.]/g, "").length;
+            const formatted = formatCommaInput(nextRaw, 4);
+            setDraft(formatted);
+
+            const parsed = parseCommaNumber(formatted);
+            if (parsed != null) applyValue(parsed);
+
+            requestAnimationFrame(() => {
+              if (inputRef.current) restoreCommaCursor(inputRef.current, formatted, digitsBeforeCursor);
+            });
+          }}
+          className="input-field font-mono text-lg font-semibold tabular-nums !pl-7"
+        />
+      </div>
+    </div>
   );
 }
 
