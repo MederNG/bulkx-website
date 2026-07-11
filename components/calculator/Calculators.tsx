@@ -24,11 +24,11 @@ const FDV_FIELD_INFO = {
   totalSupply:
     "Total AURA counted for the pool — usually the campaign-wide total across all wallets. Defaults to the live total on this site.",
   poolValue:
-    "FDV × Allocation% — airdrop allocation market cap. Edit to target a market cap; FDV, Aura Value, and Your Value update.",
+    "Token Price × Allocation (%) — effective airdrop market cap (Token Price = FDV ÷ 1B). Edit to set a target; FDV, Aura Value, and Your Value update.",
   auraValue:
-    "Market Cap ÷ Total Aura Supply — USD per AURA. Edit to set a price; Market Cap, FDV, and Your Value update.",
+    "Effective Market Cap ÷ Total Aura Supply — USD per AURA. Edit to set a price; Effective Market Cap, FDV, and Your Value update.",
   yourValue:
-    "Your Aura × Aura Value — your estimated payout. Edit to set a target; Aura Value, Market Cap, and FDV update.",
+    "Your Aura × Aura Value — your estimated payout. Edit to set a target; Aura Value, Effective Market Cap, and FDV update.",
 } as const;
 
 interface RankCalculatorProps {
@@ -178,7 +178,7 @@ export function FdvEstimator({
         </div>
         <div className="mt-5 grid gap-3 sm:grid-cols-3">
           <EditableMoneyBox
-            label="Market Cap"
+            label="Effective Market Cap"
             info={FDV_FIELD_INFO.poolValue}
             value={result.poolValue}
             onChange={setMarketCap}
@@ -207,7 +207,7 @@ export function FdvEstimator({
           <ExportField label="Total Aura Supply" value={formatNumber(auraSupply)} />
         </div>
         <div className="mt-5 grid gap-3 sm:grid-cols-3">
-          <ResultBox label="Market Cap" value={formatUsd(result.poolValue)} />
+          <ResultBox label="Effective Market Cap" value={formatUsd(result.poolValue)} />
           <ResultBox label="Aura Value" value={`$${result.auraValue.toFixed(4)}`} />
           <ResultBox label="Your Value" value={formatUsd(result.userValue)} accent />
         </div>
@@ -666,8 +666,12 @@ function restoreCommaCursor(el: HTMLInputElement, formatted: string, digitsBefor
   el.setSelectionRange(pos, pos);
 }
 
+function roundToHundredths(value: number): number {
+  return Math.round(value * 100) / 100;
+}
+
 function formatFdvUnitDisplay(unitValue: number): string {
-  return formatCommaNumber(Math.max(0, Math.round(unitValue)), 0);
+  return formatCommaNumber(Math.max(0, roundToHundredths(unitValue)), 2);
 }
 
 function formatFdvDisplay(value: number): string {
@@ -703,26 +707,26 @@ function FdvField({
     setDraft(formatFdvUnitDisplay(fdv / FDV_UNIT_MULTIPLIER[nextUnit]));
   }, [fdv, isFocused]);
 
-  const applyAbsoluteFdv = (absolute: number) => {
-    const safe = Math.max(0, Math.round(absolute));
+  const applyAbsoluteFdv = (absolute: number, syncDraft = true) => {
+    const safe = Math.max(0, absolute);
     const nextUnit = resolveFdvUnit(safe);
-    const unitValue = Math.round(safe / FDV_UNIT_MULTIPLIER[nextUnit]);
+    const unitValue = roundToHundredths(safe / FDV_UNIT_MULTIPLIER[nextUnit]);
     const snapped = unitValue * FDV_UNIT_MULTIPLIER[nextUnit];
     setUnit(nextUnit);
-    setDraft(formatFdvUnitDisplay(unitValue));
+    if (syncDraft) setDraft(formatFdvUnitDisplay(unitValue));
     onFdvChange(snapped);
     return { nextUnit, unitValue, snapped };
   };
 
   const commitDraft = (nextDraft: string, nextUnit: FdvUnit = unit) => {
     const trimmed = nextDraft.trim();
-    if (trimmed === "") {
+    if (trimmed === "" || trimmed === ".") {
       applyAbsoluteFdv(0);
       return;
     }
     const parsed = parseCommaNumber(trimmed);
     if (parsed == null) return;
-    applyAbsoluteFdv(Math.round(parsed) * FDV_UNIT_MULTIPLIER[nextUnit]);
+    applyAbsoluteFdv(roundToHundredths(parsed) * FDV_UNIT_MULTIPLIER[nextUnit]);
   };
 
   const selectUnit = (nextUnit: FdvUnit) => {
@@ -742,12 +746,12 @@ function FdvField({
         <input
           ref={inputRef}
           type="text"
-          inputMode="numeric"
+          inputMode="decimal"
           value={draft}
           onFocus={() => setIsFocused(true)}
           onBlur={() => {
             setIsFocused(false);
-            if (draft.trim() === "") {
+            if (draft.trim() === "" || draft.trim() === ".") {
               applyAbsoluteFdv(0);
               return;
             }
@@ -756,39 +760,33 @@ function FdvField({
           onChange={(e) => {
             const input = e.target;
             const nextRaw = input.value;
-            if (nextRaw !== "" && !/^[\d,]*$/.test(nextRaw)) return;
+            if (nextRaw !== "" && !/^[\d,]*\.?\d*$/.test(nextRaw)) return;
 
             const cursor = input.selectionStart ?? nextRaw.length;
-            const digitsBeforeCursor = nextRaw.slice(0, cursor).replace(/\D/g, "").length;
-            const formatted = formatCommaInput(nextRaw, 0);
+            const digitsBeforeCursor = nextRaw.slice(0, cursor).replace(/[^\d.]/g, "").length;
+            const formatted = formatCommaInput(nextRaw, 2);
+            setDraft(formatted);
 
             const parsed = parseCommaNumber(formatted);
-            if (parsed == null) {
-              setDraft(formatted);
-              requestAnimationFrame(() => {
-                if (inputRef.current) restoreCommaCursor(inputRef.current, formatted, digitsBeforeCursor);
-              });
-              return;
+            if (parsed != null) {
+              const { nextUnit, unitValue } = applyAbsoluteFdv(
+                roundToHundredths(parsed) * FDV_UNIT_MULTIPLIER[unit],
+                false
+              );
+              if (nextUnit !== unit) {
+                const display = formatFdvUnitDisplay(unitValue);
+                setDraft(display);
+                requestAnimationFrame(() => {
+                  const el = inputRef.current;
+                  if (!el) return;
+                  el.setSelectionRange(display.length, display.length);
+                });
+                return;
+              }
             }
 
-            const { nextUnit, unitValue } = applyAbsoluteFdv(
-              Math.round(parsed) * FDV_UNIT_MULTIPLIER[unit]
-            );
-            const display = formatFdvUnitDisplay(unitValue);
-
-            // If we auto-switched M → B, draft is already updated by applyAbsoluteFdv.
-            if (nextUnit !== unit) {
-              requestAnimationFrame(() => {
-                const el = inputRef.current;
-                if (!el) return;
-                el.setSelectionRange(display.length, display.length);
-              });
-              return;
-            }
-
-            setDraft(display);
             requestAnimationFrame(() => {
-              if (inputRef.current) restoreCommaCursor(inputRef.current, display, digitsBeforeCursor);
+              if (inputRef.current) restoreCommaCursor(inputRef.current, formatted, digitsBeforeCursor);
             });
           }}
           className="input-field min-w-0 flex-1 font-mono tabular-nums"
@@ -812,7 +810,10 @@ function FdvField({
         </div>
       </div>
       <p className="mt-1 text-[10px] text-text-secondary">
-        {unit === "M" ? "Millions USD" : "Billions USD"} · ${formatNumber(fdv)}
+        {unit === "M" ? "Millions USD" : "Billions USD"} · $
+        {unit === "B"
+          ? `${(fdv / 1_000_000_000).toFixed(2)}B`
+          : `${(fdv / 1_000_000).toFixed(2)}M`}
       </p>
     </div>
   );

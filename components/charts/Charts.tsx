@@ -352,7 +352,7 @@ function CurrentTvlBeaconDot({
 
 export function TvlChart({ data, currentTvl, projection, referenceTimeMs }: TvlChartProps) {
   const [range, setRange] = useState<ChartRange>("7D");
-  const ranges: ChartRange[] = ["24H", "7D", "30D", "ALL"];
+  const ranges: ChartRange[] = ["7D", "30D", "ALL"];
   const { ref, hasEntered } = useInViewOnce<HTMLDivElement>(0.2);
 
   const filtered = filterByRange(data, range, referenceTimeMs);
