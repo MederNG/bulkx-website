@@ -153,7 +153,7 @@ export function FdvEstimator({
           <p className="section-title">FDV Estimator</p>
           <CopyCardPngButton exportRef={exportRef} filename="fdv-estimator" />
         </div>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-[1fr_minmax(13.5rem,1.4fr)_1fr_1.15fr]">
           <Field
             label="Your Aura"
             info={FDV_FIELD_INFO.yourAura}
@@ -740,7 +740,7 @@ function FdvField({
   };
 
   return (
-    <div className="relative">
+    <div className="relative min-w-[13.5rem]">
       <FieldLabel label="FDV ($)" info={info} />
       <div className="flex gap-1.5">
         <input
@@ -789,7 +789,7 @@ function FdvField({
               if (inputRef.current) restoreCommaCursor(inputRef.current, formatted, digitsBeforeCursor);
             });
           }}
-          className="input-field min-w-0 flex-1 font-mono tabular-nums"
+          className="input-field min-w-[6.75rem] flex-1 font-mono tabular-nums"
         />
         <div className="flex shrink-0 gap-0.5">
           {(["M", "B"] as const).map((key) => (
@@ -798,7 +798,7 @@ function FdvField({
               type="button"
               onClick={() => selectUnit(key)}
               className={cn(
-                "btn-ghost !min-w-[2.25rem] !px-2 !py-0 font-mono text-xs font-semibold",
+                "btn-ghost !min-w-[2rem] !px-1.5 !py-0 font-mono text-xs font-semibold",
                 unit === key && "active"
               )}
               aria-pressed={unit === key}
