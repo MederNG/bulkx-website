@@ -27,8 +27,8 @@ const FDV_FIELD_INFO = {
     "Portion of the total token supply allocated to the airdrop in your scenario.",
   totalSupply:
     "Total AURA counted for the pool — usually the campaign-wide total across all wallets. Defaults to the live total on this site.",
-  poolValue: "FDV × Allocation% — total dollar value assigned to the AURA pool in your scenario.",
-  auraValue: "Pool Value ÷ Total Aura Supply — implied USD value of one AURA.",
+  poolValue: "FDV × Allocation% — market cap of the airdrop allocation in your scenario.",
+  auraValue: "Market Cap ÷ Total Aura Supply — implied USD value of one AURA.",
   yourValue: "Your Aura × Aura Value — estimated USD value of your position at this FDV.",
 } as const;
 
@@ -168,7 +168,7 @@ export function FdvEstimator({
         </div>
         <div className="mt-5 grid gap-3 sm:grid-cols-3">
           <ResultBox
-            label="Pool Value"
+            label="Market Cap"
             info={FDV_FIELD_INFO.poolValue}
             value={formatUsd(result.poolValue)}
           />
@@ -194,7 +194,7 @@ export function FdvEstimator({
           <ExportField label="Total Aura Supply" value={formatNumber(auraSupply)} />
         </div>
         <div className="mt-5 grid gap-3 sm:grid-cols-3">
-          <ResultBox label="Pool Value" value={formatUsd(result.poolValue)} />
+          <ResultBox label="Market Cap" value={formatUsd(result.poolValue)} />
           <ResultBox label="Aura Value" value={`$${result.auraValue.toFixed(4)}`} />
           <ResultBox label="Your Value" value={formatUsd(result.userValue)} accent />
         </div>
