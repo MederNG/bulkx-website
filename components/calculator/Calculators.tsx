@@ -64,6 +64,9 @@ export function RankCalculator({ targets }: RankCalculatorProps) {
           <div>
             <label className="mb-1 block text-xs text-text-secondary">Current Aura</label>
             <NumericInput value={currentAura} onChange={setCurrentAura} className="input-field font-mono tabular-nums" />
+            <p className="invisible mt-1 text-[10px] text-text-secondary" aria-hidden="true">
+              spacer
+            </p>
           </div>
           <div>
             <label className="mb-1 block text-xs text-text-secondary">Target</label>
@@ -75,7 +78,12 @@ export function RankCalculator({ targets }: RankCalculatorProps) {
           </div>
         </div>
         <div className="mt-auto grid gap-4 sm:grid-cols-2">
-          <ResultBox label="Required Aura" value={formatNumber(required)} />
+          <div>
+            <ResultBox label="Required Aura" value={formatNumber(required)} />
+            <p className="invisible mt-1 text-[10px] text-text-secondary" aria-hidden="true">
+              spacer
+            </p>
+          </div>
           <ResultBox label="Additional Aura Needed" value={formatNumber(additional)} accent={additional > 0} />
         </div>
       </div>
