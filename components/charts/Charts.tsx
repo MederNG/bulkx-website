@@ -95,11 +95,11 @@ interface PieLabelProps {
 const PIE_ANIMATION_BEGIN_MS = 0;
 const PIE_ANIMATION_DURATION_MS = 1100;
 
-function renderPieLabelFactory(shares: number[], animate: boolean) {
+function renderPieLabelFactory(shares: number[], animate: boolean, hiddenIndex?: number) {
   const total = shares.reduce((sum, share) => sum + share, 0);
 
   return function renderPieLabel({ cx, cy, midAngle, outerRadius, percent, index = 0 }: PieLabelProps) {
-    if (!percent || percent <= 0.02 || total <= 0) return null;
+    if (!percent || percent <= 0.02 || total <= 0 || index === hiddenIndex) return null;
 
     const before = shares.slice(0, index).reduce((sum, share) => sum + share, 0);
     const sectorMid = (before + (shares[index] ?? 0) / 2) / total;
@@ -648,8 +648,7 @@ function withGroupShares(data: CategoryBreakdownItem[]): CategoryChartRow[] {
   }));
 }
 
-function collapseSmallCategories(data: CategoryChartRow[]) {
-  const TOP_N = 7;
+function collapseSmallCategories(data: CategoryChartRow[], topN: number = 7) {
   const MIN_GROUP_SHARE = 2.5;
 
   const prominent = data.filter((item) => item.groupShare >= MIN_GROUP_SHARE || item.key === "others");
@@ -669,16 +668,21 @@ function collapseSmallCategories(data: CategoryChartRow[]) {
         ]
       : [...data];
 
-  if (working.length <= TOP_N + 1) {
+  if (working.length <= topN + 1) {
     const othersCategories =
       tiny.length > 0
-        ? tiny.map((item) => ({ category: item.category, share: item.share, groupShare: item.groupShare }))
+        ? tiny.map((item) => ({
+            category: item.category,
+            points: item.points,
+            share: item.share,
+            groupShare: item.groupShare,
+          }))
         : [];
     return { chartData: working, othersCategories };
   }
 
-  const head = working.slice(0, TOP_N);
-  const rest = working.slice(TOP_N);
+  const head = working.slice(0, topN);
+  const rest = working.slice(topN);
   return {
     chartData: [
       ...head,
@@ -692,6 +696,7 @@ function collapseSmallCategories(data: CategoryChartRow[]) {
     ],
     othersCategories: rest.map((item) => ({
       category: item.category,
+      points: item.points,
       share: item.share,
       groupShare: item.groupShare,
     })),
@@ -713,12 +718,15 @@ export function CategoryCharts({ data }: CategoryChartsProps) {
     [data, selectedGroup]
   );
 
+  const isDrillDown = selectedGroup !== OVERVIEW_GROUP;
+
   const { chartData, othersCategories } = useMemo(() => {
     const withShares = withGroupShares(filtered);
-    return collapseSmallCategories(withShares);
-  }, [filtered]);
-
-  const isDrillDown = selectedGroup !== OVERVIEW_GROUP;
+    // Overview buckets are Retro/Week N/Other — a bounded, meaningful set that
+    // should never be swallowed into "Others" just because the campaign has
+    // run long enough to exceed the drill-down TOP_N.
+    return collapseSmallCategories(withShares, isDrillDown ? 7 : Number.POSITIVE_INFINITY);
+  }, [filtered, isDrillDown]);
   const barHeight = Math.max(260, chartData.length * 42);
 
   const othersInfo =
@@ -732,7 +740,7 @@ export function CategoryCharts({ data }: CategoryChartsProps) {
             <span key={c.category} className="flex justify-between gap-3">
               <span>{c.category}</span>
               <span className="tabular-nums text-text-secondary">
-                {c.groupShare.toFixed(1)}% · {c.share.toFixed(2)}% total
+                {formatNumber(c.points)} Aura · {c.groupShare.toFixed(1)}%
               </span>
             </span>
           ))}
@@ -742,13 +750,18 @@ export function CategoryCharts({ data }: CategoryChartsProps) {
 
   const [activeIndex, setActiveIndex] = useState<number | undefined>(undefined);
   const { ref, hasEntered } = useInViewOnce<HTMLDivElement>(0.2);
+  // Keep the label renderer mounted at all times (never swap it for
+  // `undefined`) so hovering on/off a slice doesn't remount the <text>
+  // elements and replay their entrance fade. The active slice's own label is
+  // hidden by index instead, inside renderPieLabel.
   const pieLabel = useMemo(
     () =>
       renderPieLabelFactory(
         chartData.map((row) => row.groupShare),
-        hasEntered
+        hasEntered,
+        activeIndex
       ),
-    [chartData, hasEntered]
+    [chartData, hasEntered, activeIndex]
   );
 
   useEffect(() => {
@@ -783,7 +796,7 @@ export function CategoryCharts({ data }: CategoryChartsProps) {
               outerRadius={85}
               minAngle={5}
               paddingAngle={chartData.length > 5 ? 1 : 2}
-              label={activeIndex === undefined ? pieLabel : undefined}
+              label={pieLabel}
               labelLine={false}
               isAnimationActive={hasEntered}
               animationBegin={PIE_ANIMATION_BEGIN_MS}

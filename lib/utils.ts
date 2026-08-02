@@ -29,8 +29,24 @@ export function truncateWallet(wallet: string, chars = 4): string {
 }
 
 export function categoryLabel(key: string): string {
+  // "retro_*" and "weekN_*" categories are only ever shown inside that
+  // group's own drill-down (the "Retro" / "Week N" filter is already
+  // selected), so the prefix is a redundant echo — strip it and label by
+  // what's left.
+  if (key.startsWith("retro_")) return categoryLabel(key.slice("retro_".length));
+
+  // Bare "weekN" is the deposit-holding bucket itself.
+  if (/^week\d+$/i.test(key)) return "Pre-Deposits";
+
+  // "referral_weekN" — same idea, the week number is redundant.
+  if (/^referral_week\d+$/i.test(key)) return "Referrals";
+
+  const weekPrefixMatch = key.match(/^week\d+_(.+)$/i);
+  if (weekPrefixMatch) return categoryLabel(weekPrefixMatch[1]);
+
   return key
     .replace(/_/g, " ")
+    .replace(/\bweek(\d+)/gi, "week $1")
     .replace(/\b\w/g, (c) => c.toUpperCase());
 }
 

@@ -13,7 +13,9 @@ export interface ParsedAuraCategory {
 }
 
 const REFERRAL_WEEK_RE = /^referral_week(\d+)$/;
-const WEEK_PROTOCOL_RE = /^week(\d+)_protocol_.+$/;
+// Any weekN-prefixed sub-category (protocol bonuses, one-off corrections, etc.)
+// belongs to that week's group, not "Other".
+const WEEK_SUFFIX_RE = /^week(\d+)_.+$/;
 const WEEK_RE = /^week(\d+)$/;
 
 /** Map raw upstream category keys to Retro / Week N / Other buckets. */
@@ -27,9 +29,9 @@ export function parseAuraCategoryKey(key: string): ParsedAuraCategory {
     return { group: "week", week: Number(referralMatch[1]) };
   }
 
-  const protocolMatch = key.match(WEEK_PROTOCOL_RE);
-  if (protocolMatch) {
-    return { group: "week", week: Number(protocolMatch[1]) };
+  const suffixMatch = key.match(WEEK_SUFFIX_RE);
+  if (suffixMatch) {
+    return { group: "week", week: Number(suffixMatch[1]) };
   }
 
   const weekMatch = key.match(WEEK_RE);

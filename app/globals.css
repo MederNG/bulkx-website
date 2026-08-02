@@ -265,6 +265,14 @@ input[type="number"] {
   font-size: 11px !important;
 }
 
+/* Clicking a pie slice / bar focuses the SVG shape, which browsers outline
+   by default — suppress it since the chart already shows selection via
+   color/active-shape styling, not a focus ring. */
+.recharts-wrapper *:focus,
+.recharts-wrapper *:focus-visible {
+  outline: none;
+}
+
 .hero-intelligence-title-wrap {
   display: inline-grid;
 }
