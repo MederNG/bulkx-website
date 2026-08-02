@@ -342,7 +342,7 @@ export function DepositAuraPredictor({
 
         <div className="mb-4">
           <label className="mb-1.5 block text-xs text-text-secondary">Hold since</label>
-          <SegmentToggle
+          <Select
             value={holdSinceWeek != null ? String(holdSinceWeek) : ""}
             onChange={(v) => {
               if (v) {
@@ -353,11 +353,13 @@ export function DepositAuraPredictor({
               setHoldSinceWeek(null);
               setMode("new_deposit");
             }}
-            allowDeselect
-            options={holdSinceOptions.map((week) => ({
-              value: String(week),
-              label: `Week ${week}`,
-            }))}
+            options={[
+              { value: "", label: "Not set" },
+              ...holdSinceOptions.map((week) => ({
+                value: String(week),
+                label: `Week ${week}`,
+              })),
+            ]}
           />
           <p className="mt-1.5 text-[10px] leading-relaxed text-text-secondary">
             {holdSinceActive
