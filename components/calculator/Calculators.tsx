@@ -158,8 +158,8 @@ export function FdvEstimator({
     <div className="min-w-0 lg:row-span-3">
       <div className="card tool-pair-card flex h-full flex-col gap-5 overflow-visible p-4 md:p-5">
         <div className="flex items-start justify-between gap-3">
-          <p className="section-title">FDV Estimator</p>
-          <CopyCardPngButton exportRef={exportRef} filename="fdv-estimator" />
+          <p className="section-title">Airdrop Estimator</p>
+          <CopyCardPngButton exportRef={exportRef} filename="airdrop-estimator" />
         </div>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-[1fr_minmax(13.5rem,1.4fr)_1fr_1.15fr]">
           <Field
@@ -207,7 +207,7 @@ export function FdvEstimator({
         </div>
       </div>
       <ToolExportSurface exportRef={exportRef} width={720}>
-        <p className="section-title mb-4">FDV Estimator</p>
+        <p className="section-title mb-4">Airdrop Estimator</p>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <ExportField label="Your Aura" value={formatNumber(userAura)} />
           <ExportField label="FDV ($)" value={fdvLabel} />
