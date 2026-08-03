@@ -40,6 +40,8 @@ export function ShareCardGenerator() {
       const res = await fetch(`/api/wallet?address=${encodeURIComponent(address.trim())}`);
       if (res.ok) setWallet(await res.json());
       else setWallet(null);
+    } catch {
+      setWallet(null);
     } finally {
       setLoading(false);
     }
