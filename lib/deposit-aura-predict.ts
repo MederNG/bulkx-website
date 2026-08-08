@@ -430,21 +430,42 @@ export function computeDepositAuraPredictContext(
   };
 
   const weekPool: Record<number, number> = {};
-  const weekEligibleCumUsdHours: Record<number, number> = {};
-  for (let week = 1; week <= campaignWeek; week += 1) {
-    const pool = week <= (lastCompletedWeek ?? 0) ? measureWeeklyAuraPool(entries, week) : 0;
+  for (let week = 1; week <= (lastCompletedWeek ?? 0); week += 1) {
+    const pool = measureWeeklyAuraPool(entries, week);
     if (pool > 0) weekPool[week] = pool;
-
-    // Prefer the denominator implied by that week's actual payouts; the TVL
-    // integral is only a fallback for weeks with too few usable samples.
-    const measured =
-      pool > 0 ? measureWeekEligibleCumUsdHours(entries, week, pool, dataAsOfMs) : null;
-    weekEligibleCumUsdHours[week] = measured ?? eligibleAt(getCampaignWeekEndMs(week));
   }
 
   const measuredPool =
     lastCompletedWeek != null ? (weekPool[lastCompletedWeek] ?? null) : null;
   const depositPool = measuredPool ?? WEEKLY_DEPOSIT_AURA_POOL;
+
+  const invertedDenominator = (week: number): number | null => {
+    const pool = weekPool[week];
+    return pool > 0 ? measureWeekEligibleCumUsdHours(entries, week, pool, dataAsOfMs) : null;
+  };
+
+  // The inversion samples wallets whose tenure is inferred as
+  // `accrued / balance`, which understates anyone who topped up their position —
+  // biasing the denominator low by ~1.5%. For the newest completed week the true
+  // figure is directly summable, so the residual is measured there once and
+  // applied to every week rather than left as a standing bias.
+  const invertedLatest =
+    lastCompletedWeek != null ? invertedDenominator(lastCompletedWeek) : null;
+  const sampleCorrection =
+    invertedLatest != null && invertedLatest > 0 && eligibleNow > 0
+      ? Math.min(1.25, Math.max(0.8, eligibleNow / invertedLatest))
+      : 1;
+
+  const weekEligibleCumUsdHours: Record<number, number> = {};
+  for (let week = 1; week <= campaignWeek; week += 1) {
+    // Prefer the denominator implied by that week's actual payouts; the TVL
+    // integral is only a fallback for weeks with too few usable samples.
+    const measured = invertedDenominator(week);
+    weekEligibleCumUsdHours[week] =
+      measured != null
+        ? measured * sampleCorrection
+        : eligibleAt(getCampaignWeekEndMs(week));
+  }
 
   // Everyone still holding keeps accruing until the snapshot lands.
   const eligibleCumUsdHoursAtSnapshot =
