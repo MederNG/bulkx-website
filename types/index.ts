@@ -20,6 +20,15 @@ export interface LeaderboardEntry {
   updated_at?: string;
 }
 
+export interface AlphaInsight {
+  label: string;
+  value: string;
+  detail?: string;
+  mono?: boolean;
+  /** Full wallet address to copy, when `detail` shows a truncated one. */
+  copyValue?: string;
+}
+
 export interface LeaderboardResponse {
   items: LeaderboardEntry[];
   total: number;
@@ -76,7 +85,7 @@ export interface DashboardMetrics {
   topReferrers: LeaderboardEntry[];
   referralCandidates: LeaderboardEntry[];
   topEfficiency: (LeaderboardEntry & { efficiency: number })[];
-  alphaInsights: string[];
+  alphaInsights: AlphaInsight[];
   lastUpdated: string;
 }
 

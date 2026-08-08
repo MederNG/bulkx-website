@@ -29,8 +29,8 @@ export function HeroTvlCard() {
 }
 
 export function HeroWalletsCard() {
-  const { totalWallets } = useLiveFinancials();
-  return <MetricCard label="Total Wallets" value={totalWallets} format="plain" />;
+  const { depositWallets } = useLiveFinancials();
+  return <MetricCard label="Total Depositors" value={depositWallets} format="plain" />;
 }
 
 export function HeroAuraCard() {
@@ -185,16 +185,6 @@ export function TvlSectionCards({
         </p>
       )}
     </>
-  );
-}
-
-export function LiveTvlInsight() {
-  const { currentTvl, depositWallets } = useLiveFinancials();
-  return (
-    <li className="flex gap-3 text-sm text-text-secondary">
-      <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-accent" />
-      {`Current TVL: $${Math.round(currentTvl).toLocaleString("en-US")} across ${depositWallets.toLocaleString("en-US")} depositors.`}
-    </li>
   );
 }
 

@@ -12,6 +12,7 @@ import {
 import { formatNumber, formatUsd, truncateWallet } from "@/lib/utils";
 import { computeDepositAura, computeEfficiency } from "@/lib/percentiles";
 import { cn } from "@/lib/utils";
+import { CopyableWallet } from "@/components/ui/CopyableWallet";
 
 interface ColumnDef {
   key: string;
@@ -36,7 +37,7 @@ function getColumns(tab: LeaderboardTab): ColumnDef[] {
     key: "wallet",
     label: "Wallet",
     align: "left",
-    render: (entry) => <span className="font-mono">{truncateWallet(entry.wallet, 6)}</span>,
+    render: (entry) => <WalletCell wallet={entry.wallet} />,
   };
 
   const aura: ColumnDef = {
@@ -207,12 +208,12 @@ export function LeaderboardTable() {
   return (
     <div className="card overflow-hidden">
       <div className="flex flex-col gap-3 border-b border-[rgba(198,182,186,0.1)] p-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex flex-wrap gap-1">
+        <div className="grid grid-cols-2 gap-1 sm:grid-cols-4">
           {tabs.map((t) => (
             <button
               key={t.id}
               onClick={() => handleTabChange(t.id)}
-              className={cn("btn-ghost", tab === t.id && "active")}
+              className={cn("btn-ghost text-center", tab === t.id && "active")}
             >
               {t.label}
             </button>
@@ -270,7 +271,7 @@ export function LeaderboardTable() {
               pageData.map((entry, i) => (
                 <tr
                   key={entry.wallet}
-                  className="border-b border-[rgba(198,182,186,0.05)] hover:bg-[rgba(255,181,71,0.03)]"
+                  className="group border-b border-[rgba(198,182,186,0.05)] hover:bg-[rgba(255,181,71,0.03)]"
                 >
                   {columns.map((col) => (
                     <td
@@ -325,6 +326,10 @@ export function LeaderboardTable() {
       </div>
     </div>
   );
+}
+
+function WalletCell({ wallet }: { wallet: string }) {
+  return <CopyableWallet wallet={wallet} display={truncateWallet(wallet, 6)} className="font-mono" />;
 }
 
 function SortableHeader({

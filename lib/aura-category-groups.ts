@@ -44,48 +44,65 @@ export function parseAuraCategoryKey(key: string): ParsedAuraCategory {
 
 export const OVERVIEW_GROUP = "overview";
 
-export function overviewGroupLabel(bucketKey: string): string {
-  if (bucketKey === "retro") return "Retro";
-  if (bucketKey === "other") return "Other";
-  const weekMatch = bucketKey.match(/^week-(\d+)$/);
-  if (weekMatch) return `Week ${weekMatch[1]}`;
-  return bucketKey;
+/** One bucket per source *type*, combined across every week (not per-week). */
+const SOURCE_LABEL_OVERRIDES: Record<string, string> = {
+  retro: "Retro",
+  "pre-deposits": "Pre-Deposits",
+  referrals: "Referrals",
+};
+
+const FIXED_SOURCE_ORDER = ["retro", "pre-deposits", "referrals"];
+
+function sourceBucketKey(key: string): string {
+  if (key.startsWith("retro_")) return "retro";
+  if (/^week\d+$/i.test(key)) return "pre-deposits";
+  if (/^referral_week\d+$/i.test(key)) return "referrals";
+
+  const suffixMatch = key.match(/^week\d+_(.+)$/i);
+  if (suffixMatch) return suffixMatch[1];
+
+  return "other";
 }
 
-function sortOverviewKeys(a: string, b: string): number {
+function sourceBucketLabel(bucketKey: string): string {
+  return (
+    SOURCE_LABEL_OVERRIDES[bucketKey] ??
+    bucketKey.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())
+  );
+}
+
+function sortSourceKeys(a: string, b: string, pointsByKey: Map<string, number>): number {
   const rank = (key: string) => {
-    if (key === "retro") return 0;
-    if (key.startsWith("week-")) return 100 + Number(key.slice(5));
-    if (key === "other") return 10_000;
-    return 9_000;
+    const fixedIndex = FIXED_SOURCE_ORDER.indexOf(key);
+    if (fixedIndex !== -1) return fixedIndex;
+    if (key === "other") return 9_000;
+    return 100;
   };
-  return rank(a) - rank(b);
+  const rankDiff = rank(a) - rank(b);
+  if (rankDiff !== 0) return rankDiff;
+  return (pointsByKey.get(b) ?? 0) - (pointsByKey.get(a) ?? 0);
 }
 
-export function aggregateOverviewGroups(data: CategoryBreakdownItem[]): CategoryBreakdownItem[] {
+/** Overview bucketed by source type (Retro / Pre-Deposits / Referrals /
+ * Protocol Exponent / …), summed across every week — not by week number. */
+export function aggregateBySource(data: CategoryBreakdownItem[]): CategoryBreakdownItem[] {
   const buckets = new Map<string, number>();
   let totalPoints = 0;
 
   for (const item of data) {
     totalPoints += item.points;
-    const parsed = parseAuraCategoryKey(item.key);
-    const bucketKey =
-      parsed.group === "retro"
-        ? "retro"
-        : parsed.group === "week"
-          ? `week-${parsed.week}`
-          : "other";
+    const bucketKey = sourceBucketKey(item.key);
     buckets.set(bucketKey, (buckets.get(bucketKey) ?? 0) + item.points);
   }
 
   return [...buckets.entries()]
     .map(([key, points]) => ({
       key,
-      category: overviewGroupLabel(key),
+      category: sourceBucketLabel(key),
       points,
       share: totalPoints > 0 ? (points / totalPoints) * 100 : 0,
     }))
-    .sort((a, b) => sortOverviewKeys(a.key, b.key));
+    .sort((a, b) => sortSourceKeys(a.key, b.key, buckets));
 }
 
 export function filterCategoryBreakdown(
@@ -93,7 +110,7 @@ export function filterCategoryBreakdown(
   selectedGroup: string
 ): CategoryBreakdownItem[] {
   if (selectedGroup === OVERVIEW_GROUP) {
-    return aggregateOverviewGroups(data);
+    return aggregateBySource(data);
   }
 
   if (selectedGroup === "retro") {

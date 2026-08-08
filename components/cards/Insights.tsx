@@ -1,29 +1,40 @@
-import { Sparkles } from "lucide-react";
 import { KpiTerminalCounter, type NumberFormat } from "@/components/cards/KpiTerminalCounter";
-import { InfoTooltip } from "@/components/ui/InfoTooltip";
+import { CopyableWallet } from "@/components/ui/CopyableWallet";
+import { cn } from "@/lib/utils";
+import type { AlphaInsight } from "@/types";
 
-export function AlphaSection({
-  insights,
-  children,
-}: {
-  insights: string[];
-  children?: React.ReactNode;
-}) {
+export function AlphaSection({ insights }: { insights: AlphaInsight[] }) {
   return (
     <div className="card card-highlight p-4 md:p-5">
-      <div className="mb-4 flex items-center gap-2">
-        <Sparkles className="h-4 w-4 text-accent" />
-        <p className="section-title !text-accent">Alpha Insights</p>
-      </div>
-      <ul className="space-y-3">
-        {insights.map((insight, i) => (
-          <li key={i} className="flex gap-3 text-sm text-text-secondary">
-            <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-accent" />
-            {insight}
-          </li>
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        {insights.map((insight) => (
+          <div
+            key={insight.label}
+            className="group rounded border border-[rgba(198,182,186,0.12)] bg-bulk-base p-3.5"
+          >
+            <p className="text-[10px] uppercase tracking-wider text-text-secondary">
+              {insight.label}
+            </p>
+            <p className="mt-1.5 font-mono text-sm font-semibold tabular-nums text-accent">
+              {insight.value}
+            </p>
+            {insight.detail && (
+              <div
+                className={cn(
+                  "mt-1 text-xs text-text-secondary",
+                  insight.mono && "font-mono"
+                )}
+              >
+                {insight.copyValue ? (
+                  <CopyableWallet wallet={insight.copyValue} display={insight.detail} />
+                ) : (
+                  insight.detail
+                )}
+              </div>
+            )}
+          </div>
         ))}
-        {children}
-      </ul>
+      </div>
     </div>
   );
 }
@@ -58,46 +69,6 @@ export function NorthStarMetrics({
           />
         </div>
       ))}
-    </div>
-  );
-}
-
-export function WhaleCard({
-  top10Share,
-  top100Share,
-  top1000Share,
-  gini,
-}: {
-  top10Share: number;
-  top100Share: number;
-  top1000Share: number;
-  gini: number;
-}) {
-  const rows: { label: string; value: string; info?: string }[] = [
-    { label: "Top 10 Share", value: `${top10Share.toFixed(1)}%` },
-    { label: "Top 100 Share", value: `${top100Share.toFixed(1)}%` },
-    { label: "Top 1000 Share", value: `${top1000Share.toFixed(1)}%` },
-    {
-      label: "Gini Coefficient",
-      value: gini.toFixed(3),
-      info: "Measures how unequally AURA is spread across all wallets. 0 means every wallet holds an equal amount of AURA; 1 means a single wallet holds nearly all of it. Higher values indicate AURA is concentrated in a few whales.",
-    },
-  ];
-
-  return (
-    <div className="card p-4 md:p-5">
-      <p className="mb-4 text-sm font-medium">Whale Concentration</p>
-      <div className="space-y-3">
-        {rows.map((row) => (
-          <div key={row.label} className="flex items-center justify-between">
-            <span className="flex items-center gap-1.5 text-xs text-text-secondary">
-              {row.label}
-              {row.info && <InfoTooltip text={row.info} />}
-            </span>
-            <span className="font-mono text-sm font-semibold tabular-nums">{row.value}</span>
-          </div>
-        ))}
-      </div>
     </div>
   );
 }

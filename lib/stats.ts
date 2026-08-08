@@ -17,6 +17,7 @@ import { AURA_BUCKETS, categoryLabel } from "@/lib/utils";
 import { computeDepositAuraPredictContext } from "@/lib/deposit-aura-predict";
 import { buildWalletData } from "@/lib/wallet-data";
 import type {
+  AlphaInsight,
   ChartRange,
   DashboardMetrics,
   LeaderboardEntry,
@@ -84,15 +85,7 @@ export async function computeDashboardMetrics(): Promise<DashboardMetrics> {
     .slice(0, 20);
 
   const targets = getRankTargets(auraValues);
-  const alphaInsights = generateAlphaInsights(
-    entries,
-    sortedAuraAsc,
-    categoryBreakdown,
-    topEfficiency,
-    topReferrers,
-    currentTvl,
-    totals?.totalWallets ?? entries.length
-  );
+  const alphaInsights = generateAlphaInsights(entries, sortedAuraAsc, topEfficiency, topReferrers);
 
   return {
     totalWallets: totals?.leaderboardWallets ?? entries.length,
@@ -125,37 +118,46 @@ export async function computeDashboardMetrics(): Promise<DashboardMetrics> {
 function generateAlphaInsights(
   entries: LeaderboardEntry[],
   sortedAuraAsc: number[],
-  categories: { category: string; points: number; share: number }[],
   topEfficiency: (LeaderboardEntry & { efficiency: number })[],
-  topReferrers: LeaderboardEntry[],
-  currentTvl: number,
-  depositWallets: number
-): string[] {
-  const insights: string[] = [];
+  topReferrers: LeaderboardEntry[]
+): AlphaInsight[] {
+  const insights: AlphaInsight[] = [];
   const median = percentileValue(sortedAuraAsc, 50);
   const top1 = percentileValue(sortedAuraAsc, 99);
 
-  insights.push(`Top 1% threshold sits at ${top1.toLocaleString()} Aura — ${entries.length.toLocaleString()} wallets tracked.`);
+  insights.push({
+    label: "Top 1% Threshold",
+    value: `${top1.toLocaleString()} Aura`,
+    detail: `${entries.length.toLocaleString()} wallets tracked`,
+  });
 
   if (median > 0) {
-    insights.push(`Median Aura is ${median.toLocaleString()} across the campaign.`);
-  }
-
-  if (categories.length > 0) {
-    insights.push(`Fastest growing category: ${categories[0].category} (${categories[0].share.toFixed(1)}% share).`);
+    insights.push({
+      label: "Median Aura",
+      value: median.toLocaleString(),
+      detail: "across the campaign",
+    });
   }
 
   if (topEfficiency[0]) {
-    insights.push(`Most efficient wallet: ${topEfficiency[0].wallet.slice(0, 8)}... (${topEfficiency[0].efficiency.toFixed(2)} Aura/$).`);
+    insights.push({
+      label: "Most Efficient Wallet",
+      value: `${topEfficiency[0].efficiency.toFixed(2)} Aura/$`,
+      detail: `${topEfficiency[0].wallet.slice(0, 8)}...`,
+      mono: true,
+      copyValue: topEfficiency[0].wallet,
+    });
   }
 
   if (topReferrers[0]) {
-    insights.push(`Highest referral performer: ${topReferrers[0].wallet.slice(0, 8)}... (${topReferrers[0].referrals_qualified} qualified).`);
+    insights.push({
+      label: "Top Referral Performer",
+      value: `${topReferrers[0].referrals_qualified} qualified`,
+      detail: `${topReferrers[0].wallet.slice(0, 8)}...`,
+      mono: true,
+      copyValue: topReferrers[0].wallet,
+    });
   }
-
-  insights.push(
-    `Current TVL: $${Math.round(currentTvl).toLocaleString()} across ${depositWallets.toLocaleString()} depositors.`
-  );
 
   return insights;
 }

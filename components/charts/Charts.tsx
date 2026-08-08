@@ -11,7 +11,6 @@ import {
   LabelList,
   Legend,
   Line,
-  LineChart,
   Pie,
   PieChart,
   ResponsiveContainer,
@@ -493,29 +492,6 @@ export function TvlChart({ data, currentTvl, projection, referenceTimeMs }: TvlC
           </ComposedChart>
         </ResponsiveContainer>
       </div>
-
-      {projection.available && (
-        <div className="mt-4 rounded border border-[rgba(198,182,186,0.12)] bg-[rgba(255,254,239,0.02)] p-3">
-          <p className="text-xs font-medium text-text-primary">How Projection Works</p>
-          <p className="mt-2 text-xs leading-relaxed text-text-secondary">
-            Projected TVL is calculated using a weighted average of net TVL growth over the last 7
-            days.
-          </p>
-          <p className="mt-2 text-xs leading-relaxed text-text-secondary">
-            Recent days receive greater weighting than older days, allowing the projection to react
-            to changing deposit trends while reducing the impact of isolated outliers.
-          </p>
-          <p className="mt-2 font-mono text-[11px] leading-relaxed text-text-secondary">
-            Weighted Daily Flow = Σ(Net Flow × Weight) / Σ(Weight)
-          </p>
-          <p className="mt-1 font-mono text-[11px] leading-relaxed text-text-secondary">
-            Projected TVL = Current TVL + (Weighted Daily Flow × Remaining Days)
-          </p>
-          <p className="mt-2 text-xs text-text-secondary">
-            This projection assumes the recent trend continues until the next snapshot.
-          </p>
-        </div>
-      )}
     </div>
   );
 }
@@ -554,79 +530,25 @@ export function AuraHistogram({ data }: HistogramProps) {
               borderRadius: 4,
               fontSize: 12,
             }}
+            itemStyle={{ color: "#FFB547" }}
+            labelStyle={{ color: "#FFFEEF" }}
+            formatter={(value: number) => [value.toLocaleString(), "Wallets"]}
           />
           <Bar
             dataKey="count"
-            fill="#FFB547"
             radius={[2, 2, 0, 0]}
             isAnimationActive={hasEntered}
             activeBar={{
-              fill: "#FFC764",
-              stroke: "#FFB547",
+              stroke: "#FFFEEF",
               strokeWidth: 1,
               filter: "drop-shadow(0 0 6px rgba(255,181,71,0.45))",
             }}
-          />
+          >
+            {data.map((_, i) => (
+              <Cell key={i} fill={COLORS[i % COLORS.length]} />
+            ))}
+          </Bar>
         </BarChart>
-      </ResponsiveContainer>
-    </div>
-  );
-}
-
-interface LorenzProps {
-  data: { cumulativeWallets: number; cumulativeAura: number }[];
-}
-
-export function LorenzChart({ data }: LorenzProps) {
-  const { ref, hasEntered } = useInViewOnce<HTMLDivElement>(0.2);
-
-  return (
-    <div ref={ref} className="card p-4 md:p-5">
-      <p className="mb-4 flex items-center gap-1.5 text-sm font-medium">
-        Lorenz Curve
-        <InfoTooltip text="Plots the cumulative share of total AURA (vertical) held by the cumulative share of wallets (horizontal), ranked from lowest to highest AURA. The dashed diagonal is perfect equality; the more the gold curve bows below it, the more AURA is concentrated among the top holders." />
-      </p>
-      <ResponsiveContainer width="100%" height={240}>
-        <LineChart key={hasEntered ? "lorenz-animate" : "lorenz-idle"} data={data}>
-          <CartesianGrid strokeDasharray="3 3" />
-          <XAxis
-            dataKey="cumulativeWallets"
-            type="number"
-            domain={[0, 100]}
-            ticks={[0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100]}
-            tickFormatter={(v) => `${v.toFixed(0)}%`}
-          />
-          <YAxis tickFormatter={(v) => `${v.toFixed(0)}%`} width={45} />
-          <Tooltip
-            contentStyle={{
-              background: "#1B1A14",
-              border: "1px solid rgba(198,182,186,0.2)",
-              borderRadius: 4,
-              fontSize: 12,
-            }}
-            formatter={(value: number, name: string) => [
-              `${value.toFixed(1)}%`,
-              name === "cumulativeAura" ? "Aura Share" : "Equality",
-            ]}
-          />
-          <Line
-            type="monotone"
-            dataKey="cumulativeAura"
-            stroke="#FFB547"
-            strokeWidth={2}
-            dot={false}
-            isAnimationActive={hasEntered}
-          />
-          <Line
-            type="monotone"
-            dataKey="cumulativeWallets"
-            stroke="#544A4C"
-            strokeWidth={1}
-            strokeDasharray="4 4"
-            dot={false}
-            isAnimationActive={hasEntered}
-          />
-        </LineChart>
       </ResponsiveContainer>
     </div>
   );
@@ -725,7 +647,12 @@ export function CategoryCharts({ data }: CategoryChartsProps) {
     // Overview buckets are Retro/Week N/Other — a bounded, meaningful set that
     // should never be swallowed into "Others" just because the campaign has
     // run long enough to exceed the drill-down TOP_N.
-    return collapseSmallCategories(withShares, isDrillDown ? 7 : Number.POSITIVE_INFINITY);
+    const collapsed = collapseSmallCategories(withShares, isDrillDown ? 7 : Number.POSITIVE_INFINITY);
+    return {
+      ...collapsed,
+      // Largest to smallest, top to bottom.
+      chartData: [...collapsed.chartData].sort((a, b) => b.groupShare - a.groupShare),
+    };
   }, [filtered, isDrillDown]);
   const barHeight = Math.max(260, chartData.length * 42);
 
@@ -750,6 +677,24 @@ export function CategoryCharts({ data }: CategoryChartsProps) {
 
   const [activeIndex, setActiveIndex] = useState<number | undefined>(undefined);
   const { ref, hasEntered } = useInViewOnce<HTMLDivElement>(0.2);
+
+  // A fast mouse-out or an alt-tab away mid-hover can skip the pointer past
+  // Recharts' sector boundary without ever firing its onMouseLeave, leaving
+  // the active slice highlighted indefinitely. Clear it on any of these
+  // signals regardless of whether the sector itself reported leaving.
+  useEffect(() => {
+    if (activeIndex === undefined) return;
+    const clear = () => setActiveIndex(undefined);
+    window.addEventListener("blur", clear);
+    document.addEventListener("visibilitychange", clear);
+    document.addEventListener("mouseleave", clear);
+    return () => {
+      window.removeEventListener("blur", clear);
+      document.removeEventListener("visibilitychange", clear);
+      document.removeEventListener("mouseleave", clear);
+    };
+  }, [activeIndex]);
+
   // Keep the label renderer mounted at all times (never swap it for
   // `undefined`) so hovering on/off a slice doesn't remount the <text>
   // elements and replay their entrance fade. The active slice's own label is
@@ -770,7 +715,7 @@ export function CategoryCharts({ data }: CategoryChartsProps) {
 
   return (
     <div ref={ref} className="grid gap-4 lg:grid-cols-2">
-      <div className="card p-4 md:p-5">
+      <div className="card p-4 md:p-5" onMouseLeave={() => setActiveIndex(undefined)}>
         <div className="mb-4 flex items-start justify-between gap-3">
           <p className="flex items-center gap-1.5 text-sm font-medium">
             Source Breakdown

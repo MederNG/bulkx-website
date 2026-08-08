@@ -15,8 +15,6 @@ import {
   HeroAuraCard,
   LiveLastUpdated,
 
-  LiveTvlInsight,
-
 } from "@/components/cards/LiveFinancialMetrics";
 
 import {
@@ -25,19 +23,13 @@ import {
 
   DistributionStats,
 
-  WhaleCard,
-
 } from "@/components/cards/Insights";
-
-import { ShareCardGenerator } from "@/components/cards/ShareCard";
 
 import {
 
   AuraHistogram,
 
   CategoryCharts,
-
-  LorenzChart,
 
 } from "@/components/charts/Charts";
 
@@ -70,8 +62,6 @@ export default async function HomePage() {
   const snapshots = getChartSnapshots("ALL");
 
   const targets = getRankTargetsFromData();
-
-  const staticInsights = metrics.alphaInsights.slice(0, -1);
 
 
 
@@ -141,11 +131,7 @@ export default async function HomePage() {
 
         <Section title="Market Intelligence">
 
-          <AlphaSection insights={staticInsights}>
-
-            <LiveTvlInsight />
-
-          </AlphaSection>
+          <AlphaSection insights={metrics.alphaInsights} />
 
         </Section>
 
@@ -163,7 +149,7 @@ export default async function HomePage() {
 
         {/* Aura Distribution */}
 
-        <Section title="Aura Distribution">
+        <Section id="aura-distribution" title="Aura Distribution">
 
           <div className="grid gap-4 lg:grid-cols-3">
 
@@ -193,35 +179,9 @@ export default async function HomePage() {
 
 
 
-        {/* Whale Analytics */}
-
-        <Section title="Whale Analytics">
-
-          <div className="grid gap-4 lg:grid-cols-2">
-
-            <WhaleCard
-
-              top10Share={metrics.top10Share}
-
-              top100Share={metrics.top100Share}
-
-              top1000Share={metrics.top1000Share}
-
-              gini={metrics.giniCoefficient}
-
-            />
-
-            <LorenzChart data={metrics.lorenzCurve} />
-
-          </div>
-
-        </Section>
-
-
-
         {/* Source Breakdown */}
 
-        <Section title="Aura Source Breakdown">
+        <Section id="aura-source-breakdown" title="Aura Source Breakdown">
 
           <CategoryCharts data={metrics.categoryBreakdown} />
 
@@ -250,16 +210,6 @@ export default async function HomePage() {
         <Section id="leaderboards" title="Leaderboards" subtitle="Top 100 wallets per ranking category">
 
           <LeaderboardTable />
-
-        </Section>
-
-
-
-        {/* Share Card */}
-
-        <Section id="share-card" title="Share Card">
-
-          <ShareCardGenerator />
 
         </Section>
 

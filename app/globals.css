@@ -243,16 +243,22 @@ input[type="number"] {
   border-color: rgba(255, 181, 71, 0.4);
 }
 
-/* Header nav uses text-style links without boxed borders. */
+/* Header nav uses text-style links — highlight is a text glow, never a box. */
 .btn-ghost.btn-ghost-header {
   border-color: transparent;
   background: transparent;
 }
 
 .btn-ghost.btn-ghost-header:hover,
-.btn-ghost.btn-ghost-header.active {
+.btn-ghost.btn-ghost-header.active,
+.btn-ghost.btn-ghost-header:focus-visible {
   border-color: transparent;
-  background: rgba(255, 181, 71, 0.08);
+  background: transparent;
+  outline: none;
+  color: var(--color-accent);
+  text-shadow:
+    0 0 10px rgba(255, 181, 71, 0.7),
+    0 0 4px rgba(255, 181, 71, 0.5);
 }
 
 .recharts-cartesian-grid-horizontal line,

@@ -6,16 +6,13 @@ import { ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { AnchorLink } from "@/components/layout/AnchorLink";
 
-const NAV_ITEMS = [
-  { href: "#lookup", label: "Lookup" },
+const ANALYTICS_ITEMS = [
   { href: "#analytics", label: "TVL Analytics" },
   { href: "#aura-distribution", label: "Aura Distribution" },
   { href: "#aura-source-breakdown", label: "Aura Source Breakdown" },
-  { href: "#calculator", label: "Tools" },
-  { href: "#leaderboards", label: "Leaderboards" },
 ] as const;
 
-export function NavMoreMenu() {
+export function NavAnalyticsMenu() {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -37,7 +34,7 @@ export function NavMoreMenu() {
   }, []);
 
   return (
-    <div ref={ref} className="relative md:hidden">
+    <div ref={ref} className="relative">
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
@@ -48,7 +45,7 @@ export function NavMoreMenu() {
           open && "text-accent"
         )}
       >
-        More
+        Analytics
         <ChevronDown
           className={cn(
             "h-3.5 w-3.5 text-accent transition-transform duration-200",
@@ -66,15 +63,15 @@ export function NavMoreMenu() {
             exit={{ opacity: 0, y: -8, scaleY: 0.96 }}
             transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
             style={{ transformOrigin: "top" }}
-            className="absolute right-0 z-30 mt-2 min-w-[10.5rem] overflow-hidden rounded border border-[rgba(255,181,71,0.25)] bg-bg-primary p-1 shadow-[0_12px_30px_rgba(0,0,0,0.45)]"
+            className="absolute left-0 z-30 mt-2 min-w-[12rem] overflow-hidden rounded border border-[rgba(255,181,71,0.25)] bg-bg-primary p-1 shadow-[0_12px_30px_rgba(0,0,0,0.45)]"
           >
-            {NAV_ITEMS.map((item) => (
+            {ANALYTICS_ITEMS.map((item) => (
               <li key={item.href} role="none">
                 <AnchorLink
                   href={item.href}
                   role="menuitem"
                   onClick={() => setOpen(false)}
-                  className="block rounded px-3 py-2 text-sm text-text-secondary transition-colors hover:bg-[rgba(255,181,71,0.06)] hover:text-text-primary"
+                  className="block rounded px-3 py-2 text-sm whitespace-nowrap text-text-secondary transition-colors hover:bg-[rgba(255,181,71,0.06)] hover:text-text-primary"
                 >
                   {item.label}
                 </AnchorLink>
