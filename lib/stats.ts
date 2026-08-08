@@ -190,9 +190,13 @@ export function getRankTargetsFromData() {
   return getRankTargets(entries.map((e) => e.aura));
 }
 
-export function getDepositAuraPredictContext(currentTvl: number, nowMs: number = Date.now()) {
+export function getDepositAuraPredictContext(
+  currentTvl: number,
+  nowMs: number = Date.now(),
+  entries?: LeaderboardEntry[]
+) {
   return computeDepositAuraPredictContext(
-    getLeaderboard(),
+    entries ?? getLeaderboard(),
     currentTvl,
     nowMs,
     readSnapshots()

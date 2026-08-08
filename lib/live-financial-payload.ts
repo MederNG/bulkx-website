@@ -58,7 +58,7 @@ export async function buildLiveFinancialPayload(options?: {
     totalWithdrawn,
     referenceTimeMs,
   );
-  const depositPredict = getDepositAuraPredictContext(currentTvl, referenceTimeMs);
+  const depositPredict = getDepositAuraPredictContext(currentTvl, referenceTimeMs, entries);
 
   return {
     currentTvl,

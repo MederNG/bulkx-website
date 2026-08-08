@@ -288,6 +288,9 @@ export function DepositAuraPredictor({
           hoursInWeek: context.hoursInWeek,
           campaignWeek: context.campaignWeek,
           weekTvl: context.weekTvl,
+          weekPool: context.weekPool,
+          weekEligibleCumUsdHours: context.weekEligibleCumUsdHours,
+          eligibleCumUsdHoursAtSnapshot: context.eligibleCumUsdHoursAtSnapshot,
         },
         {
           mode: mode ?? undefined,
@@ -298,7 +301,6 @@ export function DepositAuraPredictor({
   );
 
   const holdSinceActive = holdSinceWeek != null;
-  const effectiveFullWeek = holdSinceActive || mode === "full_week_hold";
 
   const timeUntilSnapshot = formatRemainingDuration(context.hoursUntilSnapshot * 3_600_000);
   const scenarioLabel = holdSinceActive
@@ -386,7 +388,7 @@ export function DepositAuraPredictor({
             <ResultBox label="Pool Share" value={`${result.poolSharePct.toFixed(4)}%`} />
           )}
           <ResultBox
-            label={effectiveFullWeek ? "Week USD-Hours" : "Your USD-Hours"}
+            label={holdSinceActive ? "Lifetime USD-Hours" : "Your USD-Hours"}
             value={formatUsdHours(result.userUsdHours)}
           />
         </div>
@@ -418,7 +420,8 @@ export function DepositAuraPredictor({
         <p className="mt-4 text-[10px] leading-relaxed text-text-secondary">
           {holdSinceActive ? (
             <>
-              Weeks {holdSinceWeek}–{context.campaignWeek} · completed weeks Sat→Sat · Week{" "}
+              Weeks {holdSinceWeek}–{context.campaignWeek} · each week uses its own measured pool
+              and your USD-hours accrued by then, so a steady balance earns more every week · Week{" "}
               {context.campaignWeek} ({context.currentWeekWindow}) · {timeUntilSnapshot} left
             </>
           ) : (
@@ -428,6 +431,26 @@ export function DepositAuraPredictor({
             </>
           )}
         </p>
+
+        {context.calibration.isCalibrated && context.calibration.lastCompletedWeek != null && (
+          <p className="mt-1.5 text-[10px] leading-relaxed text-text-secondary">
+            Aura is split on <span className="text-text-primary">lifetime</span> USD-hours, so a
+            new deposit earns far less than an established one of the same size. Calibrated on Week{" "}
+            {context.calibration.lastCompletedWeek}:{" "}
+            <span className="font-mono tabular-nums">
+              {formatNumber(Math.round(context.calibration.measuredPool ?? 0))}
+            </span>{" "}
+            Aura split across{" "}
+            <span className="font-mono tabular-nums">
+              {formatUsdHours(context.calibration.eligibleCumUsdHours ?? 0)}
+            </span>{" "}
+            eligible USD-hours (wallets at $0 forfeit theirs —{" "}
+            <span className="font-mono tabular-nums">
+              {((1 - (context.calibration.liveShare ?? 1)) * 100).toFixed(0)}%
+            </span>{" "}
+            of all accrued)
+          </p>
+        )}
         </div>
       </div>
       <ToolExportSurface exportRef={exportRef} width={560}>
