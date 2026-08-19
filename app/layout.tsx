@@ -2,8 +2,9 @@ import type { Metadata, Viewport } from "next";
 import { IBM_Plex_Mono, IBM_Plex_Sans } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
-import { Header } from "@/components/layout/Header";
-import { Footer } from "@/components/layout/Footer";
+import { SiteNav } from "@/components/layout/SiteNav";
+import { LiveFinancialProvider } from "@/components/live/LiveFinancialProvider";
+import { buildLiveFinancialPayload } from "@/lib/live-financial-payload";
 import { ScrollToTop } from "@/components/layout/ScrollToTop";
 import { HashScrollOnLoad } from "@/components/layout/HashScrollOnLoad";
 
@@ -18,6 +19,12 @@ const ibmPlexMono = IBM_Plex_Mono({
   weight: ["400", "500", "600"],
   variable: "--font-ibm-plex-mono",
 });
+
+// Alte DIN 1451 was trialled as the UI face here and reverted: it ships no
+// `gasp` table (so small sizes get no grid-fitting hints) and leaves
+// OS/2 sxHeight/sCapHeight unset at -1, which is why body copy at 10-12px
+// rendered visibly rougher than IBM Plex Sans. It's a signage typeface —
+// built for large display, not small interface text.
 
 const siteUrl = "https://www.aurabulk.xyz";
 const siteTitle = "AURA Intelligence | BULK Analytics Terminal";
@@ -54,22 +61,26 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#141310",
+  themeColor: "#0b0b0c",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // Provided app-wide so any route can read live financials without refetching.
+  const live = await buildLiveFinancialPayload();
+
   return (
     <html lang="en" className={`${ibmPlexSans.variable} ${ibmPlexMono.variable}`}>
       <body className="antialiased">
-        <HashScrollOnLoad />
-        <Header />
-        <main>{children}</main>
-        <Footer />
-        <ScrollToTop />
+        <LiveFinancialProvider initial={live}>
+          <HashScrollOnLoad />
+          <SiteNav />
+          <main>{children}</main>
+          <ScrollToTop />
+        </LiveFinancialProvider>
         <Analytics />
       </body>
     </html>

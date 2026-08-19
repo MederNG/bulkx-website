@@ -1,5 +1,6 @@
 import { KpiTerminalCounter, type NumberFormat } from "@/components/cards/KpiTerminalCounter";
 import { CopyableWallet } from "@/components/ui/CopyableWallet";
+import { PanelCard, PanelLabel } from "@/components/overview/PanelCard";
 import { cn } from "@/lib/utils";
 import type { AlphaInsight } from "@/types";
 
@@ -95,16 +96,25 @@ export function DistributionStats({
   ];
 
   return (
-    <div className="card p-4 md:p-5">
-      <p className="mb-4 text-sm font-medium">Distribution Metrics</p>
-      <div className="space-y-2">
-        {stats.map((s) => (
-          <div key={s.label} className="flex items-center justify-between text-xs">
-            <span className="text-text-secondary">{s.label}</span>
-            <span className="font-mono tabular-nums">{s.value}</span>
+    <PanelCard glossy glossDelay={-3} className="h-full font-sans">
+      <PanelLabel>Distribution Metrics</PanelLabel>
+      <div className="mt-3 -mx-5">
+        {stats.map((s, i) => (
+          <div
+            key={s.label}
+            className={cn(
+              "group flex h-[30px] items-center justify-between px-5 text-[13px] leading-none transition-colors",
+              i > 0 && "border-t border-[var(--color-line-soft)]",
+              "hover:bg-[rgba(255,255,255,0.04)]"
+            )}
+          >
+            <span className="text-text-secondary transition-colors group-hover:text-text-primary">
+              {s.label}
+            </span>
+            <span className="tabular-nums text-text-primary">{s.value}</span>
           </div>
         ))}
       </div>
-    </div>
+    </PanelCard>
   );
 }

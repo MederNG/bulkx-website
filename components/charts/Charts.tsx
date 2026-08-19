@@ -9,12 +9,8 @@ import {
   CartesianGrid,
   Cell,
   LabelList,
-  Legend,
   Line,
-  Pie,
-  PieChart,
   ResponsiveContainer,
-  Sector,
   Tooltip,
   XAxis,
   YAxis,
@@ -30,27 +26,16 @@ import {
 import { cn, formatNumber } from "@/lib/utils";
 import { InfoTooltip } from "@/components/ui/InfoTooltip";
 import { Select } from "@/components/ui/Select";
+import { PageHeading } from "@/components/layout/PageHeading";
+import { AuraDonut, AURA_SOURCES_DONUT_WELL, donutApexInset } from "@/components/overview/AuraDonut";
+import { PanelCard, PanelLabel } from "@/components/overview/PanelCard";
+import { DONUT_COLORS, type OverviewDonutSegment } from "@/lib/overview-metrics";
 import {
   OVERVIEW_GROUP,
   buildCategoryGroupOptions,
   filterCategoryBreakdown,
   type CategoryBreakdownItem,
 } from "@/lib/aura-category-groups";
-
-const COLORS = [
-  "#FFB547", // accent gold
-  "#00B481", // bid green
-  "#4FA3C7", // teal blue
-  "#EF4A3C", // ask red
-  "#E0A458", // amber
-  "#8AB17D", // sage
-  "#C77DCB", // soft violet
-  "#E07A5F", // terracotta
-  "#5FBfB3", // aqua
-  "#D9C36B", // straw
-  "#B07AA1", // mauve
-  "#7A9CC6", // dusty blue
-];
 
 function useInViewOnce<T extends HTMLElement>(threshold = 0.25) {
   const ref = useRef<T | null>(null);
@@ -80,155 +65,6 @@ function useInViewOnce<T extends HTMLElement>(threshold = 0.25) {
   }, [hasEntered, threshold]);
 
   return { ref, hasEntered };
-}
-
-interface PieLabelProps {
-  cx: number;
-  cy: number;
-  midAngle: number;
-  outerRadius: number;
-  percent: number;
-  index?: number;
-}
-
-const PIE_ANIMATION_BEGIN_MS = 0;
-const PIE_ANIMATION_DURATION_MS = 1100;
-
-function renderPieLabelFactory(shares: number[], animate: boolean, hiddenIndex?: number) {
-  const total = shares.reduce((sum, share) => sum + share, 0);
-
-  return function renderPieLabel({ cx, cy, midAngle, outerRadius, percent, index = 0 }: PieLabelProps) {
-    if (!percent || percent <= 0.02 || total <= 0 || index === hiddenIndex) return null;
-
-    const before = shares.slice(0, index).reduce((sum, share) => sum + share, 0);
-    const sectorMid = (before + (shares[index] ?? 0) / 2) / total;
-    const delayMs = animate
-      ? Math.round(PIE_ANIMATION_BEGIN_MS + sectorMid * PIE_ANIMATION_DURATION_MS)
-      : 0;
-
-    const RADIAN = Math.PI / 180;
-    const radius = outerRadius + 16;
-    const x = cx + radius * Math.cos(-midAngle * RADIAN);
-    const y = cy + radius * Math.sin(-midAngle * RADIAN);
-
-    return (
-      <text
-        x={x}
-        y={y}
-        fill="#FFFEEF"
-        fontSize={11}
-        textAnchor={x > cx ? "start" : "end"}
-        dominantBaseline="central"
-        opacity={animate ? 0 : 1}
-        style={
-          animate
-            ? {
-                animation: `pie-label-fade 220ms ease-out ${delayMs}ms forwards`,
-              }
-            : undefined
-        }
-      >
-        {`${(percent * 100).toFixed(0)}%`}
-      </text>
-    );
-  };
-}
-
-interface ActiveShapeProps {
-  cx: number;
-  cy: number;
-  innerRadius: number;
-  outerRadius: number;
-  startAngle: number;
-  endAngle: number;
-  fill: string;
-  percent: number;
-  payload: { category: string };
-}
-
-function renderActiveShape(rawProps: unknown) {
-  const props = rawProps as ActiveShapeProps;
-  const { cx, cy, innerRadius, outerRadius, startAngle, endAngle, fill, percent, payload } = props;
-  const approxCharsPerLine = Math.max(10, Math.floor((innerRadius * 2 - 12) / 6));
-  const words = payload.category.split(" ");
-  const labelLines: string[] = [];
-  let currentLine = "";
-
-  for (const word of words) {
-    const next = currentLine ? `${currentLine} ${word}` : word;
-    if (next.length <= approxCharsPerLine || !currentLine) {
-      currentLine = next;
-    } else {
-      labelLines.push(currentLine);
-      currentLine = word;
-      if (labelLines.length === 1) break;
-    }
-  }
-  if (labelLines.length < 2 && currentLine) labelLines.push(currentLine);
-
-  let [line1 = "", line2 = ""] = labelLines;
-  if (line2) {
-    if (line2.length > approxCharsPerLine) {
-      line2 = `${line2.slice(0, Math.max(approxCharsPerLine - 1, 1)).trim()}…`;
-    } else if (words.join(" ").length > `${line1} ${line2}`.trim().length) {
-      line2 = `${line2.slice(0, Math.max(approxCharsPerLine - 1, 1)).trim()}…`;
-    }
-  } else if (line1.length > approxCharsPerLine) {
-    line1 = `${line1.slice(0, Math.max(approxCharsPerLine - 1, 1)).trim()}…`;
-  }
-
-  const isTwoLine = Boolean(line2);
-  const titleY = isTwoLine ? cy - 12 : cy - 6;
-  const percentY = isTwoLine ? cy + 18 : cy + 13;
-
-  return (
-    <g>
-      <text x={cx} y={titleY} textAnchor="middle" fill="#FFFEEF" fontSize={10}>
-        <tspan x={cx} dy="0">
-          {line1}
-        </tspan>
-        {isTwoLine && (
-          <tspan x={cx} dy="12">
-            {line2}
-          </tspan>
-        )}
-      </text>
-      <text x={cx} y={percentY} textAnchor="middle" fill="#FFB547" fontSize={14} fontWeight={600}>
-        {`${(percent * 100).toFixed(1)}%`}
-      </text>
-      <Sector
-        cx={cx}
-        cy={cy}
-        innerRadius={innerRadius}
-        outerRadius={outerRadius + 8}
-        startAngle={startAngle}
-        endAngle={endAngle}
-        fill={fill}
-        stroke="#FFB547"
-        strokeWidth={2}
-        style={{ filter: "drop-shadow(0 0 6px rgba(255,181,71,0.45))" }}
-      />
-      <Sector
-        cx={cx}
-        cy={cy}
-        innerRadius={outerRadius + 11}
-        outerRadius={outerRadius + 14}
-        startAngle={startAngle}
-        endAngle={endAngle}
-        fill="rgba(255,181,71,0.22)"
-      />
-      <Sector
-        cx={cx}
-        cy={cy}
-        innerRadius={outerRadius + 14}
-        outerRadius={outerRadius + 16}
-        startAngle={startAngle}
-        endAngle={endAngle}
-        fill="#FFB547"
-        style={{ filter: "drop-shadow(0 0 8px rgba(255,181,71,0.55))" }}
-      />
-    </g>
-  );
 }
 
 interface TvlChartPoint {
@@ -515,42 +351,66 @@ export function AuraHistogram({ data }: HistogramProps) {
   const { ref, hasEntered } = useInViewOnce<HTMLDivElement>(0.2);
 
   return (
-    <div ref={ref} className="card p-4 md:p-5">
-      <p className="mb-4 text-sm font-medium">Aura Distribution</p>
-      <ResponsiveContainer width="100%" height={260}>
-        <BarChart key={hasEntered ? "hist-animate" : "hist-idle"} data={data}>
-          <CartesianGrid strokeDasharray="3 3" />
-          <XAxis dataKey="bucket" tick={{ fontSize: 10 }} interval={0} angle={-30} textAnchor="end" height={60} />
-          <YAxis tickFormatter={(v) => v.toLocaleString()} width={50} />
-          <Tooltip
-            cursor={false}
-            contentStyle={{
-              background: "#1B1A14",
-              border: "1px solid rgba(198,182,186,0.2)",
-              borderRadius: 4,
-              fontSize: 12,
-            }}
-            itemStyle={{ color: "#FFB547" }}
-            labelStyle={{ color: "#FFFEEF" }}
-            formatter={(value: number) => [value.toLocaleString(), "Wallets"]}
-          />
-          <Bar
-            dataKey="count"
-            radius={[2, 2, 0, 0]}
-            isAnimationActive={hasEntered}
-            activeBar={{
-              stroke: "#FFFEEF",
-              strokeWidth: 1,
-              filter: "drop-shadow(0 0 6px rgba(255,181,71,0.45))",
-            }}
-          >
-            {data.map((_, i) => (
-              <Cell key={i} fill={COLORS[i % COLORS.length]} />
-            ))}
-          </Bar>
-        </BarChart>
-      </ResponsiveContainer>
-    </div>
+    <PanelCard glossy glossDelay={-6} className="h-full">
+      <div ref={ref} className="flex min-h-0 flex-1 flex-col">
+        <PanelLabel>Aura Distribution</PanelLabel>
+        <div className="aura-distribution-chart mt-3 min-h-[260px] flex-1">
+          <ResponsiveContainer width="100%" height={260}>
+            <BarChart key={hasEntered ? "hist-animate" : "hist-idle"} data={data}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis
+                dataKey="bucket"
+                tick={{
+                  fontSize: 13,
+                  fontFamily: "var(--font-ibm-plex-sans)",
+                  fill: "var(--color-text-primary)",
+                }}
+                interval={0}
+                angle={-30}
+                textAnchor="end"
+                height={60}
+              />
+              <YAxis
+                tickFormatter={(v) => v.toLocaleString()}
+                width={56}
+                tick={{
+                  fontSize: 13,
+                  fontFamily: "var(--font-ibm-plex-sans)",
+                  fill: "var(--color-text-primary)",
+                }}
+              />
+              <Tooltip
+                cursor={false}
+                contentStyle={{
+                  background: "#1B1A14",
+                  border: "1px solid rgba(198,182,186,0.2)",
+                  borderRadius: 4,
+                  fontSize: 13,
+                  fontFamily: "var(--font-ibm-plex-sans)",
+                }}
+                itemStyle={{ color: "#FFB547" }}
+                labelStyle={{ color: "#FFFEEF" }}
+                formatter={(value: number) => [value.toLocaleString(), "Wallets"]}
+              />
+              <Bar
+                dataKey="count"
+                radius={[2, 2, 0, 0]}
+                isAnimationActive={hasEntered}
+                activeBar={{
+                  stroke: "#FFFEEF",
+                  strokeWidth: 1,
+                  filter: "drop-shadow(0 0 6px rgba(255,181,71,0.45))",
+                }}
+              >
+                {data.map((_, i) => (
+                  <Cell key={i} fill={DONUT_COLORS[i % DONUT_COLORS.length]} />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+    </PanelCard>
   );
 }
 
@@ -650,11 +510,39 @@ export function CategoryCharts({ data }: CategoryChartsProps) {
     const collapsed = collapseSmallCategories(withShares, isDrillDown ? 7 : Number.POSITIVE_INFINITY);
     return {
       ...collapsed,
-      // Largest to smallest, top to bottom.
+      // Largest to smallest, top to bottom — and gold on the biggest slice,
+      // the same assignment the Overview ring uses.
       chartData: [...collapsed.chartData].sort((a, b) => b.groupShare - a.groupShare),
     };
   }, [filtered, isDrillDown]);
-  const barHeight = Math.max(260, chartData.length * 42);
+
+  const colored = useMemo(
+    () =>
+      chartData.map((row, i) => ({
+        ...row,
+        color: DONUT_COLORS[i % DONUT_COLORS.length],
+      })),
+    [chartData]
+  );
+
+  const segments = useMemo<OverviewDonutSegment[]>(
+    () =>
+      colored.map((row) => ({
+        id: row.key,
+        label: row.category,
+        color: row.color,
+        pct: row.groupShare,
+        points: row.points,
+      })),
+    [colored]
+  );
+
+  const totalAuraNumber = useMemo(
+    () => colored.reduce((sum, row) => sum + row.points, 0),
+    [colored]
+  );
+
+  const apexInset = donutApexInset();
 
   const othersInfo =
     othersCategories.length > 0 ? (
@@ -675,184 +563,130 @@ export function CategoryCharts({ data }: CategoryChartsProps) {
       </span>
     ) : null;
 
-  const [activeIndex, setActiveIndex] = useState<number | undefined>(undefined);
   const { ref, hasEntered } = useInViewOnce<HTMLDivElement>(0.2);
 
-  // A fast mouse-out or an alt-tab away mid-hover can skip the pointer past
-  // Recharts' sector boundary without ever firing its onMouseLeave, leaving
-  // the active slice highlighted indefinitely. Clear it on any of these
-  // signals regardless of whether the sector itself reported leaving.
-  useEffect(() => {
-    if (activeIndex === undefined) return;
-    const clear = () => setActiveIndex(undefined);
-    window.addEventListener("blur", clear);
-    document.addEventListener("visibilitychange", clear);
-    document.addEventListener("mouseleave", clear);
-    return () => {
-      window.removeEventListener("blur", clear);
-      document.removeEventListener("visibilitychange", clear);
-      document.removeEventListener("mouseleave", clear);
-    };
-  }, [activeIndex]);
-
-  // Keep the label renderer mounted at all times (never swap it for
-  // `undefined`) so hovering on/off a slice doesn't remount the <text>
-  // elements and replay their entrance fade. The active slice's own label is
-  // hidden by index instead, inside renderPieLabel.
-  const pieLabel = useMemo(
-    () =>
-      renderPieLabelFactory(
-        chartData.map((row) => row.groupShare),
-        hasEntered,
-        activeIndex
-      ),
-    [chartData, hasEntered, activeIndex]
-  );
-
-  useEffect(() => {
-    setActiveIndex(undefined);
-  }, [selectedGroup]);
-
   return (
-    <div ref={ref} className="grid gap-4 lg:grid-cols-2">
-      <div className="card p-4 md:p-5" onMouseLeave={() => setActiveIndex(undefined)}>
-        <div className="mb-4 flex items-start justify-between gap-3">
-          <p className="flex items-center gap-1.5 text-sm font-medium">
-            Source Breakdown
-            {othersInfo && <InfoTooltip text={othersInfo} panelClassName="w-72" floating />}
-          </p>
-          <Select
-            value={selectedGroup}
-            onChange={setSelectedGroup}
-            options={groupOptions}
-            className="w-[9.5rem] shrink-0"
-            compact
-          />
-        </div>
-        <ResponsiveContainer width="100%" height={300}>
-          <PieChart key={`${hasEntered ? "pie-animate" : "pie-idle"}-${selectedGroup}`}>
-            <Pie
-              data={chartData}
-              dataKey="groupShare"
-              nameKey="category"
-              cx="50%"
-              cy="50%"
-              innerRadius={55}
-              outerRadius={85}
-              minAngle={5}
-              paddingAngle={chartData.length > 5 ? 1 : 2}
-              label={pieLabel}
-              labelLine={false}
-              isAnimationActive={hasEntered}
-              animationBegin={PIE_ANIMATION_BEGIN_MS}
-              animationDuration={PIE_ANIMATION_DURATION_MS}
-              animationEasing="ease-out"
-              activeIndex={activeIndex}
-              activeShape={renderActiveShape}
-              onMouseEnter={(_, i) => setActiveIndex(i)}
-              onMouseLeave={() => setActiveIndex(undefined)}
-            >
-              {chartData.map((_, i) => (
-                <Cell key={i} fill={COLORS[i % COLORS.length]} stroke="#141310" strokeWidth={1} />
-              ))}
-            </Pie>
-            <Legend
-              formatter={(value) => (
-                <span style={{ color: "#FFFEEF", fontSize: 11 }}>{value}</span>
-              )}
+    <div className="flex flex-col gap-4">
+      <PageHeading eyebrow="Aura" title="Aura analytics" centered />
+
+      <div ref={ref} className="grid items-stretch gap-4 lg:grid-cols-2">
+        <PanelCard glossy glossDelay={-8} className="min-h-[400px]">
+          <div className="mb-3 flex min-h-8 items-center justify-between gap-3">
+            <div className="flex min-w-0 items-center gap-1.5">
+              <PanelLabel>Source Breakdown</PanelLabel>
+              {othersInfo && <InfoTooltip text={othersInfo} panelClassName="w-72" floating />}
+            </div>
+            <Select
+              value={selectedGroup}
+              onChange={setSelectedGroup}
+              options={groupOptions}
+              className="w-[9.5rem] shrink-0"
+              compact
             />
-            <Tooltip
-              contentStyle={{
-                background: "#1B1A14",
-                border: "1px solid rgba(198,182,186,0.2)",
-                borderRadius: 4,
-                fontSize: 12,
-              }}
-              itemStyle={{ color: "#FFFEEF" }}
-              labelStyle={{ color: "#FFFEEF" }}
-              formatter={(value: number, name: string, item) => {
-                const row = item.payload as CategoryChartRow;
-                return [
-                  `${Number(value).toFixed(1)}% of group · ${row.share.toFixed(2)}% total · ${formatNumber(row.points)} Aura`,
-                  name,
-                ];
-              }}
-            />
-          </PieChart>
-        </ResponsiveContainer>
-      </div>
-      <div className="card p-4 md:p-5">
-        <div className="mb-4">
-          <p className="flex items-center gap-1.5 text-sm font-medium">
-            Category Share
-            {othersInfo && <InfoTooltip text={othersInfo} panelClassName="w-72" floating />}
-          </p>
-          {isDrillDown && (
-            <p className="mt-1 text-xs text-text-secondary">Share within selected group</p>
+          </div>
+          {segments.length > 0 && (
+            <div className="flex min-h-[320px] flex-1 items-start">
+              <div
+                className="flex w-full min-w-0"
+                style={{ height: AURA_SOURCES_DONUT_WELL }}
+              >
+                <AuraDonut
+                  key={selectedGroup}
+                  segments={segments}
+                  totalAuraNumber={totalAuraNumber}
+                  showShare={false}
+                />
+              </div>
+            </div>
           )}
-        </div>
-        <ResponsiveContainer width="100%" height={barHeight}>
-          <BarChart
-            key={`${hasEntered ? "cat-animate" : "cat-idle"}-${selectedGroup}`}
-            data={chartData}
-            layout="vertical"
-            margin={{ left: 4, right: 48 }}
+        </PanelCard>
+
+        <PanelCard glossy glossDelay={-11}>
+          <div className="mb-3 flex min-h-8 items-center">
+            <div className="flex items-center gap-1.5">
+              <PanelLabel>Category Share</PanelLabel>
+              {othersInfo && <InfoTooltip text={othersInfo} panelClassName="w-72" floating />}
+            </div>
+          </div>
+          <div
+            className="category-share-chart w-full"
+            style={{ height: AURA_SOURCES_DONUT_WELL, paddingTop: apexInset }}
           >
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis
-              type="number"
-              domain={[0, "dataMax"]}
-              tickFormatter={(v) => `${v.toFixed(0)}%`}
-            />
-            <YAxis
-              type="category"
-              dataKey="category"
-              width={isDrillDown ? 118 : 100}
-              tick={{ fontSize: 10 }}
-            />
-            <Tooltip
-              cursor={false}
-              contentStyle={{
-                background: "#1B1A14",
-                border: "1px solid rgba(198,182,186,0.2)",
-                borderRadius: 4,
-                fontSize: 12,
-              }}
-              itemStyle={{ color: "#FFFEEF" }}
-              labelStyle={{ color: "#FFFEEF" }}
-              formatter={(value: number, _name, item) => {
-                const row = item.payload as CategoryChartRow;
-                return [
-                  `${Number(value).toFixed(1)}% of group · ${row.share.toFixed(2)}% total`,
-                  "Share",
-                ];
-              }}
-            />
-            <Bar
-              dataKey="groupShare"
-              radius={[0, 2, 2, 0]}
-              minPointSize={3}
-              isAnimationActive={hasEntered}
-              activeBar={{
-                fill: "#FFC764",
-                stroke: "#FFB547",
-                strokeWidth: 1,
-                filter: "drop-shadow(0 0 6px rgba(255,181,71,0.45))",
-              }}
-            >
-              {chartData.map((_, i) => (
-                <Cell key={i} fill={COLORS[i % COLORS.length]} />
-              ))}
-              <LabelList
-                dataKey="groupShare"
-                position="right"
-                formatter={(value: number) => `${value.toFixed(1)}%`}
-                fill="#FFFEEF"
-                fontSize={10}
-              />
-            </Bar>
-          </BarChart>
-        </ResponsiveContainer>
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart
+                key={`${hasEntered ? "cat-animate" : "cat-idle"}-${selectedGroup}`}
+                data={colored}
+                layout="vertical"
+                margin={{ top: 0, left: 4, right: 48, bottom: 8 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis
+                  type="number"
+                  domain={[0, "dataMax"]}
+                  tickFormatter={(v) => `${v.toFixed(0)}%`}
+                  tick={{
+                    fontSize: 13,
+                    fontFamily: "var(--font-ibm-plex-sans)",
+                    fill: "var(--color-text-primary)",
+                  }}
+                />
+                <YAxis
+                  type="category"
+                  dataKey="category"
+                  width={isDrillDown ? 128 : 110}
+                  tick={{
+                    fontSize: 13,
+                    fontFamily: "var(--font-ibm-plex-sans)",
+                    fill: "var(--color-text-primary)",
+                  }}
+                />
+                <Tooltip
+                  cursor={false}
+                  contentStyle={{
+                    background: "#1B1A14",
+                    border: "1px solid rgba(198,182,186,0.2)",
+                    borderRadius: 4,
+                    fontSize: 13,
+                    fontFamily: "var(--font-ibm-plex-sans)",
+                  }}
+                  itemStyle={{ color: "#FFFEEF" }}
+                  labelStyle={{ color: "#FFFEEF" }}
+                  formatter={(value: number, _name, item) => {
+                    const row = item.payload as CategoryChartRow;
+                    return [
+                      `${Number(value).toFixed(1)}% of group · ${row.share.toFixed(2)}% total`,
+                      "Share",
+                    ];
+                  }}
+                />
+                <Bar
+                  dataKey="groupShare"
+                  radius={[0, 2, 2, 0]}
+                  minPointSize={3}
+                  isAnimationActive={hasEntered}
+                  activeBar={{
+                    fill: "#FFC764",
+                    stroke: "#FFB547",
+                    strokeWidth: 1,
+                    filter: "drop-shadow(0 0 6px rgba(255,181,71,0.45))",
+                  }}
+                >
+                  {colored.map((row) => (
+                    <Cell key={row.key} fill={row.color} />
+                  ))}
+                  <LabelList
+                    dataKey="groupShare"
+                    position="right"
+                    formatter={(value: number) => `${value.toFixed(1)}%`}
+                    fill="var(--color-text-primary)"
+                    fontSize={13}
+                    fontFamily="var(--font-ibm-plex-sans)"
+                  />
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </PanelCard>
       </div>
     </div>
   );

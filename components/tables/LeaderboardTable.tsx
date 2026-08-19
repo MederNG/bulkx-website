@@ -13,6 +13,8 @@ import { formatNumber, formatUsd, truncateWallet } from "@/lib/utils";
 import { computeDepositAura, computeEfficiency } from "@/lib/percentiles";
 import { cn } from "@/lib/utils";
 import { CopyableWallet } from "@/components/ui/CopyableWallet";
+import { PageHeading } from "@/components/layout/PageHeading";
+import { PanelCard } from "@/components/overview/PanelCard";
 
 interface ColumnDef {
   key: string;
@@ -45,7 +47,7 @@ function getColumns(tab: LeaderboardTab): ColumnDef[] {
     label: "Aura",
     align: "right",
     render: (entry) => (
-      <span className="font-mono tabular-nums text-accent">
+      <span className="tabular-nums text-accent">
         {formatNumber(tab === "efficiency" ? computeDepositAura(entry) : entry.aura)}
       </span>
     ),
@@ -56,7 +58,7 @@ function getColumns(tab: LeaderboardTab): ColumnDef[] {
     label: "Deposit",
     align: "right",
     render: (entry) => (
-      <span className="font-mono tabular-nums">{formatUsd(entry.current_amount)}</span>
+      <span className="tabular-nums">{formatUsd(entry.current_amount)}</span>
     ),
   };
 
@@ -65,7 +67,7 @@ function getColumns(tab: LeaderboardTab): ColumnDef[] {
     label: "Deposit",
     align: "right",
     render: (entry) => (
-      <span className="font-mono tabular-nums">{formatUsd(entry.deposited_amount)}</span>
+      <span className="tabular-nums">{formatUsd(entry.deposited_amount)}</span>
     ),
   };
 
@@ -74,7 +76,7 @@ function getColumns(tab: LeaderboardTab): ColumnDef[] {
     label: "Referred Amount",
     align: "right",
     render: (entry) => (
-      <span className="font-mono tabular-nums">
+      <span className="tabular-nums">
         {formatUsd(entry.referees_total_deposited ?? 0)}
       </span>
     ),
@@ -85,7 +87,7 @@ function getColumns(tab: LeaderboardTab): ColumnDef[] {
     label: "Efficiency",
     align: "right",
     render: (entry) => (
-      <span className="font-mono tabular-nums text-bid-green">
+      <span className="tabular-nums text-bid-green">
         {computeEfficiency(entry).toFixed(3)}
       </span>
     ),
@@ -96,7 +98,7 @@ function getColumns(tab: LeaderboardTab): ColumnDef[] {
     label: "Sent",
     align: "right",
     render: (entry) => (
-      <span className="font-mono tabular-nums">{entry.referrals_sent}</span>
+      <span className="tabular-nums">{entry.referrals_sent}</span>
     ),
   };
 
@@ -105,7 +107,7 @@ function getColumns(tab: LeaderboardTab): ColumnDef[] {
     label: "Qualified",
     align: "right",
     render: (entry) => (
-      <span className="font-mono tabular-nums">{entry.referrals_qualified}</span>
+      <span className="tabular-nums">{entry.referrals_qualified}</span>
     ),
   };
 
@@ -130,6 +132,10 @@ function defaultSortDirForKey(tab: LeaderboardTab, key: string): LeaderboardSort
 
 export function LeaderboardTable() {
   const [tab, setTab] = useState<LeaderboardTab>("aura");
+  // Bumped on every press and used as the underline's key, so the mark
+  // restarts even when the tab pressed is the one already open. Same control
+  // as the tools page — see the note on .switch-underline.
+  const [tabClickCount, setTabClickCount] = useState(0);
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [sortKey, setSortKey] = useState(LEADERBOARD_TAB_DEFAULT_SORT.aura.key);
@@ -206,35 +212,62 @@ export function LeaderboardTable() {
   ];
 
   return (
-    <div className="card overflow-hidden">
-      <div className="flex flex-col gap-3 border-b border-[rgba(198,182,186,0.1)] p-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="grid grid-cols-2 gap-1 sm:grid-cols-4">
-          {tabs.map((t) => (
-            <button
-              key={t.id}
-              onClick={() => handleTabChange(t.id)}
-              className={cn("btn-ghost text-center", tab === t.id && "active")}
-            >
-              {t.label}
-            </button>
-          ))}
+    <div className="flex flex-col gap-4">
+      {/* The rank tabs ride the bottom edge of the heading card, the way the
+          tool tabs do on /tools. They choose what the page IS, which is the
+          heading's own question — as a strip of ghost buttons above the table
+          they read as one more table control, alongside search and paging. */}
+      <PageHeading eyebrow="Leaderboards" title="Top wallets" centered>
+        <div className="flex flex-wrap items-center justify-center gap-7">
+          {tabs.map((t) => {
+            const on = tab === t.id;
+            return (
+              <button
+                key={t.id}
+                type="button"
+                onClick={() => {
+                  handleTabChange(t.id);
+                  setTabClickCount((n) => n + 1);
+                }}
+                aria-pressed={on}
+                // -mb-px drops the button's bottom edge onto the card's own
+                // border so the underline lands on it rather than above it.
+                className={cn(
+                  "relative -mb-px cursor-pointer pb-2.5 text-[13px] font-medium transition-colors",
+                  on ? "text-accent" : "text-text-muted hover:text-text-primary"
+                )}
+              >
+                {t.label}
+                {on && (
+                  <span
+                    key={tabClickCount}
+                    className="switch-underline pointer-events-none absolute inset-x-0 bottom-0 h-[2px] rounded-full bg-[linear-gradient(90deg,transparent_0%,var(--color-accent)_22%,var(--color-accent)_78%,transparent_100%)]"
+                  />
+                )}
+              </button>
+            );
+          })}
         </div>
-        <input
-          type="text"
-          placeholder="Search wallet..."
-          value={search}
-          onChange={(e) => {
-            setSearch(e.target.value);
-            setPage(1);
-          }}
-          className="input-field max-w-xs font-mono text-xs"
-        />
-      </div>
+      </PageHeading>
+
+      <PanelCard glossy glossDelay={-11} className="overflow-hidden p-0">
+        <div className="flex flex-col gap-3 border-b border-[var(--color-line)] p-4 sm:flex-row sm:items-center sm:justify-end">
+          <input
+            type="text"
+            placeholder="Search wallet..."
+            value={search}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setPage(1);
+            }}
+            className="input-field max-w-xs text-[13px]"
+          />
+        </div>
 
       <div className={cn("overflow-x-auto", loading && "min-h-[680px]")}>
-        <table className="w-full text-left text-xs">
+        <table className="w-full text-left text-[13px] text-text-primary">
           <thead>
-            <tr className="border-b border-[rgba(198,182,186,0.1)] text-text-secondary">
+            <tr className="border-b border-[var(--color-line)]">
               {columns.map((col) => (
                 <SortableHeader
                   key={col.key}
@@ -253,7 +286,7 @@ export function LeaderboardTable() {
               <tr>
                 <td
                   colSpan={columns.length}
-                  className="px-4 py-8 text-center text-text-secondary"
+                  className="px-4 py-8 text-center text-text-muted"
                 >
                   Loading top {LEADERBOARD_TOP_LIMIT}…
                 </td>
@@ -262,7 +295,7 @@ export function LeaderboardTable() {
               <tr>
                 <td
                   colSpan={columns.length}
-                  className="px-4 py-8 text-center text-text-secondary"
+                  className="px-4 py-8 text-center text-text-muted"
                 >
                   No wallets found
                 </td>
@@ -271,26 +304,34 @@ export function LeaderboardTable() {
               pageData.map((entry, i) => (
                 <tr
                   key={entry.wallet}
-                  className="group border-b border-[rgba(198,182,186,0.05)] hover:bg-[rgba(255,181,71,0.03)]"
+                  className="group border-b border-[var(--color-line-soft)] transition-colors hover:bg-[rgba(255,255,255,0.04)]"
                 >
-                  {columns.map((col) => (
-                    <td
-                      key={col.key}
-                      className={cn(
-                        "px-4 py-2.5",
-                        col.align === "right" ? "text-right" : "text-left",
-                        col.isDisplayRank
-                          ? "font-mono tabular-nums text-text-secondary"
-                          : ""
-                      )}
-                    >
-                      {col.isDisplayRank ? (
-                        `#${(page - 1) * pageSize + i + 1}`
-                      ) : (
-                        col.render(entry)
-                      )}
-                    </td>
-                  ))}
+                  {columns.map((col) => {
+                    const value = col.isDisplayRank
+                      ? `#${(page - 1) * pageSize + i + 1}`
+                      : col.render(entry);
+                    const alignRight = col.align === "right";
+                    const sortable = col.sortable !== false;
+                    return (
+                      <td
+                        key={col.key}
+                        className={cn(
+                          "px-4 py-2.5",
+                          alignRight ? "text-right" : "text-left",
+                          col.isDisplayRank && "tabular-nums text-text-muted"
+                        )}
+                      >
+                        {alignRight && sortable ? (
+                          <span className="inline-flex w-full items-center justify-end gap-1">
+                            {value}
+                            <SortIconSlot />
+                          </span>
+                        ) : (
+                          value
+                        )}
+                      </td>
+                    );
+                  })}
                 </tr>
               ))
             )}
@@ -298,8 +339,8 @@ export function LeaderboardTable() {
         </table>
       </div>
 
-      <div className="flex items-center justify-between border-t border-[rgba(198,182,186,0.1)] px-4 py-3">
-        <p className="text-xs text-text-secondary">
+      <div className="flex items-center justify-between border-t border-[var(--color-line)] px-4 py-3">
+        <p className="text-[13px] text-text-muted">
           {search.trim()
             ? `Showing ${pageData.length} of ${filtered.length} matches (top ${LEADERBOARD_TOP_LIMIT} in category)`
             : `Top ${LEADERBOARD_TOP_LIMIT} · showing ${pageData.length} of ${filtered.length}`}
@@ -312,7 +353,7 @@ export function LeaderboardTable() {
           >
             Prev
           </button>
-          <span className="flex items-center px-2 font-mono text-xs tabular-nums text-text-secondary">
+          <span className="flex items-center px-2 text-[13px] tabular-nums text-text-muted">
             {page}/{totalPages}
           </span>
           <button
@@ -324,12 +365,24 @@ export function LeaderboardTable() {
           </button>
         </div>
       </div>
+      </PanelCard>
     </div>
   );
 }
 
 function WalletCell({ wallet }: { wallet: string }) {
-  return <CopyableWallet wallet={wallet} display={truncateWallet(wallet, 6)} className="font-mono" />;
+  return <CopyableWallet wallet={wallet} display={truncateWallet(wallet, 6)} />;
+}
+
+/** Same box the sort chevron occupies, so right-aligned figures sit on the
+ * header label rather than sliding under the icon. Empty in the body; the
+ * header fills it with the chevron. */
+function SortIconSlot({ children }: { children?: React.ReactNode }) {
+  return (
+    <span className="inline-flex h-3.5 w-3.5 shrink-0 items-center justify-center">
+      {children}
+    </span>
+  );
 }
 
 function SortableHeader({
@@ -347,7 +400,7 @@ function SortableHeader({
   direction: LeaderboardSortDir | null;
   onClick: () => void;
 }) {
-  const th = "px-4 py-3 font-medium";
+  const th = "px-4 py-3 text-[10px] font-medium uppercase tracking-[0.1em]";
 
   if (!sortable) {
     return (
@@ -355,13 +408,15 @@ function SortableHeader({
         className={cn(
           th,
           align === "right" ? "text-right" : "text-left",
-          "text-text-secondary"
+          "text-text-muted"
         )}
       >
         {label}
       </th>
     );
   }
+
+  const Icon = active && direction === "asc" ? ChevronUp : ChevronDown;
 
   return (
     <th className={cn(th, align === "right" ? "text-right" : "text-left")}>
@@ -371,17 +426,15 @@ function SortableHeader({
         className={cn(
           "inline-flex w-full items-center gap-1 transition-colors",
           align === "right" ? "justify-end" : "justify-start",
-          active ? "text-accent" : "text-text-secondary hover:text-text-primary"
+          active ? "text-accent" : "text-text-muted hover:text-text-primary"
         )}
       >
         {label}
-        {active && direction === "desc" ? (
-          <ChevronDown className="h-3.5 w-3.5 shrink-0" />
-        ) : active && direction === "asc" ? (
-          <ChevronUp className="h-3.5 w-3.5 shrink-0" />
-        ) : (
-          <span className="inline-block h-3.5 w-3.5 shrink-0 opacity-0" aria-hidden />
-        )}
+        <SortIconSlot>
+          <Icon
+            className={cn("h-3.5 w-3.5", active ? "text-accent" : "text-text-dim")}
+          />
+        </SortIconSlot>
       </button>
     </th>
   );

@@ -25,6 +25,16 @@ import type {
   WalletData,
 } from "@/types";
 
+const DEPOSIT_SIZE_BUCKETS = [
+  { label: "<$100", min: 0, max: 100 },
+  { label: "$100-1K", min: 100, max: 1_000 },
+  { label: "$1K-10K", min: 1_000, max: 10_000 },
+  { label: "$10K-100K", min: 10_000, max: 100_000 },
+  { label: "$100K-500K", min: 100_000, max: 500_000 },
+  { label: "$500K-1M", min: 500_000, max: 1_000_000 },
+  { label: "$1M+", min: 1_000_000, max: Infinity },
+];
+
 export async function computeDashboardMetrics(): Promise<DashboardMetrics> {
   const entries = await getLeaderboardForApp({ waitMs: 4000 });
   const snapshots = readSnapshots();
@@ -46,6 +56,35 @@ export async function computeDashboardMetrics(): Promise<DashboardMetrics> {
     totals?.totalWithdrawn ?? entries.reduce((s, e) => s + e.withdrawn_amount, 0);
   const totalAura = auraValues.reduce((a, b) => a + b, 0);
   const qualifiedReferrals = entries.reduce((s, e) => s + e.referrals_qualified, 0);
+  // "OG Hodlers" — earned Aura during week 1 and never withdrawn since.
+  // `first_seen` is unpopulated on every real entry, so `categories.week1`
+  // (points earned that week) is the only honest signal for "was already
+  // depositing in week 1" available in the data.
+  const ogHodlers = entries.filter(
+    (e) => e.deposited_amount > 0 && e.withdrawn_amount === 0 && (e.categories?.week1 ?? 0) > 0
+  ).length;
+
+  const depositSizeDistribution = DEPOSIT_SIZE_BUCKETS.map((bucket) => {
+    // Filtered once and then counted and summed, rather than filtered twice:
+    // this runs over every leaderboard entry for each of seven buckets.
+    const inBucket = entries.filter(
+      (e) =>
+        e.deposited_amount > 0 &&
+        e.deposited_amount >= bucket.min &&
+        e.deposited_amount < bucket.max
+    );
+    return {
+      bucket: bucket.label,
+      count: inBucket.length,
+      // Net of withdrawals, and floored per wallet: a wallet that took out
+      // more than it put in still holds nothing, not a negative balance that
+      // would quietly cancel out someone else's deposit.
+      held: inBucket.reduce(
+        (sum, e) => sum + Math.max(0, e.deposited_amount - e.withdrawn_amount),
+        0
+      ),
+    };
+  });
 
   const categoryTotals: Record<string, number> = {};
   for (const entry of entries) {
@@ -95,6 +134,8 @@ export async function computeDashboardMetrics(): Promise<DashboardMetrics> {
     totalWithdrawn,
     totalAura,
     qualifiedReferrals,
+    depositSizeDistribution,
+    ogHodlers,
     medianAura: percentileValue(sortedAuraAsc, 50),
     averageAura: entries.length ? totalAura / entries.length : 0,
     top10Threshold: targets.top10Percent,
@@ -183,11 +224,6 @@ export function getSortedLeaderboard(
 export function getChartSnapshots(range: ChartRange): Snapshot[] {
   const snapshots = readSnapshots();
   return filterSnapshotsByRange(snapshots, range);
-}
-
-export function getRankTargetsFromData() {
-  const entries = getLeaderboard();
-  return getRankTargets(entries.map((e) => e.aura));
 }
 
 export function getDepositAuraPredictContext(

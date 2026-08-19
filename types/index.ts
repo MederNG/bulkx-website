@@ -70,6 +70,22 @@ export interface DashboardMetrics {
   totalWithdrawn: number;
   totalAura: number;
   qualifiedReferrals: number;
+  /** Depositor count and USD still held per deposit-size bucket, smallest to
+   * largest.
+   *
+   * Which bucket a wallet lands in is decided by `deposited_amount` — that is
+   * what a tier like "$100-1K" names. `held` is a different question and sums
+   * deposits net of withdrawals, so the buckets add up to TVL rather than to
+   * lifetime deposits. Summing `deposited_amount` instead put $88.8M against
+   * a TVL of $22.5M: the withdrawn $65M counted as though it were still
+   * there. */
+  depositSizeDistribution: { bucket: string; count: number; held: number }[];
+  /**
+   * "OG Hodlers": earned Aura in week 1 (categories.week1 > 0 — the campaign's
+   * `first_seen` field is never populated, so this is the only real signal
+   * for early participation) and have never withdrawn since.
+   */
+  ogHodlers: number;
   medianAura: number;
   averageAura: number;
   top10Threshold: number;
