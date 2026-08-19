@@ -4,7 +4,7 @@ import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 import { SiteNav } from "@/components/layout/SiteNav";
 import { LiveFinancialProvider } from "@/components/live/LiveFinancialProvider";
-import { buildLiveFinancialPayloadFromDisk } from "@/lib/live-financial-payload";
+import { LIVE_FINANCIAL_SEED } from "@/lib/live-financial-seed";
 import { ScrollToTop } from "@/components/layout/ScrollToTop";
 import { HashScrollOnLoad } from "@/components/layout/HashScrollOnLoad";
 
@@ -69,10 +69,10 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  // Disk snapshot only. Awaiting live indexer here made the root layout
-  // dynamic, so every tab switch waited on the server before the new page
-  // could render. The provider refreshes from /api/live-financials after paint.
-  const live = buildLiveFinancialPayloadFromDisk();
+  // Seed is computed once per process, not on every RSC navigation. Walking
+  // the leaderboard here used to stall every tab switch. Live numbers still
+  // arrive from /api/live-financials after paint.
+  const live = LIVE_FINANCIAL_SEED;
 
   return (
     <html lang="en" className={`${ibmPlexSans.variable} ${ibmPlexMono.variable}`}>

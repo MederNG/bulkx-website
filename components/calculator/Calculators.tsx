@@ -1104,8 +1104,8 @@ function FieldLabel({
   return (
     <span className="flex min-w-0 items-center gap-1.5">
       <span className="text-xs text-text-secondary">{label}</span>
-      {info ? <InfoTooltip text={info} floating panelClassName="w-64" /> : null}
       {hint ? <span className="truncate text-[11px] text-text-muted">{hint}</span> : null}
+      {info ? <InfoTooltip text={info} floating panelClassName="w-64" /> : null}
     </span>
   );
 }

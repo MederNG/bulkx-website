@@ -42,23 +42,31 @@ export function PageHeading({
             as clean as its neighbours'. */}
         <PanelCard glossy glossDelay={-16} className="w-full py-8 sm:py-8 text-center">
           <span
-            className={cn(
-              "pointer-events-none absolute inset-x-0 top-1/2 -translate-y-1/2 select-none",
-              "text-center font-semibold uppercase tracking-[0.02em]",
-              // Half again the size it was, and fainter with it: the bigger a
-              // shape gets the more of the eye it takes at the same opacity,
-              // so growing it without thinning it would have turned a texture
-              // into a second headline. 5% against this near-black card is
-              // enough to shape the letters and no more.
-              "text-[clamp(108px,22.5vw,285px)] text-[rgba(255,181,71,0.05)]"
-            )}
-            // Inline, not `leading-none`: tailwind-merge drops a leading
-            // utility standing next to an arbitrary text-[…] size, and the
-            // word silently inherits the 1.5 body leading, which throws the
-            // vertical centring out by half a line.
-            style={{ lineHeight: 1 }}
+            aria-hidden="true"
+            // -inset matches the card's padding so the word is centred in the
+            // full panel, not the inner content box. Overflow stays on the
+            // card: a clip on this overlay sat inside the padding and cut
+            // TOOLS / AURA through the middle of the letters.
+            className="pointer-events-none absolute -inset-x-3 -inset-y-8 flex items-center justify-center sm:-inset-x-5"
           >
-            {eyebrow}
+            <span
+              className={cn(
+                "whitespace-nowrap font-semibold uppercase tracking-[0.02em]",
+                // Same clamp as production: half again the previous mark,
+                // faint enough that the bigger shape stays texture, not a
+                // second headline.
+                "text-[clamp(108px,22.5vw,285px)] text-[rgba(255,181,71,0.05)]"
+              )}
+              // Inline, not utilities: tailwind-merge drops `leading-none`
+              // next to an arbitrary text-[…] size, and the 1.5 body leading
+              // would throw vertical centring out by half a line.
+              // Negative margin cancels the trailing letter-spacing so the
+              // glyph box, not the empty space after the last letter, is
+              // what gets centered.
+              style={{ lineHeight: 1, marginRight: "-0.02em" }}
+            >
+              {eyebrow}
+            </span>
           </span>
           {/* Fluid rather than a flat 44: at the top of the range this is the
               largest solid type on the site, and a fixed size that reads as a

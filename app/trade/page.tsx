@@ -2,6 +2,9 @@ import type { Metadata } from "next";
 import { PageHeading } from "@/components/layout/PageHeading";
 import { PanelCard } from "@/components/overview/PanelCard";
 
+export const dynamic = "force-static";
+export const revalidate = 60;
+
 export const metadata: Metadata = {
   title: "Trade | AURA Intelligence",
   description:

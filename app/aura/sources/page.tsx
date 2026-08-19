@@ -2,6 +2,7 @@ import { CategoryCharts, AuraHistogram } from "@/components/charts/Charts";
 import { DistributionStats } from "@/components/cards/Insights";
 import { computeDashboardMetrics } from "@/lib/stats";
 
+export const dynamic = "force-static";
 export const revalidate = 60;
 
 export default async function AuraSourcesPage() {

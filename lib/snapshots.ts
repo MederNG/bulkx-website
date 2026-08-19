@@ -4,15 +4,30 @@ import type { Snapshot } from "@/types";
 
 const SNAPSHOTS_FILE = path.join(process.cwd(), "data", "snapshots.json");
 
+let cache: { mtimeMs: number; data: Snapshot[] } | null = null;
+
+export function getSnapshotsMtimeMs(): number {
+  try {
+    return fs.statSync(SNAPSHOTS_FILE).mtimeMs;
+  } catch {
+    return 0;
+  }
+}
+
 export function readSnapshots(): Snapshot[] {
   if (!fs.existsSync(SNAPSHOTS_FILE)) return [];
-  return JSON.parse(fs.readFileSync(SNAPSHOTS_FILE, "utf-8")) as Snapshot[];
+  const mtimeMs = fs.statSync(SNAPSHOTS_FILE).mtimeMs;
+  if (cache && cache.mtimeMs === mtimeMs) return cache.data;
+  const data = JSON.parse(fs.readFileSync(SNAPSHOTS_FILE, "utf-8")) as Snapshot[];
+  cache = { mtimeMs, data };
+  return data;
 }
 
 export function writeSnapshots(snapshots: Snapshot[]): void {
   const dir = path.dirname(SNAPSHOTS_FILE);
   fs.mkdirSync(dir, { recursive: true });
   fs.writeFileSync(SNAPSHOTS_FILE, JSON.stringify(snapshots, null, 2));
+  cache = null;
 }
 
 export function appendSnapshot(snapshot: Omit<Snapshot, "timestamp">): Snapshot[] {

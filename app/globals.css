@@ -340,6 +340,13 @@ body {
   animation: tier-row-pulse 1150ms ease-in-out infinite;
 }
 
+@media (prefers-reduced-motion: reduce) {
+  .tier-row-pulse {
+    animation: none;
+    background-color: rgba(255, 255, 255, 0.08);
+  }
+}
+
 /* The week still running in the Pre-Deposits APR bars. Unlike the two pulses
    above, this one isn't about the cursor — it marks the bar whose pool and
    TVL are still moving, against eleven that have settled. Same 1150ms as the
@@ -360,20 +367,6 @@ body {
 
 .apr-week-pulse {
   animation: apr-current-week-pulse 1150ms ease-in-out infinite;
-}
-
-/* Reduced motion: keep the highlight, drop the movement. Each settles on the
-   bright end of its own pulse, so what it was pointing out is still visible
-   — it just doesn't move. */
-@media (prefers-reduced-motion: reduce) {
-  .tier-row-pulse {
-    animation: none;
-    background-color: rgba(255, 255, 255, 0.08);
-  }
-
-  .apr-week-pulse {
-    animation: none;
-  }
 }
 
 /* Deposit-size callout: reads as emerging from the headline number above it —
@@ -622,17 +615,10 @@ body {
 
 .switch-underline,
 .site-nav-link[data-active]::after {
+  /* Not gated on prefers-reduced-motion: Windows "Animation effects: off"
+     maps onto that query, which froze this fade on desktop (the rule stuck)
+     while iOS still ran it. Opacity-only, so it stays even there. */
   animation: switch-underline-out 1600ms ease-in-out forwards;
-}
-
-/* Left standing rather than animated away: the point of the line is to be
-   noticed, and for a reader who has asked for less motion a mark that simply
-   stays is the version that still does its job. */
-@media (prefers-reduced-motion: reduce) {
-  .switch-underline,
-  .site-nav-link[data-active]::after {
-    animation: none;
-  }
 }
 
 .site-nav-link[data-active]::after {

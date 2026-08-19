@@ -7,6 +7,7 @@ import { KpiStrip } from "@/components/overview/KpiStrip";
 import { DepositorsDistributionPanel } from "@/components/overview/DepositorsDistributionPanel";
 import { TvlViewProvider } from "@/components/overview/TvlViewContext";
 
+export const dynamic = "force-static";
 export const revalidate = 60;
 
 export default async function OverviewPage() {
