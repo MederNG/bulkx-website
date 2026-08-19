@@ -1,233 +1,118 @@
-import { ArrowUpRight } from "lucide-react";
-
-import { computeDashboardMetrics, getChartSnapshots, getRankTargetsFromData } from "@/lib/stats";
-
 import { buildLiveFinancialPayload } from "@/lib/live-financial-payload";
-
-import { MetricCard, Section } from "@/components/cards/MetricCard";
-
-import { TvlAnalytics } from "@/components/cards/TvlAnalytics";
-
-import {
-
-  HeroTvlCard,
-  HeroWalletsCard,
-  HeroAuraCard,
-  LiveLastUpdated,
-
-} from "@/components/cards/LiveFinancialMetrics";
-
-import {
-
-  AlphaSection,
-
-  DistributionStats,
-
-} from "@/components/cards/Insights";
-
-import {
-
-  AuraHistogram,
-
-  CategoryCharts,
-
-} from "@/components/charts/Charts";
-
-import { CalculatorSection } from "@/components/calculator/Calculators";
-
-import { WalletLookup } from "@/components/lookup/WalletLookup";
-
-import { HeroIntelligenceTitle } from "@/components/layout/HeroIntelligenceTitle";
-
-import { LeaderboardTable } from "@/components/tables/LeaderboardTable";
-
-import { LiveFinancialProvider } from "@/components/live/LiveFinancialProvider";
-
-
+import { buildOverviewPanels } from "@/lib/overview-metrics";
+import { computeDashboardMetrics, getChartSnapshots } from "@/lib/stats";
+import { TvlPanel } from "@/components/overview/TvlPanel";
+import { AuraSourcesPanel } from "@/components/overview/AuraSourcesPanel";
+import { KpiStrip } from "@/components/overview/KpiStrip";
+import { DepositorsDistributionPanel } from "@/components/overview/DepositorsDistributionPanel";
+import { TvlViewProvider } from "@/components/overview/TvlViewContext";
 
 export const revalidate = 60;
 
-
-
-export default async function HomePage() {
-
-  const [metrics, liveFinancials] = await Promise.all([
-
+export default async function OverviewPage() {
+  const [metrics, live] = await Promise.all([
     computeDashboardMetrics(),
-
     buildLiveFinancialPayload(),
-
   ]);
-
   const snapshots = getChartSnapshots("ALL");
 
-  const targets = getRankTargetsFromData();
-
-
+  const panels = buildOverviewPanels({
+    currentTvl: live.currentTvl,
+    totalAura: live.totalAura,
+    depositWallets: live.depositWallets,
+    depositSizeDistribution: metrics.depositSizeDistribution,
+    ogHodlers: metrics.ogHodlers,
+    weeklyAuraEmissions: live.depositPredict.depositPool,
+    projection: live.projection,
+    secondaryMetrics: live.secondaryMetrics,
+    categoryBreakdown: metrics.categoryBreakdown,
+    currentWeek: live.depositPredict.campaignWeek,
+    nextSnapshotTimestamp: live.depositPredict.nextSnapshotTimestamp,
+  });
 
   return (
+    // 100vh minus the sticky header only now — the site-wide Footer that used
+    // to sit below `main` is gone, so this is just the nav's own height (61px)
+    // plus a small buffer.
+    // The one-screen treatment starts at xl, not lg. Side by side at 1024 the
+    // right-hand panels get ~365px, and a readable ring plus its three-column
+    // legend needs more than that however the gaps are tuned — the ring was
+    // collapsing and the names truncating to pay for it. Below xl the panels
+    // stack full-width, where both have room, and the page scrolls instead of
+    // being held to one screen.
+    // min-height rather than a fixed height. A hard height fills a tall
+    // screen exactly, which is what it was for, but on a short one it hands
+    // each row less than its contents need and the overflow is simply clipped
+    // — the distribution panel lost its last tier and its footnote that way at
+    // 720px. As a minimum it does the same job wherever there is room and lets
+    // the page scroll where there isn't.
+    <div className="shell flex flex-col pb-4 pt-4 xl:min-h-[calc(100vh-70px)]">
+      {/* A strip of headline numbers on top, then two chart rows. Both rows
+          share one column template — unlike the previous layout, whose rows
+          were split differently and so never lined up with each other. Each
+          row is flex-1 of the capped height above, so the whole dashboard
+          sits on one screen instead of scrolling.
 
-    <LiveFinancialProvider initial={liveFinancials}>
+          minmax(0, …) rather than bare fr: an fr track's automatic minimum is
+          min-content, so a panel whose contents refuse to shrink past a point
+          — the Aura legend has a floor, the distribution chart has one — quietly
+          widens its own column and narrows the other. The two rows then stop
+          being the same split, which is exactly what put the tier table's
+          bullets out of line with the donut above them at 1280. */}
+      {/* Wraps both the KPI strip and the chart row so the Current/Projected
+          toggle inside the chart can drive the headline figure in the card
+          above it. */}
+      <TvlViewProvider>
+      <div className="flex min-h-0 flex-1 flex-col gap-3 lg:gap-4">
+        {/* Auto height, not flex-1: these cards are text, so they should
+            take what they need and hand the rest of the screen to the two
+            chart rows below. */}
+        <KpiStrip ogHodlers={panels.depositorsAnalysis.ogHodlers} />
 
-      <div className="mx-auto max-w-[1400px] px-4 md:px-6">
+        {/* 1.25 against the depositors row's 1, not an equal share. Both
+            rows were flex-1, which split the screen down the middle — and half
+            the screen is more than a six-row table needs and less than a chart
+            wants. At this ratio the TVL curve gets the height, and the panel
+            below settles at roughly four fifths of what it used to take.
 
-        {/* Hero */}
-
-        <section className="border-b border-[rgba(198,182,186,0.1)] py-10 md:py-14">
-
-          <p className="section-title mb-3 text-accent">AURA Analytics Terminal</p>
-
-          <HeroIntelligenceTitle />
-
-          <p className="mt-3 max-w-2xl text-sm text-text-secondary md:text-base">
-
-            Real-time analytics for the BULK AURA campaign. Institutional-grade insights
-
-            beyond the official interface.
-
-          </p>
-
-          <a
-
-            href="https://early.bulk.trade/deposit?ref=maker"
-
-            target="_blank"
-
-            rel="noopener noreferrer"
-
-            className="btn-primary mt-6 inline-flex items-center gap-2"
-
-          >
-
-            Deposit
-
-            <ArrowUpRight className="h-4 w-4" />
-
-          </a>
-
-          <div className="mt-8 grid grid-cols-1 gap-3 sm:grid-cols-3">
-
-            <HeroWalletsCard />
-            <HeroTvlCard />
-            <HeroAuraCard />
-
+            xl:min-h-[280px] on top of that: the depositors panel below is
+            fixed to its own content height, not flex, so on a short window
+            this row was the only thing left to squeeze — 191px at 1366×768,
+            which is what capped the Aura donut to a ring smaller than its own
+            width formula allowed. A floor here means the one-screen fit gives
+            way instead: the page scrolls a short window rather than
+            shrinking the donut down to fit it. */}
+        <div className="grid min-h-0 grid-cols-1 gap-3 xl:flex-[1.25] xl:min-h-[280px] xl:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)] xl:gap-4">
+          <div className="min-h-0">
+            <TvlPanel snapshots={snapshots} />
           </div>
-
-        </section>
-
-
-
-        {/* Wallet Lookup - above fold on mobile */}
-
-        <Section id="lookup" title="Wallet Lookup" subtitle="Search any wallet for detailed Aura analytics">
-
-          <WalletLookup />
-
-        </Section>
-
-
-
-        {/* Alpha */}
-
-        <Section title="Market Intelligence">
-
-          <AlphaSection insights={metrics.alphaInsights} />
-
-        </Section>
-
-
-
-        {/* TVL Analytics */}
-
-        <Section id="analytics" title="TVL Analytics">
-
-          <TvlAnalytics snapshots={snapshots} />
-
-        </Section>
-
-
-
-        {/* Aura Distribution */}
-
-        <Section id="aura-distribution" title="Aura Distribution">
-
-          <div className="grid gap-4 lg:grid-cols-3">
-
-            <div className="lg:col-span-2">
-
-              <AuraHistogram data={metrics.auraDistribution} />
-
-            </div>
-
-            <DistributionStats
-
-              median={metrics.medianAura}
-
-              average={metrics.averageAura}
-
-              top10={metrics.top10Threshold}
-
-              top5={metrics.top5Threshold}
-
-              top1={metrics.top1Threshold}
-
+          <div className="min-h-0 xl:flex">
+            <AuraSourcesPanel
+              donut={panels.auraSources.donut}
+              totalAuraNumber={panels.auraSources.totalAuraNumber}
             />
-
           </div>
-
-        </Section>
-
-
-
-        {/* Source Breakdown */}
-
-        <Section id="aura-source-breakdown" title="Aura Source Breakdown">
-
-          <CategoryCharts data={metrics.categoryBreakdown} />
-
-        </Section>
-
-
-
-        {/* Tools */}
-
-        <Section id="calculator" title="Tools">
-
-          <CalculatorSection
-
-            targets={targets}
-
-            totalAuraSupply={metrics.totalAura}
-
-          />
-
-        </Section>
-
-
-
-        {/* Leaderboards */}
-
-        <Section id="leaderboards" title="Leaderboards" subtitle="Top 100 wallets per ranking category">
-
-          <LeaderboardTable />
-
-        </Section>
-
-
-
-        <div className="pb-12 pt-4 text-center text-[10px] text-text-secondary">
-
-          <LiveLastUpdated />
-
-          <div className="mt-1">Not affiliated with BULK.</div>
-
         </div>
 
+        {/* Two cards again, on the same column template as the row above —
+            the bars under the TVL curve at its width, the tier table under
+            the donut at its. They spent a spell as a single card, which read
+            well as one object but split this row at its own ratio, leaving
+            the two rows visibly out of step with each other. The pairing
+            survives the split: the panel still owns both halves, so hovering
+            a bar lights its tier row and back, across the two cards. */}
+        {/* No flex-1: this row takes exactly what it contains and no more.
+            A table of six fixed-height rows has one right height, and stretching
+            it only pushes the footnote away from the rows and pads the bars;
+            the chart above is the thing that actually improves with height, so
+            the entire remainder goes there. It used to be flex-1 with a 336px
+            floor, and between them they took more of the screen than the TVL
+            chart, which is what this now gives back. */}
+        <div className="min-h-0 xl:flex">
+          <DepositorsDistributionPanel tiers={panels.depositorsAnalysis.tiers} />
+        </div>
       </div>
-
-    </LiveFinancialProvider>
-
+      </TvlViewProvider>
+    </div>
   );
-
 }
-

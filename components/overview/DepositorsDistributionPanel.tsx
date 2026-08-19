@@ -1,0 +1,693 @@
+"use client";
+
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
+import { motion } from "framer-motion";
+import type { DepositTier } from "@/lib/overview-metrics";
+import { PanelCard } from "@/components/overview/PanelCard";
+import { cn } from "@/lib/utils";
+
+/** Which series the toggle has picked out. Both bars are always drawn — the
+ * two have opposite shapes (Bulker is 55% of the depositors and 2.7% of the
+ * money), so showing only one at a time hid exactly the comparison this
+ * chart exists to make. The toggle instead decides which of the pair reads
+ * at full strength and which steps back to a dim outline, and which side of
+ * the axis its own numbers describe. */
+type Metric = "count" | "value";
+
+/** Splits "Bulker ($100-1K)" into its name and its range. The range is
+ * authored alongside the label in overview-metrics, so this only has to
+ * handle that one shape. Brackets are dropped — they were punctuation for
+ * text tucked in beside a name, and both halves have their own column now. */
+function splitLabel(label: string): { name: string; range: string } {
+  const match = label.match(/^(.*?)\s*\((.*)\)$/);
+  return match ? { name: match[1], range: match[2] } : { name: label, range: "" };
+}
+
+function usdCompact(value: number): string {
+  if (value >= 1e9) return `$${(value / 1e9).toFixed(2)}B`;
+  if (value >= 1e6) return `$${(value / 1e6).toFixed(2)}M`;
+  if (value >= 1e3) return `$${Math.round(value / 1e3).toLocaleString("en-US")}K`;
+  return `$${Math.round(value).toLocaleString("en-US")}`;
+}
+
+function usdExact(value: number): string {
+  return `$${Math.round(value).toLocaleString("en-US")}`;
+}
+
+/** Type scale, taken from what the rest of the Overview already uses rather
+ * than from the mock this panel was drawn from. Mono is kept for figures
+ * only, which is what it is loaded for. */
+const HEADING = "text-[10px] uppercase tracking-[0.1em] text-text-muted";
+const CELL = "text-[13px] tabular-nums";
+/** The name column is capped at 180 so a wide viewport doesn't strand
+ * "Megalodon" hundreds of pixels from its own row of figures — that was the
+ * old bug this column existed to avoid. The five numeric ones are fixed to
+ * their own content instead of sharing 1fr/0.7fr of whatever's left: letting
+ * them stretch put "DEPOSITORS" (70px of header) and "AVG" (18px) in
+ * same-width boxes, so a right-aligned header text sat close to its neighbour
+ * in one column and 60-70px further from it in the next — the gap between
+ * Size and Depositors read as noticeably tighter than the gap between Share,
+ * Deposits and Avg, on the same row. Sized to the widest thing each column
+ * actually holds, header or data — measured in the browser, same as
+ * MetricTable's columns — that slack mostly disappears, because there's
+ * almost nothing left over for a right-aligned value to float inside.
+ *
+ * The gap is fluid for the same reason MetricTable's is: on a viewport wide
+ * enough that six content-fit columns don't need all the room this panel's
+ * table has, the extra goes into breathing room between every column
+ * equally, not into stretching whichever column happened to be flexible. */
+const TABLE_COLS =
+  "grid grid-cols-[minmax(0,180px)_minmax(0,80px)_minmax(0,74px)_minmax(0,44px)_minmax(0,56px)_minmax(0,44px)] items-center [column-gap:clamp(16px,2.5vw,36px)]";
+
+/** Every body row, in both the table AND the chart, is this tall. Bumped
+ * from 26 alongside the rest of the chart's own numbers (BAR_W, the width
+ * bounds below) — bigger rows make a bigger chart AND a bigger table, since
+ * both are paced off this one constant, so the two grow together instead of
+ * drifting back out of step.
+ *
+ * The two used to keep separate rhythms — the table paced itself in its own
+ * rows, the chart drew its own reference lines at even fractions of
+ * whatever height it happened to be given — and side by side that read as
+ * two unrelated grids stacked on one panel, each with lines at its own
+ * unrelated heights. Driving both from this one number is what makes them
+ * one grid instead of two: every line the chart draws sits at a multiple of
+ * ROW_H, which is exactly where a table row boundary also falls. */
+const ROW_H = 34;
+
+/** The table's header — TIER / SIZE / DEPOSITORS … — and the chart's own
+ * blank space above its bars share this exact height too, for the same
+ * reason: it puts the first shared gridline (the header's bottom rule) at
+ * the same y on both sides, rather than wherever each one's own padding
+ * happened to add up to. */
+const HEAD_H = 30;
+
+/** Both bars sit in every tier's slot at once, side by side with a hairline
+ * between them, so the pair reads as one object — the two readings of a
+ * single tier — rather than two unrelated bars that happen to be adjacent. */
+const BAR_W = 32;
+const BAR_GAP = 6;
+/** Only for a tier that really is empty — anything with wallets in it gets a
+ * height off the scale below, which never rounds to nothing. */
+const MIN_BAR_PCT = 1.2;
+
+/** Width of the axis gutter on the chart's left — one line of digits
+ * ("7,591", "$13.13M") right-aligned with 8px clear of the first bar. Static
+ * rather than measured: the labels are short, fixed-format numbers, not
+ * arbitrary text, so a number sized to the widest plausible one of them
+ * covers every real value without needing to watch the DOM for it.
+ *
+ * 54, not the 44 this was: Value's top label runs to a full "$13.13M", 45px
+ * of text that needs 53 with its 8px of clearance. At 44 it simply overran
+ * the gutter to the left — invisible while the chart carried a wide left
+ * margin, which had room to spare for it to bleed into, but the moment the
+ * chart went flush with the card's padding that overrun poked out past the
+ * card's own left edge. */
+const Y_AXIS_W = 54;
+
+/** Nudge that drops the X-axis ranges onto the tier rows' own baseline.
+ *
+ * Centring the two boxes is not enough: this row's labels are 11px on
+ * `leading-none`, so their line box IS the type, while a tier row's cells are
+ * 13px on the default 1.5 line-height. Two boxes of the same height, centred
+ * on the same y, still sit their text on baselines 1.75px apart — measured,
+ * not derived — and the ranges read as riding above the row beside them.
+ * Applied as a transform so the row keeps its exact ROW_H in the layout. */
+const X_LABEL_BASELINE_NUDGE = 1.75;
+
+/**
+ * Bar height as a fraction of the tallest bar, on a square-root scale.
+ *
+ * The shares here span 55.4% down to 0.2% — a factor of 277. Drawn straight,
+ * the two tiers that hold most of the money were 2.5px and 1.5px tall and
+ * simply could not be seen. Square root pulls that range into a factor of 17,
+ * which puts them at 22px and 11px: visible, and still four times apart, which
+ * is what they actually are.
+ *
+ * A minimum height was the other option and is worse. It makes every small
+ * tier the same size, so Auramaxer and Megalodon would draw identically
+ * despite one being 4x the other — the exact fault that got the tier donut
+ * replaced by a table in the first place.
+ *
+ * What it costs: heights are no longer proportional, so a bar twice as tall is
+ * four times the share, not twice. Both figures are in the table and the
+ * tooltip.
+ */
+function barHeight(share: number, peak: number): number {
+  if (!(share > 0) || !(peak > 0)) return MIN_BAR_PCT;
+  return Math.max(MIN_BAR_PCT, (Math.sqrt(share) / Math.sqrt(peak)) * 100);
+}
+
+export function DepositorsDistributionPanel({ tiers }: { tiers: DepositTier[] }) {
+  const [metric, setMetric] = useState<Metric>("count");
+  const [hovered, setHovered] = useState<string | null>(null);
+  const [selected, setSelected] = useState<string | null>(null);
+
+  // The chart and the table are separate cards now, each sized by the page
+  // grid, so neither measures the other any more. What still has to be
+  // measured is the toggle: it sits in the chart card, above the chart, and
+  // the table card needs to reserve exactly that much height or every tier
+  // row would sit a toggle's worth higher than the bar it belongs to. Read
+  // off the element rather than hardcoded so it can't drift when the control
+  // changes size.
+  const toggleRowRef = useRef<HTMLDivElement | null>(null);
+  const [toggleRowH, setToggleRowH] = useState(0);
+
+  useEffect(() => {
+    const el = toggleRowRef.current;
+    if (!el) return;
+
+    // getBoundingClientRect, not offsetHeight: the latter rounds to whole
+    // pixels, and the half-pixel it threw away was enough to leave every
+    // tier row half a pixel off the bar beside it.
+    const measure = () => setToggleRowH(el.getBoundingClientRect().height);
+    measure();
+
+    window.addEventListener("resize", measure);
+    const observer = typeof ResizeObserver !== "undefined" ? new ResizeObserver(measure) : null;
+    observer?.observe(el);
+
+    return () => {
+      window.removeEventListener("resize", measure);
+      observer?.disconnect();
+    };
+  }, []);
+
+  const { rows, peak } = useMemo(() => {
+    // Both series are scaled against the single largest share in either of
+    // them, not each against its own maximum. Two independent scales would
+    // draw Bulker's 55% of people and Megalodon's 38% of the money at the
+    // same height, which is the one comparison this chart exists to make.
+    // Exposed alongside the rows themselves — the axis below has to invert
+    // this same sqrt scale to label it correctly, and needs the number this
+    // was computed from to do it.
+    const peak = tiers.reduce((max, t) => Math.max(max, t.pct, t.heldPct), 0) || 1;
+
+    const rows = tiers.map((t) => {
+      const { name, range } = splitLabel(t.label);
+      return {
+        ...t,
+        name,
+        range,
+        countHeight: barHeight(t.pct, peak),
+        valueHeight: barHeight(t.heldPct, peak),
+      };
+    });
+
+    return { rows, peak };
+  }, [tiers]);
+
+  // The six shared gridlines, top to bottom, as the real count or dollar
+  // value each one falls at — inverting the sqrt scale the bars themselves
+  // are drawn on (see barHeight) rather than dividing the axis evenly in
+  // value, which would put it out of step with where the bars actually are.
+  //
+  // Because that inverse is quadratic, the labels are NOT evenly spaced in
+  // value the way a typical axis is — they bunch up low and spread out high,
+  // the same compression the bars themselves are drawn under. That is the
+  // honest reading of a sqrt-scaled chart: a gridline a fifth of the way up
+  // is not a fifth of the peak value, the same way a bar half as tall is not
+  // half the share. Labelling it as if it were evenly spaced would be the
+  // wrong number at every line but the top and bottom.
+  const axisLabels = useMemo(() => {
+    const total = tiers.reduce(
+      (sum, t) => ({ count: sum.count + t.count, held: sum.held + t.held }),
+      { count: 0, held: 0 }
+    );
+    const totalForMetric = metric === "count" ? total.count : total.held;
+    return [100, 80, 60, 40, 20, 0].map((fraction) => {
+      const value = (peak / 100) * (fraction / 100) ** 2 * totalForMetric;
+      return metric === "count" ? Math.round(value).toLocaleString("en-US") : usdCompact(value);
+    });
+  }, [tiers, peak, metric]);
+
+  const hoveredRow = rows.find((r) => r.id === hovered) ?? null;
+
+  // The hover card tracks the cursor instead of parking over the hovered
+  // bar's column. Measured rather than assumed: the clamp that keeps the card
+  // inside the plot needs its real size, and that changes with the toggle —
+  // Value carries a third row, so the card is taller than in Count.
+  const plotRef = useRef<HTMLDivElement | null>(null);
+  const cardRef = useRef<HTMLDivElement | null>(null);
+  const [pointer, setPointer] = useState({ x: 0, y: 0 });
+  const [plotSize, setPlotSize] = useState({ w: 0, h: 0 });
+  const [cardSize, setCardSize] = useState({ w: 0, h: 0 });
+
+  useEffect(() => {
+    const el = cardRef.current;
+    if (!el) return;
+    setCardSize({ w: el.offsetWidth, h: el.offsetHeight });
+  }, [hovered, metric]);
+
+  // Never past an edge — a card left free to follow the pointer runs off the
+  // panel on the outermost tiers, which is exactly where it is most needed.
+  const half = cardSize.w / 2;
+  const cardX = Math.min(Math.max(pointer.x, half), Math.max(half, plotSize.w - half));
+  // Above the cursor by preference, below it when there isn't the room.
+  // Clamping to the top instead would pin the card there for most of the
+  // plot's height — it is 170px tall and the card is most of 72 — leaving it
+  // sliding along one rail rather than following the pointer.
+  const above = pointer.y - cardSize.h - 14;
+  const cardY =
+    above >= 0
+      ? above
+      : Math.min(pointer.y + 18, Math.max(0, plotSize.h - cardSize.h));
+
+  /** Dimmed by a selection elsewhere, not by the cursor: hovering brightens
+   * its own tier, selecting mutes every other one. */
+  const isMuted = (id: string) => selected != null && selected !== id;
+
+  const toggleSelected = (id: string) => setSelected((prev) => (prev === id ? null : id));
+
+  return (
+    // Two cards, not one, on the SAME column template as the TVL/donut row
+    // above — so the bars sit under the TVL curve at its width and the tier
+    // table under the donut at its. The pair used to share a single card,
+    // which read as one object but left this row split at its own ratio,
+    // out of step with the row above it.
+    <div className="grid min-h-0 flex-1 grid-cols-1 gap-3 xl:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)] xl:gap-4">
+      {/* ------------------------------------------------ chart card */}
+      <PanelCard glossy glossDelay={-16}>
+      {/* No title, no legend: the colour and the row order already tie a
+          bar to its tier — hovering either lights the other — and what each
+          bar height means is in the tooltip the moment it's asked for, which
+          is a shorter path than reading it off a legend first. The one
+          control that stayed is Count/Value, since without it there is no
+          way to ask "which of these two series is the one I'm looking at" —
+          hovering only explains a single tier at a time, not the whole
+          chart. */}
+      {/* Left, over the chart it drives — not over the table. Flush with the
+          panel's own padding, which is where the chart below and the TVL
+          card's Current/Projected toggle above both start, so the three sit
+          on one line down the left edge. */}
+      <div ref={toggleRowRef} className="flex pb-2">
+        {/* Same sliding-pill treatment as the TVL card's Current/Projected
+            toggle — a shared border+padding shell with a spring-animated
+            accent pill sliding under whichever label is active — so the two
+            toggles on this page read as one kind of control. A distinct
+            layoutId from that one ("tvl-toggle-pill"): framer-motion
+            animates a FROM/TO transition between any two elements sharing an
+            id, and both toggles are mounted on the page at once, so sharing
+            the id would have this pill leap across the page toward the TVL
+            one's position the instant either changed. */}
+        <div className="flex shrink-0 gap-1 rounded-lg border border-[var(--color-line-strong)] p-0.5">
+          {(["count", "value"] as const).map((m) => {
+            const on = m === metric;
+            return (
+              <button
+                key={m}
+                type="button"
+                onClick={() => setMetric(m)}
+                aria-pressed={on}
+                className={cn(
+                  "relative rounded-md px-2.5 py-1 text-center text-[11px] transition-colors",
+                  on
+                    ? "font-medium text-[var(--color-bulk-base)]"
+                    : "font-medium text-text-secondary hover:text-text-primary"
+                )}
+              >
+                {on && (
+                  <motion.span
+                    layoutId="deposit-metric-toggle-pill"
+                    className="absolute inset-0 rounded-md bg-accent"
+                    transition={{ type: "spring", stiffness: 480, damping: 32 }}
+                  />
+                )}
+                <span className="relative z-10">{m === "count" ? "Count" : "Value"}</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+        {/* Fills its own card now rather than being measured against the
+            table's width — the card itself is what the page grid sizes, so
+            the chart simply takes it. The bars stay at BAR_W whatever that
+            comes to; the extra width a wide viewport brings goes into the
+            space between tier groups, not into fatter bars. */}
+        <div className="flex w-full min-h-0 flex-1 flex-col">
+          {/* Blank, at the table header's own height — see HEAD_H. Its only
+              job is to put the chart's first gridline at the same y as the
+              header's bottom rule. */}
+          <div style={{ height: HEAD_H }} aria-hidden="true" />
+
+          {/* Five rows tall, not six — the sixth is handed to the range
+              labels below instead of tacked on past the table's own bottom.
+              A bar this tall (100%) tops out exactly at the header's rule
+              and never higher, which is what keeps the chart from
+              overrunning the "Tier" level above it. */}
+          <div className="relative" style={{ height: ROW_H * 5 }}>
+            {/* The axis gutter. Six labels, each pinned to the exact y its
+                gridline sits at (i * height / 5, the same arithmetic the
+                gridlines below are laid out with) rather than left to a
+                second `justify-between` guessing at it independently — text
+                has real line-height where the gridlines are borders on a
+                zero-height div, so two separately-distributed flex columns
+                would not necessarily land on the same y at all. */}
+            <div
+              className="pointer-events-none absolute inset-y-0 left-0"
+              style={{ width: Y_AXIS_W }}
+            >
+              {axisLabels.map((label, i) => (
+                <span
+                  key={i}
+                  // IBM Plex Sans, 11px, text-secondary — matches the TVL
+                  // chart's own Y-axis labels exactly. HeroTvlChart's source
+                  // declares fontSize 10.5 and fill #8b8580 (text-muted) on
+                  // its YAxis ticks, but globals.css's
+                  // `.recharts-text { fill: var(--color-text-secondary) !important;
+                  // font-size: 11px !important }` overrides both on any tick
+                  // recharts renders through its own Text component (the
+                  // YAxis, unlike the X-axis's custom tick component, goes
+                  // through that path) — so 11px / text-secondary, not
+                  // 10.5px / text-muted, is what actually renders. Matched
+                  // here literally since this panel isn't recharts and gets
+                  // no such override.
+                  className="absolute right-2 -translate-y-1/2 whitespace-nowrap text-[11px] leading-none tabular-nums text-text-secondary"
+                  style={{ top: (i * (ROW_H * 5)) / 5 }}
+                >
+                  {label}
+                </span>
+              ))}
+            </div>
+
+            {/* Everything else — gridlines, bars, the tooltip — inset by the
+                gutter's width, in its own containing block so their existing
+                percentage-of-width math (the tooltip's left offset, the
+                bars' flex-1 slots) still divides the space they actually
+                have rather than the axis labels' width too. */}
+            <div
+              ref={plotRef}
+              className="absolute inset-y-0"
+              style={{ left: Y_AXIS_W, right: 0 }}
+              onMouseMove={(e) => {
+                const el = plotRef.current;
+                if (!el) return;
+                const r = el.getBoundingClientRect();
+                setPointer({ x: e.clientX - r.left, y: e.clientY - r.top });
+                setPlotSize({ w: r.width, h: r.height });
+              }}
+            >
+              {/* The shared grid itself: five lines, each one ROW_H apart,
+                  which is what a 6-row table divides into internally (the
+                  header's own rule is the first shared line, drawn on the
+                  table side — see the header below). No line below the fifth
+                  row here: that band belongs to the range labels, not a bar. */}
+              <div
+                className="pointer-events-none absolute inset-x-0 top-0 flex flex-col justify-between"
+                style={{ height: ROW_H * 5 }}
+              >
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <div key={i} className="border-t border-dashed border-[var(--color-line-soft)]" />
+                ))}
+              </div>
+
+              {/* Both series, every tier, always — the toggle changes which
+                  one is highlighted, not which one is drawn. Highlighting is
+                  a solid-vs-outline SWAP, not a shared opacity dip: giving
+                  the inactive bar a flat opacity multiplier still left it
+                  reading as "the same bar, dimmer" — because it never
+                  stopped being a solid fill, it just got fainter along with
+                  its neighbour, so the pair changed brightness together
+                  instead of trading places. Toggling now swaps which one of
+                  the two is drawn solid (bright fill, no border) and which is
+                  drawn as an outline (a faint tint, coloured border) — the
+                  same two treatments as before, just no longer nailed to
+                  "count is always solid." Both bars keep a border at all
+                  times (transparent on the solid one) so swapping doesn't
+                  shift either by the width of the border toggling on and
+                  off. */}
+              <div className="absolute inset-0 flex items-end">
+                {rows.map((row) => {
+                  const muted = isMuted(row.id);
+                  const countActive = metric === "count";
+                  const isHovered = hovered === row.id;
+                  // Only the series the toggle is showing solid takes the
+                  // highlight. Lighting both bars of the pair made the hover
+                  // read as "this tier", when what it marks is the one figure
+                  // the toggle has picked out — the outline landed on the
+                  // faint companion bar just as brightly as on the answer.
+                  const countLit = isHovered && countActive;
+                  const valueLit = isHovered && !countActive;
+                  return (
+                    <div
+                      key={row.id}
+                      onMouseEnter={() => setHovered(row.id)}
+                      onMouseLeave={() => setHovered(null)}
+                      onClick={() => toggleSelected(row.id)}
+                      className="flex h-full flex-1 cursor-pointer items-end justify-center transition-opacity"
+                      style={{ gap: BAR_GAP, opacity: muted ? 0.22 : 1 }}
+                    >
+                      {/* Depositors — solid while Count is active, an
+                          outline of the same colour otherwise. */}
+                      <div
+                        className="rounded-t-[2px] border transition-[height,background-color,border-color,outline-color] duration-300"
+                        style={{
+                          width: BAR_W,
+                          height: `${row.countHeight}%`,
+                          background: countActive
+                            ? row.color
+                            : `color-mix(in srgb, ${row.color} 25%, transparent)`,
+                          borderColor: countActive
+                            ? "transparent"
+                            : `color-mix(in srgb, ${row.color} 85%, transparent)`,
+                          // Same highlight the /tools charts give an active
+                          // bar: a bright hairline round the shape plus a
+                          // gold bloom. Drawn as an outline rather than a
+                          // border so it can't shift the bar by its own
+                          // width, and kept mounted in transparent at rest so
+                          // the colour transitions instead of snapping on.
+                          outline: `1px solid ${countLit ? "#FFFEEF" : "transparent"}`,
+                          filter: countLit
+                            ? "drop-shadow(0 0 6px rgba(255,181,71,0.45))"
+                            : undefined,
+                        }}
+                      />
+                      {/* Deposits — the mirror: solid while Value is active. */}
+                      <div
+                        className="rounded-t-[2px] border transition-[height,background-color,border-color,outline-color] duration-300"
+                        style={{
+                          width: BAR_W,
+                          height: `${row.valueHeight}%`,
+                          background: !countActive
+                            ? row.color
+                            : `color-mix(in srgb, ${row.color} 25%, transparent)`,
+                          borderColor: !countActive
+                            ? "transparent"
+                            : `color-mix(in srgb, ${row.color} 85%, transparent)`,
+                          // Same highlight the /tools charts give an active
+                          // bar: a bright hairline round the shape plus a
+                          // gold bloom. Drawn as an outline rather than a
+                          // border so it can't shift the bar by its own
+                          // width, and kept mounted in transparent at rest so
+                          // the colour transitions instead of snapping on.
+                          outline: `1px solid ${valueLit ? "#FFFEEF" : "transparent"}`,
+                          filter: valueLit
+                            ? "drop-shadow(0 0 6px rgba(255,181,71,0.45))"
+                            : undefined,
+                        }}
+                      />
+                    </div>
+                  );
+                })}
+              </div>
+
+            {hoveredRow && (
+              <motion.div
+                className="pointer-events-none absolute left-0 top-0 z-20"
+                // Spring, not a linear move: the card lags the cursor a beat
+                // and settles, which is what reads as gliding rather than
+                // being dragged. `initial={false}` so it appears already at
+                // the pointer instead of flying in from the plot's corner.
+                initial={false}
+                animate={{ x: cardX, y: cardY }}
+                transition={{ type: "spring", stiffness: 300, damping: 26, mass: 0.5 }}
+              >
+                <div
+                  ref={cardRef}
+                  className="-translate-x-1/2 rounded-[4px] border border-[rgba(198,182,186,0.2)] bg-[#1B1A14] px-3 py-2.5 text-[12px] shadow-[0_14px_36px_rgba(0,0,0,.55)]"
+                >
+                  {/* Tier name alone, centred. The size band it used to carry
+                      is the same string the table's own SIZE column shows for
+                      this row a few inches away, and the range labels under
+                      the bars repeat it a third time. */}
+                  <div className="mb-2 whitespace-nowrap text-center leading-none text-[#FFFEEF]">
+                    {hoveredRow.name}
+                  </div>
+                  {/* Only the pair the active toggle actually explains: Count
+                      means "how many, what share of depositors" and stops
+                      there — Deposits and Avg are a different metric's
+                      answer, not a supporting detail for this one. Value flips
+                      that: Deposits and its share of TVL, plus what that
+                      averages to per
+                      wallet, with the depositor count dropped since a $
+                      reading doesn't need a headcount attached to it.
+
+                      Label and value are separate grid columns rather than one
+                      run of text: that is what stacks the numbers under each
+                      other instead of starting each one wherever its own label
+                      happened to end. */}
+                  <div className="grid grid-cols-[auto_auto] gap-x-3 gap-y-[6px] whitespace-nowrap leading-none">
+                    {(metric === "count"
+                      ? ([
+                          ["Wallets", hoveredRow.count.toLocaleString("en-US")],
+                          ["Share", `${hoveredRow.pct.toFixed(1)}%`],
+                        ] as const)
+                      : ([
+                          ["Deposits", usdCompact(hoveredRow.held)],
+                          ["Share", `${hoveredRow.heldPct.toFixed(1)}%`],
+                          ["Avg", usdExact(hoveredRow.avgHeld)],
+                        ] as const)
+                    ).map(([label, value]) => (
+                      <Fragment key={label}>
+                        <span className="text-text-muted">{label} :</span>
+                        <span className="text-right tabular-nums text-[#FFB547]">{value}</span>
+                      </Fragment>
+                    ))}
+                  </div>
+                </div>
+              </motion.div>
+            )}
+            </div>
+          </div>
+
+          {/* Ranges only — the tier names already sit right beside this
+              chart in the table's own TIER column, so repeating them here a
+              second time was the same six words said twice a few inches
+              apart.
+
+              This is the sixth row the bars gave up, so it is exactly
+              ROW_H tall and vertically centred the same way a table row is,
+              which puts "<$100" … "$500K+" on the same row as "Megalodon" in
+              the TIER column beside it rather than a line below the table's
+              own bottom — plus the baseline nudge, without which the two
+              rows line up as boxes but not as text. paddingLeft matches the
+              axis gutter above, so each range still centres under its own
+              bar instead of under the wider box that now includes the axis
+              labels. */}
+          <div
+            className="flex shrink-0 items-center"
+            style={{
+              height: ROW_H,
+              paddingLeft: Y_AXIS_W,
+              transform: `translateY(${X_LABEL_BASELINE_NUDGE}px)`,
+            }}
+          >
+            {rows.map((row) => (
+              <div
+                key={row.id}
+                className="min-w-0 flex-1 text-center transition-opacity"
+                style={{ opacity: isMuted(row.id) ? 0.22 : 1 }}
+              >
+                {/* IBM Plex Sans at 11px — matches the Y-axis labels beside
+                    it and HeroTvlChart's real rendered axis size (see the
+                    Y-axis label comment above re: the recharts !important
+                    override), so every axis on the page reads at the same
+                    size. The table's Size column below repeats this text at
+                    the table's larger CELL size; that's a table cell, not an
+                    axis, so it's intentionally left alone. */}
+                <div className="truncate text-[11px] leading-none tabular-nums text-text-secondary">
+                  {row.range}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+      </PanelCard>
+
+      {/* ------------------------------------------------ table card */}
+      {/* A different gloss delay from the chart card's, so the two drift out
+          of step with each other rather than lighting up in unison. */}
+      <PanelCard glossy glossDelay={-11}>
+        {/* Reserves exactly the height of the toggle sitting in the card
+            beside this one. Without it the table's header rule — and every
+            tier row under it — would ride a toggle's worth higher than the
+            bar it belongs to, and the two cards would stop reading as one
+            object split in half. Only at xl: below that the cards stack,
+            where there is nothing to line up against and this would just be
+            unexplained padding at the top of the card. */}
+        <div aria-hidden="true" className="hidden xl:block" style={{ height: toggleRowH }} />
+        {/* TABLE_COLS' columns are fixed to their own content (see its
+            comment), so the table's natural width doesn't change with the
+            viewport — it sits at the start of its card and leaves the slack
+            on the right, rather than stretching the columns into it. */}
+        <div className="flex min-w-0 flex-col">
+          <div
+            className={cn(TABLE_COLS, HEADING, "border-b border-[var(--color-line)]")}
+            style={{ height: HEAD_H }}
+          >
+            <span className="pl-[17px] text-left">Tier</span>
+            <span className="text-right">Size</span>
+            <span className="text-right">Depositors</span>
+            <span className="text-right">Share</span>
+            <span className="text-right">Deposits</span>
+            <span className="text-right">Avg</span>
+          </div>
+
+          {rows.map((row, i) => {
+            const muted = isMuted(row.id);
+            const lit = hovered === row.id || selected === row.id;
+            const color = muted ? "#6B6660" : "#F5F3EE";
+            return (
+              <div
+                key={row.id}
+                onMouseEnter={() => setHovered(row.id)}
+                onMouseLeave={() => setHovered(null)}
+                onClick={() => toggleSelected(row.id)}
+                className={cn(
+                  TABLE_COLS,
+                  "shrink-0 cursor-pointer transition-colors",
+                  i > 0 && "border-t border-[var(--color-line-soft)]",
+                  lit && "bg-[rgba(255,255,255,0.03)]"
+                )}
+                style={{ height: ROW_H }}
+              >
+                <span className="flex min-w-0 items-center gap-2 text-[13px]" style={{ color }}>
+                  <span
+                    className="h-[9px] w-[9px] shrink-0 rounded-full transition-transform"
+                    style={{
+                      background: row.color,
+                      opacity: muted ? 0.4 : 1,
+                      transform: lit ? "scale(1.25)" : "scale(1)",
+                    }}
+                  />
+                  <span className="truncate">{row.name}</span>
+                </span>
+                <span className={cn(CELL, "truncate text-right")} style={{ color }}>
+                  {row.range}
+                </span>
+                <span className={cn(CELL, "text-right")} style={{ color }}>
+                  {row.count.toLocaleString("en-US")}
+                </span>
+                <span className={cn(CELL, "text-right font-semibold")} style={{ color }}>
+                  {row.pct.toFixed(1)}%
+                </span>
+                <span className={cn(CELL, "text-right")} style={{ color }}>
+                  {usdCompact(row.held)}
+                </span>
+                <span
+                  className={cn(CELL, "text-right")}
+                  style={{ color: muted ? "#6B6660" : "#C9C4BD" }}
+                >
+                  {usdCompact(row.avgHeld)}
+                </span>
+              </div>
+            );
+          })}
+
+          {selected && (
+            <div className="flex justify-end pt-2">
+              <button
+                type="button"
+                onClick={() => setSelected(null)}
+                className="ghost-pill shrink-0 cursor-pointer px-2.5 py-[3px] text-[11px]"
+              >
+                Clear filter
+              </button>
+            </div>
+          )}
+        </div>
+      </PanelCard>
+    </div>
+  );
+}

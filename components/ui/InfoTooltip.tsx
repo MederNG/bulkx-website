@@ -8,7 +8,6 @@ import {
   type ReactNode,
 } from "react";
 import { createPortal } from "react-dom";
-import { HelpCircle } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 
@@ -89,9 +88,9 @@ export function InfoTooltip({ text, className, panelClassName, floating }: InfoT
         onFocus={show}
         onBlur={hide}
         onClick={() => setOpen((o) => !o)}
-        className="text-text-secondary transition-colors hover:text-accent focus:text-accent focus:outline-none"
+        className="help-dot flex h-[17px] w-[17px] cursor-default items-center justify-center rounded-full border text-[10.5px] font-semibold leading-none transition-colors focus:outline-none"
       >
-        <HelpCircle className="h-3.5 w-3.5" />
+        ?
       </button>
 
       {floating ? (
