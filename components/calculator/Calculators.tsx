@@ -464,9 +464,6 @@ function EstimatorWorkbench({
                     className="min-w-0 flex-1 bg-transparent px-[0.875rem] py-[0.625rem] text-sm tabular-nums outline-none"
                   />
                 </CompoundInput>
-                <p className="mt-1.5 text-[11px] leading-snug text-text-muted">
-                  Live campaign total: {formatNumber(liveSupply)} — earned so far, still growing.
-                </p>
               </div>
             </div>
           </div>
@@ -857,6 +854,7 @@ export function DepositAuraPredictor({
   const [deposit, setDeposit] = useState(1_000);
   const [mode, setMode] = useState<DepositPredictMode | null>("new_deposit");
   const [holdSinceWeek, setHoldSinceWeek] = useState<number | null>(null);
+  const [hoveredWeek, setHoveredWeek] = useState<number | null>(null);
 
   const result = useMemo(
     () =>
@@ -882,163 +880,237 @@ export function DepositAuraPredictor({
   );
 
   const holdSinceActive = holdSinceWeek != null;
-
   const timeUntilSnapshot = formatRemainingDuration(context.hoursUntilSnapshot * 3_600_000);
-  const scenarioLabel = holdSinceActive
-    ? `Hold since Week ${holdSinceWeek} · Weeks ${holdSinceWeek}–${context.campaignWeek}`
-    : mode === "full_week_hold"
-      ? "Full week hold"
-      : "Deposit now";
+
+  const campaignBars = useMemo(
+    () =>
+      predictDepositAura(
+        deposit,
+        {
+          depositPool: context.depositPool,
+          cohortUsdHoursAtSnapshot: context.cohortUsdHoursAtSnapshot,
+          hoursUntilSnapshot: context.hoursUntilSnapshot,
+          hoursInWeek: context.hoursInWeek,
+          campaignWeek: context.campaignWeek,
+          weekTvl: context.weekTvl,
+          weekPool: context.weekPool,
+          weekEligibleCumUsdHours: context.weekEligibleCumUsdHours,
+          eligibleCumUsdHoursAtSnapshot: context.eligibleCumUsdHoursAtSnapshot,
+        },
+        { holdSinceWeek: 1 }
+      ).weekBreakdown ?? [],
+    [deposit, context]
+  );
+
+  const bars = useMemo(() => {
+    const counted = new Map((result.weekBreakdown ?? []).map((row) => [row.week, row]));
+    const campaign = new Map(campaignBars.map((row) => [row.week, row]));
+    const selectedStart = holdSinceWeek ?? context.campaignWeek;
+
+    return Array.from({ length: context.campaignWeek }, (_, i) => i + 1).map((week) => {
+      const selected = week >= selectedStart;
+      const inProgress = week === context.campaignWeek;
+      const countedRow = counted.get(week);
+      const campaignRow = campaign.get(week);
+      let aura = campaignRow?.aura ?? 0;
+      if (countedRow) aura = countedRow.aura;
+      else if (!holdSinceActive && inProgress) aura = result.predictedAura;
+      return { week, aura, inProgress, selected };
+    });
+  }, [
+    result.weekBreakdown,
+    result.predictedAura,
+    campaignBars,
+    holdSinceWeek,
+    holdSinceActive,
+    context.campaignWeek,
+  ]);
 
   const holdSinceOptions = Array.from({ length: context.campaignWeek }, (_, i) => i + 1);
+  const hovered = bars.find((bar) => bar.week === hoveredWeek) ?? null;
+  const shownAura = hovered?.aura ?? result.predictedAura;
+  const shownCaption = hovered
+    ? hovered.inProgress
+      ? `Week ${hovered.week} · ${timeUntilSnapshot} left`
+      : `Week ${hovered.week}`
+    : holdSinceActive
+      ? "Predicted total Aura"
+      : "Predicted deposit Aura";
 
   return (
-    <>
+    <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
       <PanelCard glossy glossDelay={-16}>
-        {/* The eyebrow-plus-detail opening every Overview panel uses, on the
-            card's own hairline. The negative margins bleed that rule to the
-            card's edges; PanelCard owns the padding, so a border drawn inside
-            it would stop short of both sides. */}
-        <div className="-mx-5 -mt-4 border-b border-[var(--color-line)] px-5 pb-4 pt-4">
-          <div className="min-w-0">
-            <PanelLabel>Aura Predictor</PanelLabel>
-            <p className="m-0 mt-2 text-[11px] text-text-secondary">Week {context.campaignWeek}</p>
-            <p className="m-0 mt-0.5 text-[11px] leading-relaxed text-text-muted">
-              {context.currentWeekWindow}
-            </p>
-          </div>
-        </div>
-
-        <div className="flex flex-1 flex-col pt-4">
-        <div className="mb-4">
-          <label className="mb-1.5 block text-xs text-text-secondary">Hold scenario</label>
-          <SegmentToggle
-            value={holdSinceActive ? "" : mode ?? "new_deposit"}
-            onChange={(v) => {
-              if (!v) return;
-              setHoldSinceWeek(null);
-              setMode(v as DepositPredictMode);
-            }}
-            options={[
-              { value: "new_deposit", label: "Deposit now" },
-              { value: "full_week_hold", label: "Full week hold" },
-            ]}
-          />
-        </div>
-
-        <div className="mb-4">
-          <label className="mb-1.5 block text-xs text-text-secondary">Hold since</label>
-          <Select
-            value={holdSinceWeek != null ? String(holdSinceWeek) : ""}
-            onChange={(v) => {
-              if (v) {
-                setMode(null);
-                setHoldSinceWeek(Number(v));
-                return;
-              }
-              setHoldSinceWeek(null);
-              setMode("new_deposit");
-            }}
-            options={[
-              { value: "", label: "Not set" },
-              ...holdSinceOptions.map((week) => ({
-                value: String(week),
-                label: `Week ${week}`,
-              })),
-            ]}
-          />
-          <p className="mt-1.5 text-[11px] leading-relaxed text-text-muted">
-            {holdSinceActive
-              ? `Total Aura if you held ${formatUsd(deposit)} without interruption from Week ${holdSinceWeek} through Week ${context.campaignWeek} · Week ${context.campaignWeek} in progress (${timeUntilSnapshot} to snapshot)`
-              : "Optional · cumulative Aura if you never stopped holding from that week"}
-          </p>
-        </div>
-
-        <Field
-          label="Deposit Amount ($)"
-          value={deposit}
-          onChange={setDeposit}
-          step={100}
-        />
-
-        <div className="mt-5 grid gap-3 sm:grid-cols-2">
-          <ResultBox
-            label={holdSinceActive ? "Predicted Total Aura" : "Predicted Deposit Aura"}
-            value={formatNumber(Math.round(result.predictedAura))}
-            accent
-          />
-          <ResultBox label="Efficiency" value={`${result.efficiency.toFixed(4)} A/$`} />
-          {!holdSinceActive && (
-            <ResultBox label="Pool Share" value={`${result.poolSharePct.toFixed(4)}%`} />
-          )}
-          <ResultBox
-            label={holdSinceActive ? "Lifetime USD-Hours" : "Your USD-Hours"}
-            value={formatUsdHours(result.userUsdHours)}
-          />
-        </div>
-
-        {holdSinceActive && result.weekBreakdown && result.weekBreakdown.length > 0 && (
-          <div className="mt-4 rounded-lg border border-[var(--color-line)] bg-[var(--color-bg-primary)] p-3.5">
-            <p className="m-0 mb-2 text-[10px] uppercase tracking-[0.1em] text-text-muted">
-              Per week
-            </p>
-            <div className="space-y-1.5">
-              {result.weekBreakdown.map((row) => (
-                <div key={row.week} className="flex items-center justify-between gap-3 text-xs">
-                  <span className="text-text-secondary">
-                    Week {row.week}
-                    {row.inProgress && (
-                      <span className="text-[10px] text-text-secondary/80">
-                        {" "}
-                        · in progress · {timeUntilSnapshot} to snapshot
-                      </span>
-                    )}
-                  </span>
-                  <span className="tabular-nums text-accent">
-                    {formatNumber(Math.round(row.aura))} A
-                  </span>
-                </div>
-              ))}
+        <PanelLabel>Aura Predictor</PanelLabel>
+        <div className="mt-3 flex flex-1 flex-col">
+          <div className="mb-3">
+            <div className="mb-1">
+              <FieldLabel label="Hold scenario" />
             </div>
+            <SegmentToggle
+              value={holdSinceActive ? "" : mode ?? "new_deposit"}
+              onChange={(v) => {
+                if (!v) return;
+                setHoldSinceWeek(null);
+                setMode(v as DepositPredictMode);
+              }}
+              options={[
+                { value: "new_deposit", label: "Deposit now" },
+                { value: "full_week_hold", label: "Full week hold" },
+              ]}
+            />
           </div>
-        )}
 
-        <p className="mt-4 text-[11px] leading-relaxed text-text-muted">
-          {holdSinceActive ? (
-            <>
-              Weeks {holdSinceWeek}–{context.campaignWeek} · each week uses its own measured pool
-              and your USD-hours accrued by then, so a steady balance earns more every week · Week{" "}
-              {context.campaignWeek} ({context.currentWeekWindow}) · {timeUntilSnapshot} left
-            </>
-          ) : (
-            <>
-              Snapshot {context.snapshotLabel} · {timeUntilSnapshot} remaining · {scenarioLabel} ·
-              Week 1: Jun 1 → first snapshot · Week 2+: Sat 13:00 UTC → Sat 13:00 UTC
-            </>
-          )}
+          <div className="mb-3">
+            <div className="mb-1">
+              <FieldLabel label="Hold since" />
+            </div>
+            <Select
+              value={holdSinceWeek != null ? String(holdSinceWeek) : ""}
+              onChange={(v) => {
+                if (v) {
+                  setMode(null);
+                  setHoldSinceWeek(Number(v));
+                  return;
+                }
+                setHoldSinceWeek(null);
+                setMode("new_deposit");
+              }}
+              options={[
+                { value: "", label: "Not set" },
+                ...holdSinceOptions.map((week) => ({
+                  value: String(week),
+                  label: `Week ${week}`,
+                })),
+              ]}
+            />
+          </div>
+
+          <Field label="Deposit Amount ($)" value={deposit} onChange={setDeposit} step={100} />
+        </div>
+      </PanelCard>
+
+      <PanelCard glossy glossDelay={-11}>
+        <PanelLabel>Projection</PanelLabel>
+        <p className="m-0 mt-3 text-[clamp(28px,3.2vw,44px)] font-semibold leading-none tracking-[-0.02em] text-accent tabular-nums">
+          {formatNumber(Math.round(shownAura))}
+        </p>
+        <p className="m-0 mt-2 text-[11px] uppercase tracking-[0.11em] text-text-muted">
+          {shownCaption}
         </p>
 
-        {context.calibration.isCalibrated && context.calibration.lastCompletedWeek != null && (
-          <p className="mt-1.5 text-[11px] leading-relaxed text-text-muted">
-            Aura is split on <span className="text-text-primary">lifetime</span> USD-hours, so a
-            new deposit earns far less than an established one of the same size. Calibrated on Week{" "}
-            {context.calibration.lastCompletedWeek}:{" "}
-            <span className="tabular-nums">
-              {formatNumber(Math.round(context.calibration.measuredPool ?? 0))}
-            </span>{" "}
-            Aura split across{" "}
-            <span className="tabular-nums">
-              {formatUsdHours(context.calibration.eligibleCumUsdHours ?? 0)}
-            </span>{" "}
-            eligible USD-hours (wallets at $0 forfeit theirs —{" "}
-            <span className="tabular-nums">
-              {((1 - (context.calibration.liveShare ?? 1)) * 100).toFixed(0)}%
-            </span>{" "}
-            of all accrued)
-          </p>
-        )}
+        <div className="mt-4 h-px w-full bg-[var(--color-line)]" />
+        <div className="grid grid-cols-2 divide-x divide-[var(--color-line)]">
+          <div className="min-w-0 px-2 py-3 text-center">
+            <p className="m-0 text-[11px] uppercase tracking-[0.11em] text-text-muted">
+              Efficiency
+            </p>
+            <p className="m-0 mt-1.5 truncate text-[13px] font-semibold leading-none tabular-nums">
+              {result.efficiency.toFixed(4)} A/$
+            </p>
+          </div>
+          <div className="min-w-0 px-2 py-3 text-center">
+            <p className="m-0 text-[11px] uppercase tracking-[0.11em] text-text-muted">
+              {holdSinceActive ? "Lifetime USD-hours" : "Your USD-hours"}
+            </p>
+            <p className="m-0 mt-1.5 truncate text-[13px] font-semibold leading-none tabular-nums">
+              {formatUsdHours(result.userUsdHours)}
+            </p>
+          </div>
         </div>
-      </PanelCard>    </>
+
+        <PredictorWeekBars bars={bars} hovered={hoveredWeek} onHover={setHoveredWeek} />
+        <PoolShareTrack pct={result.poolSharePct} />
+      </PanelCard>
+    </div>
+  );
+}
+
+function PredictorWeekBars({
+  bars,
+  hovered,
+  onHover,
+}: {
+  bars: { week: number; aura: number; inProgress: boolean; selected: boolean }[];
+  hovered: number | null;
+  onHover: (week: number | null) => void;
+}) {
+  const selectedMax = Math.max(
+    ...bars.filter((bar) => bar.selected).map((bar) => bar.aura),
+    1
+  );
+
+  return (
+    <div className="mt-4 flex min-h-0 flex-1 flex-col">
+      <div className="relative min-h-[148px] flex-1">
+        <div
+          className="absolute inset-0 flex items-stretch gap-[3px]"
+          onMouseLeave={() => onHover(null)}
+        >
+        {bars.map((bar) => {
+          const active = hovered === bar.week;
+          const pulsing = bar.selected && bar.inProgress && (hovered == null || active);
+          return (
+            <div
+              key={bar.week}
+              className="flex flex-1 cursor-default flex-col items-stretch"
+              onMouseEnter={() => onHover(bar.week)}
+              role="img"
+              aria-label={`Week ${bar.week}: ${Math.round(bar.aura)} Aura`}
+            >
+              <div className="flex min-h-0 flex-1 items-end">
+                <div
+                  className={cn(
+                    "w-full rounded-[2px] transition-[height,background-color] duration-500 ease-in-out",
+                    pulsing && "apr-week-pulse",
+                    hovered != null && !active && "opacity-45"
+                  )}
+                  style={{
+                    height: bar.selected
+                      ? `${Math.max(8, (bar.aura / selectedMax) * 100)}%`
+                      : "8%",
+                    background: active || bar.selected ? "#ffb547" : "rgba(255,181,71,0.32)",
+                  }}
+                />
+              </div>
+            </div>
+          );
+        })}
+        </div>
+      </div>
+      <div className="mt-1.5 flex gap-[3px]">
+        {bars.map((bar) => (
+          <div
+            key={bar.week}
+            className={cn(
+              "min-w-0 flex-1 text-center text-[10px] leading-none tabular-nums sm:text-[11px]",
+              bar.selected ? "text-accent" : "text-text-muted"
+            )}
+          >
+            W{bar.week}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function PoolShareTrack({ pct }: { pct: number }) {
+  const clamped = Math.min(100, Math.max(0, pct));
+  const label = pct < 0.01 ? `${pct.toFixed(4)}%` : `${pct.toFixed(2)}%`;
+
+  return (
+    <div className="mt-4">
+      <div className="flex items-baseline justify-between gap-3">
+        <p className="m-0 text-[11px] uppercase tracking-[0.11em] text-text-muted">Your slice</p>
+        <p className="m-0 text-[13px] tabular-nums text-text-secondary">{label}</p>
+      </div>
+      <div className="relative mt-1.5 h-1.5 overflow-hidden rounded-full bg-[rgba(255,181,71,0.12)]">
+        <span
+          className="absolute top-0 h-full w-[3px] rounded-full bg-accent"
+          style={{ left: `min(calc(100% - 3px), ${clamped}%)` }}
+        />
+      </div>
+    </div>
   );
 }
 
@@ -1058,7 +1130,7 @@ function SegmentToggle({
   return (
     <div
       className={cn(
-        "flex rounded-md border border-[rgba(198,182,186,0.15)] bg-bulk-base p-0.5",
+        "flex rounded-[10px] border border-[var(--color-line-strong)] bg-[var(--color-bulk-base)] p-0.5",
         disabled && "pointer-events-none opacity-45"
       )}
     >
@@ -1078,13 +1150,20 @@ function SegmentToggle({
             }}
             aria-pressed={selected}
             className={cn(
-              "min-w-0 flex-1 rounded px-2 py-1.5 text-xs font-medium transition-colors",
+              "relative min-w-0 flex-1 rounded-md px-2 py-[0.5rem] text-[13px] font-medium transition-colors",
               selected
-                ? "bg-[rgba(255,181,71,0.14)] text-accent"
+                ? "text-[var(--color-bulk-base)]"
                 : "text-text-secondary hover:text-text-primary"
             )}
           >
-            {label}
+            {selected && (
+              <motion.span
+                layoutId="predictor-hold-toggle"
+                className="absolute inset-0 rounded-md bg-accent"
+                transition={{ type: "spring", stiffness: 480, damping: 32 }}
+              />
+            )}
+            <span className="relative z-10">{label}</span>
           </button>
         );
       })}
@@ -1635,30 +1714,3 @@ function EditableMoneyBox({
 
 
 
-function ResultBox({
-  label,
-  value,
-  accent,
-  info,
-}: {
-  label: string;
-  value: string;
-  accent?: boolean;
-  info?: string;
-}) {
-  return (
-    <div>
-      <div className="mb-1">
-        <FieldLabel label={label} info={info} />
-      </div>
-      <div
-        className={cn(
-          "input-field flex min-h-[2.625rem] items-center tabular-nums",
-          accent && "text-accent"
-        )}
-      >
-        {value}
-      </div>
-    </div>
-  );
-}

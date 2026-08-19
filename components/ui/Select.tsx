@@ -99,17 +99,21 @@ export function Select({ value, onChange, options, className, compact }: SelectP
         aria-haspopup="listbox"
         aria-expanded={open}
         className={cn(
-          "flex w-full items-center justify-between gap-2 rounded border bg-bulk-base text-left transition-colors outline-none",
-          compact ? "px-2.5 py-1.5 text-xs" : "px-[0.875rem] py-[0.625rem] text-sm",
+          "flex w-full items-center justify-between gap-2 text-left font-sans transition-colors outline-none",
+          compact
+            ? "rounded-[10px] border bg-[var(--color-bulk-base)] px-2.5 py-1.5 text-[13px]"
+            : "input-field",
           open
             ? "border-accent"
-            : "border-[rgba(198,182,186,0.2)] hover:border-[rgba(255,181,71,0.4)]"
+            : compact
+              ? "border-[var(--color-line-strong)] hover:border-[rgba(255,181,71,0.4)]"
+              : undefined
         )}
       >
-        <span className="text-text-primary">{selected?.label ?? "Select..."}</span>
+        <span className="min-w-0 truncate text-text-primary">{selected?.label ?? "Select..."}</span>
         <ChevronDown
           className={cn(
-            "h-4 w-4 shrink-0 text-accent transition-transform duration-200",
+            "h-4 w-4 shrink-0 text-text-muted transition-transform duration-200",
             open && "rotate-180"
           )}
         />
@@ -136,7 +140,10 @@ export function Select({ value, onChange, options, className, compact }: SelectP
                   visibility: coords ? "visible" : "hidden",
                   transformOrigin: coords?.bottom != null ? "bottom" : "top",
                 }}
-                className="z-50 overflow-x-hidden overflow-y-auto rounded border border-[rgba(255,181,71,0.25)] bg-bg-primary p-1 shadow-[0_12px_30px_rgba(0,0,0,0.45)]"
+                className={cn(
+                  "z-50 overflow-x-hidden overflow-y-auto rounded-[10px] border border-[var(--color-line-strong)] bg-[var(--color-bulk-base)] p-1 font-sans shadow-[0_12px_30px_rgba(0,0,0,0.45)]",
+                  compact ? "text-[13px]" : "text-sm"
+                )}
               >
                 {options.map((o) => {
                   const active = o.value === value;
@@ -151,7 +158,8 @@ export function Select({ value, onChange, options, className, compact }: SelectP
                           setOpen(false);
                         }}
                         className={cn(
-                          "flex w-full items-center justify-between rounded px-3 py-2 text-left text-sm transition-colors",
+                          "flex w-full items-center justify-between rounded-md text-left transition-colors",
+                          compact ? "h-[30px] px-2.5" : "px-3 py-2",
                           active
                             ? "bg-[rgba(255,181,71,0.12)] text-accent"
                             : "text-text-secondary hover:bg-[rgba(255,181,71,0.06)] hover:text-text-primary"

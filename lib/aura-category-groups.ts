@@ -1,3 +1,5 @@
+import { categoryLabel } from "@/lib/utils";
+
 export interface CategoryBreakdownItem {
   key: string;
   category: string;
@@ -65,10 +67,7 @@ function sourceBucketKey(key: string): string {
 }
 
 function sourceBucketLabel(bucketKey: string): string {
-  return (
-    SOURCE_LABEL_OVERRIDES[bucketKey] ??
-    bucketKey.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())
-  );
+  return SOURCE_LABEL_OVERRIDES[bucketKey] ?? categoryLabel(bucketKey);
 }
 
 function sortSourceKeys(a: string, b: string, pointsByKey: Map<string, number>): number {
