@@ -40,7 +40,7 @@ export function PageHeading({
             The watermark is clipped by the card too, which is the trade: it no
             longer bleeds under the nav, and in exchange the block's edges are
             as clean as its neighbours'. */}
-        <PanelCard glossy glossDelay={-16} className="w-full py-8 text-center">
+        <PanelCard glossy glossDelay={-16} className="w-full py-8 sm:py-8 text-center">
           <span
             className={cn(
               "pointer-events-none absolute inset-x-0 top-1/2 -translate-y-1/2 select-none",
@@ -74,9 +74,10 @@ export function PageHeading({
               clipped the watermark differently. 30px is 13px type at body
               leading plus the tabs' pb-2.5.
 
-              -mb-8 cancels the card's own bottom padding so the tabs sit ON
-              its bottom edge — their active underline then lands on the card's
-              border instead of floating a padding's height above it. */}
+              -mb-8 cancels the card's own bottom padding (py-8 / sm:py-8 —
+              both, because PanelCard's default sm:py-4 would otherwise win
+              on desktop and pull the 2px underline outside overflow-hidden)
+              so the tabs sit ON its bottom edge. */}
           <div className="relative mt-7 -mb-8 flex min-h-[30px] items-end justify-center">
             {children}
           </div>

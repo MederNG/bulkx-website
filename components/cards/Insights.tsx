@@ -98,12 +98,12 @@ export function DistributionStats({
   return (
     <PanelCard glossy glossDelay={-3} className="h-full font-sans">
       <PanelLabel>Distribution Metrics</PanelLabel>
-      <div className="mt-3 -mx-5">
+      <div className="mt-3 -mx-3 sm:-mx-5">
         {stats.map((s, i) => (
           <div
             key={s.label}
             className={cn(
-              "group flex h-[30px] items-center justify-between px-5 text-[13px] leading-none transition-colors",
+              "group flex h-[30px] items-center justify-between px-3 text-[13px] leading-none transition-colors sm:px-5",
               i > 0 && "border-t border-[var(--color-line-soft)]",
               "hover:bg-[rgba(255,255,255,0.04)]"
             )}

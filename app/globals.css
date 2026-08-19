@@ -345,10 +345,9 @@ body {
    TVL are still moving, against eleven that have settled. Same 1150ms as the
    pair above so everything on the page that pulses breathes together.
 
-   It drives opacity, which the bar also sets inline; that's fine and
-   deliberate — animations outrank inline styles in the cascade — but the
-   component only turns this on when the bar isn't being dimmed by another
-   week's hover, so the two never actually disagree. */
+   Opacity only lives on this animation. An inline opacity (or a transition
+   on opacity) on the same node cancelled the pulse in Chromium, while Safari
+   on phones still ran it. Hover dimming is a class on non-current bars. */
 @keyframes apr-current-week-pulse {
   0%,
   100% {
@@ -646,21 +645,6 @@ body {
   background: var(--color-accent);
 }
 
-/* Dropdowns open on hover, and on keyboard focus so they stay reachable. */
-.site-nav-drop {
-  opacity: 0;
-  visibility: hidden;
-  transform: translateY(-4px);
-  transition: opacity 0.16s, transform 0.16s, visibility 0.16s;
-}
-
-.site-nav-menu:hover .site-nav-drop,
-.site-nav-menu:focus-within .site-nav-drop {
-  opacity: 1;
-  visibility: visible;
-  transform: translateY(0);
-}
-
 /* Gold pill CTA (Deposit, active range toggle). */
 .cta {
   background: var(--color-accent);
@@ -913,6 +897,14 @@ input[type="number"] {
 .aura-distribution-chart .recharts-text {
   fill: var(--color-text-primary) !important;
   font-size: 13px !important;
+}
+
+@media (max-width: 640px) {
+  .category-share-chart .recharts-text,
+  .aura-distribution-chart .recharts-text,
+  .fdv-chart .recharts-text {
+    font-size: 10px !important;
+  }
 }
 
 /* Clicking a pie slice / bar focuses the SVG shape, which browsers outline

@@ -24,6 +24,7 @@ import {
   formatUsdCompact,
 } from "@/lib/projected-snapshot-tvl";
 import { cn, formatNumber } from "@/lib/utils";
+import { useNarrowViewport } from "@/lib/use-narrow-viewport";
 import { InfoTooltip } from "@/components/ui/InfoTooltip";
 import { Select } from "@/components/ui/Select";
 import { PageHeading } from "@/components/layout/PageHeading";
@@ -347,34 +348,77 @@ interface HistogramProps {
   data: { bucket: string; count: number }[];
 }
 
+function shortAuraBucket(label: string): string {
+  return label
+    .replace("1000-2500", "1k–2.5k")
+    .replace("2500-5000", "2.5k–5k")
+    .replace("500-1000", "0.5–1k")
+    .replace("5000+", "5k+");
+}
+
+function CategoryYTick({
+  x,
+  y,
+  payload,
+}: {
+  x?: number;
+  y?: number;
+  payload?: { value?: string };
+}) {
+  return (
+    <text
+      x={x}
+      y={y}
+      dy={4}
+      textAnchor="end"
+      fill="var(--color-text-primary)"
+      fontSize={12}
+      fontFamily="var(--font-ibm-plex-sans)"
+    >
+      {payload?.value}
+    </text>
+  );
+}
+
 export function AuraHistogram({ data }: HistogramProps) {
   const { ref, hasEntered } = useInViewOnce<HTMLDivElement>(0.2);
+  const narrow = useNarrowViewport();
 
   return (
     <PanelCard glossy glossDelay={-6} className="h-full">
       <div ref={ref} className="flex min-h-0 flex-1 flex-col">
         <PanelLabel>Aura Distribution</PanelLabel>
         <div className="aura-distribution-chart mt-3 min-h-[260px] flex-1">
-          <ResponsiveContainer width="100%" height={260}>
-            <BarChart key={hasEntered ? "hist-animate" : "hist-idle"} data={data}>
+          <ResponsiveContainer width="100%" height={narrow ? 280 : 260}>
+            <BarChart
+              key={hasEntered ? "hist-animate" : "hist-idle"}
+              data={data}
+              margin={{ top: 8, right: 8, left: 0, bottom: 0 }}
+              barCategoryGap={narrow ? "18%" : "12%"}
+            >
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis
                 dataKey="bucket"
+                tickFormatter={narrow ? shortAuraBucket : undefined}
                 tick={{
-                  fontSize: 13,
+                  fontSize: narrow ? 10 : 13,
                   fontFamily: "var(--font-ibm-plex-sans)",
                   fill: "var(--color-text-primary)",
                 }}
                 interval={0}
-                angle={-30}
+                minTickGap={narrow ? 8 : 0}
+                angle={narrow ? -50 : -30}
                 textAnchor="end"
-                height={60}
+                height={narrow ? 72 : 60}
+                tickMargin={4}
               />
               <YAxis
-                tickFormatter={(v) => v.toLocaleString()}
-                width={56}
+                tickFormatter={(v) =>
+                  v >= 1000 ? `${Math.round(v / 1000)}k` : v.toLocaleString()
+                }
+                width={narrow ? 36 : 56}
                 tick={{
-                  fontSize: 13,
+                  fontSize: narrow ? 11 : 13,
                   fontFamily: "var(--font-ibm-plex-sans)",
                   fill: "var(--color-text-primary)",
                 }}
@@ -488,6 +532,7 @@ function collapseSmallCategories(data: CategoryChartRow[], topN: number = 7) {
 export function CategoryCharts({ data }: CategoryChartsProps) {
   const groupOptions = useMemo(() => buildCategoryGroupOptions(data), [data]);
   const [selectedGroup, setSelectedGroup] = useState(OVERVIEW_GROUP);
+  const narrow = useNarrowViewport();
 
   useEffect(() => {
     if (!groupOptions.some((option) => option.value === selectedGroup)) {
@@ -570,7 +615,7 @@ export function CategoryCharts({ data }: CategoryChartsProps) {
       <PageHeading eyebrow="Aura" title="Aura analytics" centered />
 
       <div ref={ref} className="grid items-stretch gap-4 lg:grid-cols-2">
-        <PanelCard glossy glossDelay={-8} className="min-h-[400px]">
+        <PanelCard glossy glossDelay={-8} className={narrow ? undefined : "min-h-[400px]"}>
           <div className="mb-3 flex min-h-8 items-center justify-between gap-3">
             <div className="flex min-w-0 items-center gap-1.5">
               <PanelLabel>Source Breakdown</PanelLabel>
@@ -585,10 +630,10 @@ export function CategoryCharts({ data }: CategoryChartsProps) {
             />
           </div>
           {segments.length > 0 && (
-            <div className="flex min-h-[320px] flex-1 items-start">
+            <div className="flex min-h-0 flex-1 items-start">
               <div
                 className="flex w-full min-w-0"
-                style={{ height: AURA_SOURCES_DONUT_WELL }}
+                style={narrow ? undefined : { height: AURA_SOURCES_DONUT_WELL }}
               >
                 <AuraDonut
                   key={selectedGroup}
@@ -610,22 +655,28 @@ export function CategoryCharts({ data }: CategoryChartsProps) {
           </div>
           <div
             className="category-share-chart w-full"
-            style={{ height: AURA_SOURCES_DONUT_WELL, paddingTop: apexInset }}
+            style={{
+              height: narrow ? Math.max(220, colored.length * 44) : AURA_SOURCES_DONUT_WELL,
+              paddingTop: narrow ? 0 : apexInset,
+            }}
           >
             <ResponsiveContainer width="100%" height="100%">
               <BarChart
                 key={`${hasEntered ? "cat-animate" : "cat-idle"}-${selectedGroup}`}
                 data={colored}
                 layout="vertical"
-                margin={{ top: 0, left: 4, right: 48, bottom: 8 }}
+                margin={{ top: 0, left: 4, right: narrow ? 36 : 48, bottom: 8 }}
+                barCategoryGap={narrow ? 10 : 8}
+                maxBarSize={28}
               >
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis
                   type="number"
                   domain={[0, "dataMax"]}
                   tickFormatter={(v) => `${v.toFixed(0)}%`}
+                  minTickGap={28}
                   tick={{
-                    fontSize: 13,
+                    fontSize: narrow ? 11 : 13,
                     fontFamily: "var(--font-ibm-plex-sans)",
                     fill: "var(--color-text-primary)",
                   }}
@@ -633,12 +684,9 @@ export function CategoryCharts({ data }: CategoryChartsProps) {
                 <YAxis
                   type="category"
                   dataKey="category"
-                  width={isDrillDown ? 128 : 110}
-                  tick={{
-                    fontSize: 13,
-                    fontFamily: "var(--font-ibm-plex-sans)",
-                    fill: "var(--color-text-primary)",
-                  }}
+                  width={narrow ? 92 : isDrillDown ? 128 : 110}
+                  tick={CategoryYTick}
+                  interval={0}
                 />
                 <Tooltip
                   cursor={false}

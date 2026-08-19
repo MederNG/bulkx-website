@@ -230,10 +230,8 @@ export function LeaderboardTable() {
                   setTabClickCount((n) => n + 1);
                 }}
                 aria-pressed={on}
-                // -mb-px drops the button's bottom edge onto the card's own
-                // border so the underline lands on it rather than above it.
                 className={cn(
-                  "relative -mb-px cursor-pointer pb-2.5 text-[13px] font-medium transition-colors",
+                  "relative cursor-pointer pb-2.5 text-[13px] font-medium transition-colors",
                   on ? "text-accent" : "text-text-muted hover:text-text-primary"
                 )}
               >

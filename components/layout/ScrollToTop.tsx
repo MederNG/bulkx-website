@@ -29,7 +29,7 @@ export function ScrollToTop() {
       onClick={scrollToTop}
       aria-label="Scroll to top"
       className={cn(
-        "scroll-to-top-btn fixed right-4 bottom-6 z-40 flex h-10 w-10 items-center justify-center rounded-full border border-[rgba(255,181,71,0.35)] bg-[rgba(27,26,20,0.92)] text-accent shadow-[0_8px_24px_rgba(0,0,0,0.45)] backdrop-blur-sm transition-[opacity,transform] duration-200 md:right-6 md:bottom-8",
+        "scroll-to-top-btn fixed right-3 bottom-20 z-40 flex h-10 w-10 items-center justify-center rounded-full border border-[rgba(255,181,71,0.35)] bg-[rgba(27,26,20,0.92)] text-accent shadow-[0_8px_24px_rgba(0,0,0,0.45)] backdrop-blur-sm transition-[opacity,transform] duration-200 sm:right-4 sm:bottom-8 md:right-6",
         visible
           ? "pointer-events-auto translate-y-0 opacity-100"
           : "pointer-events-none translate-y-3 opacity-0"

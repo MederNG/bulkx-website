@@ -1,4 +1,4 @@
-import { buildLiveFinancialPayload } from "@/lib/live-financial-payload";
+import { buildLiveFinancialPayloadFromDisk } from "@/lib/live-financial-payload";
 import { buildOverviewPanels } from "@/lib/overview-metrics";
 import { computeDashboardMetrics, getChartSnapshots } from "@/lib/stats";
 import { TvlPanel } from "@/components/overview/TvlPanel";
@@ -10,10 +10,8 @@ import { TvlViewProvider } from "@/components/overview/TvlViewContext";
 export const revalidate = 60;
 
 export default async function OverviewPage() {
-  const [metrics, live] = await Promise.all([
-    computeDashboardMetrics(),
-    buildLiveFinancialPayload(),
-  ]);
+  const metrics = await computeDashboardMetrics();
+  const live = buildLiveFinancialPayloadFromDisk();
   const snapshots = getChartSnapshots("ALL");
 
   const panels = buildOverviewPanels({

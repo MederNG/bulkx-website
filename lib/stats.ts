@@ -1,3 +1,4 @@
+import { unstable_cache } from "next/cache";
 import { getLeaderboard } from "@/lib/fetcher";
 import { getLeaderboardForApp } from "@/lib/live-leaderboard";
 import {
@@ -10,7 +11,7 @@ import {
   percentileValue,
 } from "@/lib/percentiles";
 import { filterSnapshotsByRange, readSnapshots } from "@/lib/snapshots";
-import { getLiveTotals } from "@/lib/live-totals";
+import { readTotals } from "@/lib/totals";
 import { getLeaderboardTop } from "@/lib/leaderboard-table";
 import { hasReferralActivity } from "@/lib/referrals";
 import { AURA_BUCKETS, categoryLabel } from "@/lib/utils";
@@ -35,10 +36,10 @@ const DEPOSIT_SIZE_BUCKETS = [
   { label: "$1M+", min: 1_000_000, max: Infinity },
 ];
 
-export async function computeDashboardMetrics(): Promise<DashboardMetrics> {
-  const entries = await getLeaderboardForApp({ waitMs: 4000 });
+async function computeDashboardMetricsUncached(): Promise<DashboardMetrics> {
+  const entries = await getLeaderboardForApp({ waitMs: 0 });
   const snapshots = readSnapshots();
-  const totals = await getLiveTotals();
+  const totals = readTotals();
   const lastUpdated =
     totals?.updatedAt ??
     (snapshots.length > 0
@@ -155,6 +156,12 @@ export async function computeDashboardMetrics(): Promise<DashboardMetrics> {
     lastUpdated,
   };
 }
+
+export const computeDashboardMetrics = unstable_cache(
+  computeDashboardMetricsUncached,
+  ["dashboard-metrics"],
+  { revalidate: 60 },
+);
 
 function generateAlphaInsights(
   entries: LeaderboardEntry[],

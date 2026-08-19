@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -31,6 +32,23 @@ function isActive(pathname: string, item: NavItem): boolean {
 
 export function SiteNav() {
   const pathname = usePathname() ?? "/";
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    setMenuOpen(false);
+  }, [pathname]);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    const onPointerDown = (event: PointerEvent) => {
+      if (!menuRef.current?.contains(event.target as Node)) {
+        setMenuOpen(false);
+      }
+    };
+    document.addEventListener("pointerdown", onPointerDown);
+    return () => document.removeEventListener("pointerdown", onPointerDown);
+  }, [menuOpen]);
 
   return (
     <header className="sticky top-0 z-50 border-b border-[var(--color-line)] bg-[rgba(11,11,12,0.92)] backdrop-blur-[10px]">
@@ -78,24 +96,61 @@ export function SiteNav() {
 
         <div className="flex min-w-0 flex-1 items-center justify-end gap-3">
           {/* Flattened nav for narrow screens, where the inline bar is hidden. */}
-          <div className="site-nav-menu relative lg:hidden">
+          <div ref={menuRef} className="relative lg:hidden">
             <button
               type="button"
-              className="ghost-pill inline-flex items-center gap-1.5 px-3 py-2 text-[13px]"
+              aria-expanded={menuOpen}
+              aria-haspopup="menu"
+              onClick={() => setMenuOpen((open) => !open)}
+              className={cn(
+                "inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-[13px] transition-colors",
+                menuOpen
+                  ? "border-accent bg-[rgba(255,181,71,0.14)] text-accent"
+                  : "border-[rgba(255,181,71,0.4)] text-accent"
+              )}
             >
               Menu
-              <ChevronDown className="h-[13px] w-[13px]" strokeWidth={2.4} />
+              <ChevronDown
+                className={cn(
+                  "h-[13px] w-[13px] transition-transform duration-200",
+                  menuOpen && "rotate-180"
+                )}
+                strokeWidth={2.4}
+              />
             </button>
-            <div className="site-nav-drop absolute right-0 top-full z-[60] mt-3 min-w-[210px] rounded-[10px] border border-[var(--color-line-strong)] bg-[var(--color-bg-primary)] p-1.5 shadow-[0_16px_40px_rgba(0,0,0,0.6)]">
-              {NAV.map((link) => (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  className="block rounded-md px-3 py-[9px] text-[13.5px] text-text-secondary transition-colors hover:bg-[rgba(255,181,71,0.1)] hover:text-accent"
-                >
-                  {link.label}
-                </Link>
-              ))}
+            <div
+              role="menu"
+              className={cn(
+                "absolute right-0 top-full z-[60] mt-2 min-w-[220px] origin-top-right rounded-[10px] border border-[rgba(255,181,71,0.22)] bg-[var(--color-bulk-base)] p-1.5 shadow-[0_20px_48px_rgba(0,0,0,0.72)] transition-[opacity,transform] duration-150",
+                menuOpen
+                  ? "pointer-events-auto scale-100 opacity-100"
+                  : "pointer-events-none scale-[0.98] opacity-0"
+              )}
+            >
+              {NAV.map((link) => {
+                const active = isActive(pathname, link);
+                return (
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    role="menuitem"
+                    className={cn(
+                      "relative block rounded-md px-3 py-2.5 text-[13px] transition-colors",
+                      active
+                        ? "bg-[rgba(255,181,71,0.12)] font-medium text-accent"
+                        : "text-text-primary hover:bg-[rgba(255,181,71,0.08)] hover:text-accent"
+                    )}
+                  >
+                    {active && (
+                      <span
+                        aria-hidden="true"
+                        className="absolute bottom-1.5 left-0 top-1.5 w-[2px] rounded-full bg-accent"
+                      />
+                    )}
+                    {link.label}
+                  </Link>
+                );
+              })}
             </div>
           </div>
         </div>

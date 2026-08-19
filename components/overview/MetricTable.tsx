@@ -55,8 +55,9 @@ const TWO_TRAILING = `minmax(0, ${LABEL_W}px) ${COUNT_W}px`;
 /** With no leading column, the trailing columns have to be pushed to the
  * right edge explicitly; with one, its 1fr does the pushing. */
 const TWO_COL = { template: TWO_TRAILING, justify: "justify-end" };
-const TWO_COL_WIDE = { template: `minmax(0, 1fr) ${COUNT_W}px`, justify: "" };
+const TWO_COL_WIDE = { template: "minmax(0, 1fr) max-content", justify: "" };
 const THREE_COL = { template: TRAILING_COLS, justify: "justify-end" };
+const THREE_COL_WIDE = { template: "minmax(0, 1fr) max-content max-content", justify: "" };
 const FOUR_COL = { template: `minmax(0, 1fr) ${TRAILING_COLS}`, justify: "" };
 
 function shapeFor(columnCount: number) {
@@ -111,7 +112,12 @@ export function MetricTableHeader({
    * stays 168px wide and the rest of the box is a gap. */
   wide?: boolean;
 }) {
-  const shape = wide && columns.length === 2 ? TWO_COL_WIDE : shapeFor(columns.length);
+  const shape =
+    wide && columns.length === 2
+      ? TWO_COL_WIDE
+      : wide && columns.length === 3
+        ? THREE_COL_WIDE
+        : shapeFor(columns.length);
   return (
     <div
       className={cn(GRID, shape.justify, "shrink-0 border-b border-[var(--color-line)] pb-1.5")}
@@ -177,7 +183,15 @@ export function MetricTableRow({
   // Must match the header's — each row is its own grid container, so the
   // columns line up only because every one is handed the same template.
   const shape =
-    detail != null ? FOUR_COL : share != null ? THREE_COL : wide ? TWO_COL_WIDE : TWO_COL;
+    detail != null
+      ? FOUR_COL
+      : share != null
+        ? wide
+          ? THREE_COL_WIDE
+          : THREE_COL
+        : wide
+          ? TWO_COL_WIDE
+          : TWO_COL;
   return (
     <div
       onMouseEnter={onMouseEnter}

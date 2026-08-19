@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Cell, Pie, PieChart, Sector } from "recharts";
 import type { OverviewDonutSegment } from "@/lib/overview-metrics";
 import { cn } from "@/lib/utils";
+import { useNarrowViewport } from "@/lib/use-narrow-viewport";
 import {
   MetricTableHeader,
   MetricTableRow,
@@ -11,7 +12,11 @@ import {
   METRIC_TABLE_LEAD_INSET,
 } from "@/components/overview/MetricTable";
 
-/** How long the ring takes to wipe round on first draw. */
+function compactAura(value: number): string {
+  if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(1)}M`;
+  if (value >= 10_000) return `${Math.round(value / 1_000)}K`;
+  return Math.round(value).toLocaleString("en-US");
+}
 const SWEEP_MS = 900;
 /** 12 o'clock, sweeping clockwise. */
 const START_ANGLE = 90;
@@ -120,6 +125,7 @@ export function AuraDonut({
   showShare?: boolean;
 }) {
   const [activeIndex, setActiveIndex] = useState<number | undefined>(undefined);
+  const narrow = useNarrowViewport();
 
   // Measured off the ROW, not the donut's own box, and against both axes.
   // The ring is square, so its size is bounded by whichever of the two runs
@@ -174,22 +180,20 @@ export function AuraDonut({
   // the legend either: it sat as a gap belonging to neither, 105px of it at
   // 1920. Removing the cap is what lets the ring actually claim the width
   // this formula was already handing it.
+  const leftover =
+    avail.w === 0
+      ? 0
+      : avail.w - avail.legendFloor - ROW_GAP - METRIC_TABLE_LEAD_INSET - 1;
+  const stacked = narrow || (avail.w > 0 && leftover < MIN_RING);
+
   const width =
     avail.w === 0
       ? 0
-      : Math.max(
-          // The floor gives way to the row's own height — a short panel still
-          // shrinks the ring rather than overflowing.
+      : stacked
+        ? Math.max(MIN_RING, Math.min(avail.w, 280))
+        : Math.max(
           Math.min(MIN_RING, avail.h),
-          Math.min(
-            avail.h,
-            // The -1 is a rounding cushion. clientWidth is an integer while
-            // the row's real width isn't, so a ring sized to the whole of it
-            // can land a fraction of a px wide — enough for the legend's
-            // label column to give up that fraction and stop lining up with
-            // the tier table's Size column below.
-            avail.w - avail.legendFloor - ROW_GAP - METRIC_TABLE_LEAD_INSET - 1
-          )
+          Math.min(avail.h, leftover)
         );
 
   // Recharts' own entrance runs through react-smooth, which ticks on
@@ -282,17 +286,8 @@ export function AuraDonut({
   // hole as clearance either side. A looser ratio hit the 20px cap and
   // stopped scaling while the hole kept shrinking, which is what let the
   // number reach the ring on a shorter viewport.
-  const valueFontPx = Math.max(10, Math.min(20, holeDiameter * 0.16));
-  // Capped at 10px to match the column headings in the legend beside it —
-  // same size, same 0.1em tracking, same muted colour, so the two read as one
-  // class of label rather than this one looking like fine print. It was
-  // ceilinged at 9.5 and floored at 7, which on a normal-sized ring left it a
-  // shade under everything else on the panel and hard to read at all.
-  //
-  // The ratio is generous enough that the cap is what binds at any ring this
-  // panel actually draws; it only starts scaling down on a ring small enough
-  // that 10px genuinely wouldn't fit the hole. "TOTAL AURA" needs 67px at
-  // 10px against the 78px the hole gives at the tightest layout measured.
+  const tightHole = holeDiameter > 0 && holeDiameter < 96;
+  const valueFontPx = Math.max(10, Math.min(20, holeDiameter * (tightHole ? 0.2 : 0.16)));
   const captionFontPx = Math.max(8.5, Math.min(10, holeDiameter * 0.13));
 
   const sourcesLayout = !showShare;
@@ -301,12 +296,11 @@ export function AuraDonut({
     <div
       ref={rowRef}
       className={cn(
-        "flex min-h-0 min-w-0 flex-1 gap-5 overflow-hidden",
-        sourcesLayout ? "items-start" : "items-center"
+        "flex min-h-0 min-w-0 flex-1",
+        stacked ? "flex-col items-stretch gap-4 overflow-visible" : "gap-5 overflow-hidden",
+        !stacked && (sourcesLayout ? "items-start" : "items-center")
       )}
-      // Holds the ring off the card's left edge, in step with the tier names
-      // below it — see METRIC_TABLE_LEAD_INSET.
-      style={{ paddingLeft: METRIC_TABLE_LEAD_INSET }}
+      style={{ paddingLeft: stacked ? 0 : METRIC_TABLE_LEAD_INSET }}
       onMouseLeave={() => setActiveIndex(undefined)}
     >
       {/* Sized from the measurement above rather than by a width class, so
@@ -319,19 +313,13 @@ export function AuraDonut({
           which it refuses to patch up. Withheld as one unit, both sides
           render the same bare div and the geometry arrives with the measure. */}
       <div
-        className="relative shrink-0"
+        className={cn("relative shrink-0", stacked && "mx-auto")}
         style={
           width > 0
             ? {
                 width,
                 height: width,
-                // Pulled left by the ring's own inset inside its square
-                // canvas. The canvas is wider than the ring — it has to be,
-                // to keep the hover glow from clipping — so aligning the BOX
-                // with the tier bullets below left the visible ring sitting a
-                // dozen px to their right. Offsetting by the inset lines up
-                // what's actually drawn.
-                marginLeft: -ringLeftInset,
+                marginLeft: stacked ? undefined : -ringLeftInset,
               }
             : undefined
         }
@@ -386,13 +374,18 @@ export function AuraDonut({
                 maxWidth: "100%",
               }}
             >
-              {Math.round(active ? active.points : totalAuraNumber).toLocaleString("en-US")}
+              {tightHole
+                ? compactAura(active ? active.points : totalAuraNumber)
+                : Math.round(active ? active.points : totalAuraNumber).toLocaleString("en-US")}
             </p>
             <p
-              className="m-0 mt-1 truncate uppercase leading-tight tracking-[0.1em] text-text-muted"
+              className={cn(
+                "m-0 mt-1 uppercase leading-tight tracking-[0.1em] text-text-muted",
+                tightHole ? "whitespace-normal" : "truncate"
+              )}
               style={{ fontSize: captionFontPx, maxWidth: "100%" }}
             >
-              {active ? active.category : "Total Aura"}
+              {active ? active.category : tightHole ? "Aura" : "Total Aura"}
             </p>
           </div>
         </div>
@@ -401,31 +394,27 @@ export function AuraDonut({
       <div
         className={cn(
           "flex min-h-0 min-w-0 flex-col",
-          sourcesLayout
-            ? "flex-1 justify-start self-start"
+          stacked || sourcesLayout
+            ? "flex-1 justify-start self-stretch"
             : "ml-auto flex-none self-stretch [justify-content:safe_center]"
         )}
-        // Overview: fixed at legendFloor + ml-auto so Category/Aura/Share
-        // line up with the tier table under the card. Aura sources: flex-1
-        // so leftover beside the height-capped ring goes into the legend,
-        // and self-start so a two-row week table stays at the top.
         style={
-          sourcesLayout
-            ? {
-                minWidth: avail.legendFloor,
-                maxWidth: "100%",
-                // Same inset the ring has inside its square canvas, so the
-                // header sits on the donut's apex rather than the box's top.
-                paddingTop: ringLeftInset,
-              }
-            : { width: avail.legendFloor, minWidth: 0, maxWidth: "100%" }
+          stacked
+            ? { width: "100%", minWidth: 0, maxWidth: "100%", paddingTop: 0 }
+            : sourcesLayout
+              ? {
+                  minWidth: avail.legendFloor,
+                  maxWidth: "100%",
+                  paddingTop: ringLeftInset,
+                }
+              : { width: avail.legendFloor, minWidth: 0, maxWidth: "100%" }
         }
       >
         <MetricTableHeader
           columns={
             showShare ? (["Category", "Aura", "Share"] as const) : (["Category", "Aura"] as const)
           }
-          wide={sourcesLayout}
+          wide={sourcesLayout || stacked}
         />
         {chartData.map((row, i) => (
           <MetricTableRow
@@ -434,7 +423,7 @@ export function AuraDonut({
             name={row.category}
             count={Math.round(row.points).toLocaleString("en-US")}
             share={showShare ? `${Math.round(row.share)}%` : undefined}
-            wide={sourcesLayout}
+            wide={sourcesLayout || stacked}
             active={activeIndex === i}
             dimmed={activeIndex !== undefined && activeIndex !== i}
             isFirst={i === 0}
