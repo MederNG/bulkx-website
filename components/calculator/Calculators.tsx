@@ -318,11 +318,8 @@ export function CalculatorSection({ totalAuraSupply = 0 }: { totalAuraSupply?: n
                 setTabClickCount((n) => n + 1);
               }}
               aria-pressed={on}
-              // -mb-px drops the button's own bottom edge onto the row's rule
-              // so the underline covers it, instead of riding a pixel above
-              // with a hairline showing through underneath.
               className={cn(
-                "relative -mb-px cursor-pointer pb-2.5 text-[13px] font-medium transition-colors",
+                "relative cursor-pointer pb-2.5 text-[13px] font-medium transition-colors",
                 on ? "text-accent" : "text-text-muted hover:text-text-primary"
               )}
             >

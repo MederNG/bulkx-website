@@ -345,10 +345,9 @@ body {
    TVL are still moving, against eleven that have settled. Same 1150ms as the
    pair above so everything on the page that pulses breathes together.
 
-   It drives opacity, which the bar also sets inline; that's fine and
-   deliberate — animations outrank inline styles in the cascade — but the
-   component only turns this on when the bar isn't being dimmed by another
-   week's hover, so the two never actually disagree. */
+   Opacity only lives on this animation. An inline opacity (or a transition
+   on opacity) on the same node cancelled the pulse in Chromium, while Safari
+   on phones still ran it. Hover dimming is a class on non-current bars. */
 @keyframes apr-current-week-pulse {
   0%,
   100% {

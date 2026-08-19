@@ -199,15 +199,13 @@ function AprWeekBars({
           >
             <div
               className={cn(
-                "w-full rounded-[2px] transition-[background-color,opacity]",
-                pulsing && "apr-week-pulse"
+                "w-full rounded-[2px] transition-[background-color]",
+                pulsing && "apr-week-pulse",
+                activeWeek != null && !active && "opacity-45"
               )}
               style={{
                 height: `${Math.max(8, (w.apr / max) * 100)}%`,
-                // The live week is called out from the settled ones, and
-                // whichever is hovered outranks both.
                 background: active || w.isCurrent ? "#ffb547" : "rgba(255,181,71,0.32)",
-                opacity: activeWeek != null && !active ? 0.45 : 1,
               }}
             />
           </div>
