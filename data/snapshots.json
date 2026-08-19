@@ -488,5 +488,77 @@
     "wallets": 55266,
     "totalDeposited": 87019668.5119274,
     "totalWithdrawn": 57943178.08340902
+  },
+  {
+    "timestamp": "2026-08-09T01:05:42.600Z",
+    "tvl": 28877228.594075955,
+    "totalAura": 10623277,
+    "wallets": 55332,
+    "totalDeposited": 87455704.44201449,
+    "totalWithdrawn": 58578475.847938016
+  },
+  {
+    "timestamp": "2026-08-10T01:07:30.449Z",
+    "tvl": 28477370.424742967,
+    "totalAura": 10623277,
+    "wallets": 55347,
+    "totalDeposited": 87635201.25469448,
+    "totalWithdrawn": 59157830.82995102
+  },
+  {
+    "timestamp": "2026-08-11T01:06:37.740Z",
+    "tvl": 27452674.38043595,
+    "totalAura": 10623277,
+    "wallets": 55352,
+    "totalDeposited": 87715301.12566546,
+    "totalWithdrawn": 60262626.74522899
+  },
+  {
+    "timestamp": "2026-08-12T01:14:44.324Z",
+    "tvl": 26961462.063867953,
+    "totalAura": 10623277,
+    "wallets": 55366,
+    "totalDeposited": 87808583.24138346,
+    "totalWithdrawn": 60847121.17751496
+  },
+  {
+    "timestamp": "2026-08-13T01:16:07.319Z",
+    "tvl": 26732001.958807938,
+    "totalAura": 10623277,
+    "wallets": 55376,
+    "totalDeposited": 87959531.87730746,
+    "totalWithdrawn": 61227529.918498985
+  },
+  {
+    "timestamp": "2026-08-14T01:15:06.319Z",
+    "tvl": 26026665.347418938,
+    "totalAura": 10623277,
+    "wallets": 55392,
+    "totalDeposited": 88120027.81037848,
+    "totalWithdrawn": 62093362.46295898
+  },
+  {
+    "timestamp": "2026-08-15T00:47:05.065Z",
+    "tvl": 25326312.393405966,
+    "totalAura": 10623277,
+    "wallets": 55397,
+    "totalDeposited": 88162464.54534945,
+    "totalWithdrawn": 62836152.15194298
+  },
+  {
+    "timestamp": "2026-08-16T00:50:22.556Z",
+    "tvl": 24161378.39485096,
+    "totalAura": 11623277,
+    "wallets": 55438,
+    "totalDeposited": 88560516.95039344,
+    "totalWithdrawn": 64399138.55554192
+  },
+  {
+    "timestamp": "2026-08-17T00:47:39.557Z",
+    "tvl": 23687008.366849955,
+    "totalAura": 11623277,
+    "wallets": 55440,
+    "totalDeposited": 88671457.48174246,
+    "totalWithdrawn": 64984449.114891954
   }
 ]
