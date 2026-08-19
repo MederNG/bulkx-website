@@ -636,8 +636,17 @@ export function DepositorsDistributionPanel({ tiers }: { tiers: DepositTier[] })
           >
             <span className="pl-[17px] text-left">Tier</span>
             {!narrow && <span className="text-right">Size</span>}
-            <span className="text-right">Wallets</span>
-            <span className="text-right">Share</span>
+            {narrow && metric === "value" ? (
+              <>
+                <span className="text-right">Deposits</span>
+                <span className="text-right">Avg</span>
+              </>
+            ) : (
+              <>
+                <span className="text-right">Wallets</span>
+                <span className="text-right">Share</span>
+              </>
+            )}
             {!narrow && <span className="text-right">Deposits</span>}
             {!narrow && <span className="text-right">Avg</span>}
           </div>
@@ -676,12 +685,28 @@ export function DepositorsDistributionPanel({ tiers }: { tiers: DepositTier[] })
                     {row.range}
                   </span>
                 )}
-                <span className={cn(CELL, "text-right")} style={{ color }}>
-                  {row.count.toLocaleString("en-US")}
-                </span>
-                <span className={cn(CELL, "text-right font-semibold")} style={{ color }}>
-                  {row.pct.toFixed(1)}%
-                </span>
+                {narrow && metric === "value" ? (
+                  <>
+                    <span className={cn(CELL, "text-right")} style={{ color }}>
+                      {usdCompact(row.held)}
+                    </span>
+                    <span
+                      className={cn(CELL, "text-right")}
+                      style={{ color: muted ? "#6B6660" : "#C9C4BD" }}
+                    >
+                      {usdCompact(row.avgHeld)}
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <span className={cn(CELL, "text-right")} style={{ color }}>
+                      {row.count.toLocaleString("en-US")}
+                    </span>
+                    <span className={cn(CELL, "text-right font-semibold")} style={{ color }}>
+                      {row.pct.toFixed(1)}%
+                    </span>
+                  </>
+                )}
                 {!narrow && (
                   <span className={cn(CELL, "text-right")} style={{ color }}>
                     {usdCompact(row.held)}
