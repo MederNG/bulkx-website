@@ -1,6 +1,7 @@
-import { getLiveLeaderboardFresh } from "@/lib/live-leaderboard";
+import { getLeaderboardForApp } from "@/lib/live-leaderboard";
 
-/** Leaderboard rows synced from upstream (aura + deposits). */
+/** Leaderboard rows for the table. Disk/memory on the request path so the
+ * Leaderboards tab is not blocked on a full upstream pull. */
 export async function getLeaderboardWithLiveFinancials() {
-  return getLiveLeaderboardFresh();
+  return getLeaderboardForApp({ waitMs: 0 });
 }

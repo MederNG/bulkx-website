@@ -4,7 +4,7 @@ import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 import { SiteNav } from "@/components/layout/SiteNav";
 import { LiveFinancialProvider } from "@/components/live/LiveFinancialProvider";
-import { buildLiveFinancialPayload } from "@/lib/live-financial-payload";
+import { buildLiveFinancialPayloadFromDisk } from "@/lib/live-financial-payload";
 import { ScrollToTop } from "@/components/layout/ScrollToTop";
 import { HashScrollOnLoad } from "@/components/layout/HashScrollOnLoad";
 
@@ -64,13 +64,15 @@ export const viewport: Viewport = {
   themeColor: "#0b0b0c",
 };
 
-export default async function RootLayout({
+export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  // Provided app-wide so any route can read live financials without refetching.
-  const live = await buildLiveFinancialPayload();
+  // Disk snapshot only. Awaiting live indexer here made the root layout
+  // dynamic, so every tab switch waited on the server before the new page
+  // could render. The provider refreshes from /api/live-financials after paint.
+  const live = buildLiveFinancialPayloadFromDisk();
 
   return (
     <html lang="en" className={`${ibmPlexSans.variable} ${ibmPlexMono.variable}`}>

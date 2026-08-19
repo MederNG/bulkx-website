@@ -59,6 +59,8 @@ export function LiveFinancialProvider({
   }, []);
 
   useEffect(() => {
+    void refresh(true);
+
     const intervalId = window.setInterval(() => {
       void refresh(true);
     }, POLL_MS);

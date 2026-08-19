@@ -4,6 +4,14 @@ const nextConfig: NextConfig = {
   images: {
     unoptimized: true,
   },
+  // Tab switches were refetching every dynamic RSC payload from scratch.
+  // Keep the last page around so Overview ↔ Aura ↔ Tools feel instant.
+  experimental: {
+    staleTimes: {
+      dynamic: 30,
+      static: 180,
+    },
+  },
   // leaderboard.json is tens of thousands of rows. Watching it (and the rest
   // of data/) makes Fast Refresh stall or never finish on this machine.
   webpack: (config, { dev }) => {

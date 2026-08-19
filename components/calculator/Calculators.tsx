@@ -260,7 +260,7 @@ const TOOL_TABS = [
 type ToolTab = (typeof TOOL_TABS)[number]["id"];
 type SupplyPreset = "live" | "assumed" | "custom";
 
-export function CalculatorSection({ totalAuraSupply }: { totalAuraSupply: number }) {
+export function CalculatorSection({ totalAuraSupply = 0 }: { totalAuraSupply?: number }) {
   const { depositPredict, totalAura } = useLiveFinancials();
   const liveSupply = Math.round(totalAura || totalAuraSupply);
   const [tab, setTab] = useState<ToolTab>("estimator");
