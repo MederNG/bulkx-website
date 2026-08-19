@@ -35,7 +35,7 @@ export function PanelCard({
   return (
     <div
       className={cn(
-        "flex min-h-0 min-w-0 flex-col rounded-[10px] border border-[var(--color-line)] bg-[var(--color-bulk-base)] px-5 py-4",
+        "flex min-h-0 min-w-0 flex-col rounded-[10px] border border-[var(--color-line)] bg-[var(--color-bulk-base)] px-3 py-3 sm:px-5 sm:py-4",
         glossy && "relative overflow-hidden",
         className
       )}

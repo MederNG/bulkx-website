@@ -646,21 +646,6 @@ body {
   background: var(--color-accent);
 }
 
-/* Dropdowns open on hover, and on keyboard focus so they stay reachable. */
-.site-nav-drop {
-  opacity: 0;
-  visibility: hidden;
-  transform: translateY(-4px);
-  transition: opacity 0.16s, transform 0.16s, visibility 0.16s;
-}
-
-.site-nav-menu:hover .site-nav-drop,
-.site-nav-menu:focus-within .site-nav-drop {
-  opacity: 1;
-  visibility: visible;
-  transform: translateY(0);
-}
-
 /* Gold pill CTA (Deposit, active range toggle). */
 .cta {
   background: var(--color-accent);
@@ -913,6 +898,14 @@ input[type="number"] {
 .aura-distribution-chart .recharts-text {
   fill: var(--color-text-primary) !important;
   font-size: 13px !important;
+}
+
+@media (max-width: 640px) {
+  .category-share-chart .recharts-text,
+  .aura-distribution-chart .recharts-text,
+  .fdv-chart .recharts-text {
+    font-size: 10px !important;
+  }
 }
 
 /* Clicking a pie slice / bar focuses the SVG shape, which browsers outline

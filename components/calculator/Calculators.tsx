@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { FDV_SCENARIOS, cn, formatNumber, formatUsd } from "@/lib/utils";
+import { useNarrowViewport } from "@/lib/use-narrow-viewport";
 import { APR_TOTAL_AURA_SUPPLY } from "@/lib/overview-metrics";
 import { computeFdv } from "@/lib/percentiles";
 import {
@@ -194,12 +195,14 @@ function FdvAxisTick({
   payload,
   index,
   visibleTicksCount,
+  fontSize = 12,
 }: {
   x?: number;
   y?: number;
   payload?: { value?: number };
   index?: number;
   visibleTicksCount?: number;
+  fontSize?: number;
 }) {
   const isFirst = index === 0;
   const isLast = visibleTicksCount != null && index === visibleTicksCount - 1;
@@ -210,7 +213,7 @@ function FdvAxisTick({
       dy={14}
       textAnchor={isFirst ? "start" : isLast ? "end" : "middle"}
       fill="var(--color-text-primary)"
-      fontSize={12}
+      fontSize={fontSize}
       fontFamily="var(--font-ibm-plex-sans)"
     >
       {fdvTick(payload?.value ?? 0)}
@@ -576,6 +579,10 @@ function FdvValueChart({
 
   const yMax = data.reduce((m, d) => Math.max(m, d.value), 0);
   const { hi: yHi, ticks: yTicks } = usdAxisTicks(yMax);
+  const narrow = useNarrowViewport();
+  const xTicks = narrow
+    ? [100_000_000, 500_000_000, 1_000_000_000, 2_000_000_000]
+    : [...FDV_SCENARIOS];
 
   const scenarioPoints = useMemo(
     () =>
@@ -598,7 +605,7 @@ function FdvValueChart({
         {/* Read-only here on purpose — the editable copies of both live in
             RESULTS on the left, and two edit points for one number invites
             the reader to wonder which one is the real one. */}
-        <div className="flex shrink-0 items-start gap-6 border-l border-[var(--color-line)] pl-6">
+        <div className="flex shrink-0 items-start gap-4 border-l border-[var(--color-line)] pl-4 sm:gap-6 sm:pl-6">
           <div className="text-right">
             <PanelLabel>Price per Aura</PanelLabel>
             <p className="m-0 mt-1.5 text-[12px] font-semibold tabular-nums text-accent">
@@ -656,11 +663,11 @@ function FdvValueChart({
             ))}
             <XAxis
               dataKey="fdv"
-              ticks={[...FDV_SCENARIOS]}
+              ticks={xTicks}
               interval={0}
               tickLine={false}
               axisLine={false}
-              tick={<FdvAxisTick />}
+              tick={(props) => <FdvAxisTick {...props} fontSize={narrow ? 10 : 12} />}
               tickMargin={10}
             />
             <YAxis
@@ -760,25 +767,29 @@ function FdvScenarioPanel({
         {/* Same shape as the Overview tables: a 10px uppercase heading row on
             a hairline, then fixed-height rows divided by the softer one, first
             column left, every number right. */}
-        <div className="grid grid-cols-4 items-center gap-x-4 border-b border-[var(--color-line)] pb-1.5 sm:gap-x-8">
+        <div className="grid grid-cols-4 items-center gap-x-2 border-b border-[var(--color-line)] pb-1.5 sm:gap-x-8">
           <span className="text-[10px] uppercase tracking-[0.1em] text-text-muted">
-            FDV (millions USD)
+            <span className="sm:hidden">FDV</span>
+            <span className="hidden sm:inline">FDV (millions USD)</span>
           </span>
           <span className="text-right text-[10px] uppercase tracking-[0.1em] text-text-muted">
-            Price per Aura
+            <span className="sm:hidden">Price</span>
+            <span className="hidden sm:inline">Price per Aura</span>
           </span>
           <span className="text-right text-[10px] uppercase tracking-[0.1em] text-text-muted">
-            Your Value
+            <span className="sm:hidden">Value</span>
+            <span className="hidden sm:inline">Your Value</span>
           </span>
           <span className="text-right text-[10px] uppercase tracking-[0.1em] text-text-muted">
-            vs. Current
+            <span className="sm:hidden">vs now</span>
+            <span className="hidden sm:inline">vs. Current</span>
           </span>
         </div>
         {rows.map((row, i) => (
           <div
             key={row.key}
             className={cn(
-              "grid grid-cols-4 items-center gap-x-4 sm:gap-x-8",
+              "grid grid-cols-4 items-center gap-x-2 sm:gap-x-8",
               i > 0 && "border-t border-[var(--color-line-soft)]",
               "cursor-default transition-colors",
               // Only the cursor tints a row now. The live row is marked by its

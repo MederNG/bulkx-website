@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import type { DepositTier } from "@/lib/overview-metrics";
 import { PanelCard } from "@/components/overview/PanelCard";
 import { cn } from "@/lib/utils";
+import { useNarrowViewport } from "@/lib/use-narrow-viewport";
 
 /** Which series the toggle has picked out. Both bars are always drawn — the
  * two have opposite shapes (Bulker is 55% of the depositors and 2.7% of the
@@ -58,6 +59,8 @@ const CELL = "text-[13px] tabular-nums";
  * equally, not into stretching whichever column happened to be flexible. */
 const TABLE_COLS =
   "grid grid-cols-[minmax(0,180px)_minmax(0,80px)_minmax(0,74px)_minmax(0,44px)_minmax(0,56px)_minmax(0,44px)] items-center [column-gap:clamp(16px,2.5vw,36px)]";
+const TABLE_COLS_NARROW =
+  "grid grid-cols-[minmax(0,1fr)_minmax(0,72px)_minmax(0,52px)] items-center gap-x-3";
 
 /** Every body row, in both the table AND the chart, is this tall. Bumped
  * from 26 alongside the rest of the chart's own numbers (BAR_W, the width
@@ -141,6 +144,11 @@ export function DepositorsDistributionPanel({ tiers }: { tiers: DepositTier[] })
   const [metric, setMetric] = useState<Metric>("count");
   const [hovered, setHovered] = useState<string | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
+  const narrow = useNarrowViewport();
+  const barW = narrow ? 14 : BAR_W;
+  const barGap = narrow ? 3 : BAR_GAP;
+  const yAxisW = narrow ? 36 : Y_AXIS_W;
+  const tableCols = narrow ? TABLE_COLS_NARROW : TABLE_COLS;
 
   // The chart and the table are separate cards now, each sized by the page
   // grid, so neither measures the other any more. What still has to be
@@ -216,7 +224,11 @@ export function DepositorsDistributionPanel({ tiers }: { tiers: DepositTier[] })
     const totalForMetric = metric === "count" ? total.count : total.held;
     return [100, 80, 60, 40, 20, 0].map((fraction) => {
       const value = (peak / 100) * (fraction / 100) ** 2 * totalForMetric;
-      return metric === "count" ? Math.round(value).toLocaleString("en-US") : usdCompact(value);
+      return metric === "count"
+        ? value >= 1000
+          ? `${(value / 1000).toFixed(value >= 10000 ? 0 : 1)}k`
+          : Math.round(value).toLocaleString("en-US")
+        : usdCompact(value);
     });
   }, [tiers, peak, metric]);
 
@@ -345,7 +357,7 @@ export function DepositorsDistributionPanel({ tiers }: { tiers: DepositTier[] })
                 would not necessarily land on the same y at all. */}
             <div
               className="pointer-events-none absolute inset-y-0 left-0"
-              style={{ width: Y_AXIS_W }}
+              style={{ width: yAxisW }}
             >
               {axisLabels.map((label, i) => (
                 <span
@@ -378,7 +390,7 @@ export function DepositorsDistributionPanel({ tiers }: { tiers: DepositTier[] })
             <div
               ref={plotRef}
               className="absolute inset-y-0"
-              style={{ left: Y_AXIS_W, right: 0 }}
+              style={{ left: yAxisW, right: 0 }}
               onMouseMove={(e) => {
                 const el = plotRef.current;
                 if (!el) return;
@@ -435,14 +447,14 @@ export function DepositorsDistributionPanel({ tiers }: { tiers: DepositTier[] })
                       onMouseLeave={() => setHovered(null)}
                       onClick={() => toggleSelected(row.id)}
                       className="flex h-full flex-1 cursor-pointer items-end justify-center transition-opacity"
-                      style={{ gap: BAR_GAP, opacity: muted ? 0.22 : 1 }}
+                      style={{ gap: barGap, opacity: muted ? 0.22 : 1 }}
                     >
                       {/* Depositors — solid while Count is active, an
                           outline of the same colour otherwise. */}
                       <div
                         className="rounded-t-[2px] border transition-[height,background-color,border-color,outline-color] duration-300"
                         style={{
-                          width: BAR_W,
+                          width: barW,
                           height: `${row.countHeight}%`,
                           background: countActive
                             ? row.color
@@ -466,7 +478,7 @@ export function DepositorsDistributionPanel({ tiers }: { tiers: DepositTier[] })
                       <div
                         className="rounded-t-[2px] border transition-[height,background-color,border-color,outline-color] duration-300"
                         style={{
-                          width: BAR_W,
+                          width: barW,
                           height: `${row.valueHeight}%`,
                           background: !countActive
                             ? row.color
@@ -568,7 +580,7 @@ export function DepositorsDistributionPanel({ tiers }: { tiers: DepositTier[] })
             className="flex shrink-0 items-center"
             style={{
               height: ROW_H,
-              paddingLeft: Y_AXIS_W,
+              paddingLeft: yAxisW,
               transform: `translateY(${X_LABEL_BASELINE_NUDGE}px)`,
             }}
           >
@@ -585,8 +597,14 @@ export function DepositorsDistributionPanel({ tiers }: { tiers: DepositTier[] })
                     size. The table's Size column below repeats this text at
                     the table's larger CELL size; that's a table cell, not an
                     axis, so it's intentionally left alone. */}
-                <div className="truncate text-[11px] leading-none tabular-nums text-text-secondary">
-                  {row.range}
+                <div className="truncate px-0.5 text-center text-[10px] leading-none tabular-nums text-text-secondary sm:text-[11px]">
+                  {narrow
+                    ? row.range
+                        .replace("$100-1K", "$1K")
+                        .replace("$1K-10K", "$10K")
+                        .replace("$10K-100K", "$100K")
+                        .replace("$100K-500K", "$500K")
+                    : row.range}
                 </div>
               </div>
             ))}
@@ -613,15 +631,15 @@ export function DepositorsDistributionPanel({ tiers }: { tiers: DepositTier[] })
             on the right, rather than stretching the columns into it. */}
         <div className="flex min-w-0 flex-col">
           <div
-            className={cn(TABLE_COLS, HEADING, "border-b border-[var(--color-line)]")}
+            className={cn(tableCols, HEADING, "border-b border-[var(--color-line)]")}
             style={{ height: HEAD_H }}
           >
             <span className="pl-[17px] text-left">Tier</span>
-            <span className="text-right">Size</span>
-            <span className="text-right">Depositors</span>
+            {!narrow && <span className="text-right">Size</span>}
+            <span className="text-right">Wallets</span>
             <span className="text-right">Share</span>
-            <span className="text-right">Deposits</span>
-            <span className="text-right">Avg</span>
+            {!narrow && <span className="text-right">Deposits</span>}
+            {!narrow && <span className="text-right">Avg</span>}
           </div>
 
           {rows.map((row, i) => {
@@ -635,7 +653,7 @@ export function DepositorsDistributionPanel({ tiers }: { tiers: DepositTier[] })
                 onMouseLeave={() => setHovered(null)}
                 onClick={() => toggleSelected(row.id)}
                 className={cn(
-                  TABLE_COLS,
+                  tableCols,
                   "shrink-0 cursor-pointer transition-colors",
                   i > 0 && "border-t border-[var(--color-line-soft)]",
                   lit && "bg-[rgba(255,255,255,0.03)]"
@@ -653,24 +671,30 @@ export function DepositorsDistributionPanel({ tiers }: { tiers: DepositTier[] })
                   />
                   <span className="truncate">{row.name}</span>
                 </span>
-                <span className={cn(CELL, "truncate text-right")} style={{ color }}>
-                  {row.range}
-                </span>
+                {!narrow && (
+                  <span className={cn(CELL, "truncate text-right")} style={{ color }}>
+                    {row.range}
+                  </span>
+                )}
                 <span className={cn(CELL, "text-right")} style={{ color }}>
                   {row.count.toLocaleString("en-US")}
                 </span>
                 <span className={cn(CELL, "text-right font-semibold")} style={{ color }}>
                   {row.pct.toFixed(1)}%
                 </span>
-                <span className={cn(CELL, "text-right")} style={{ color }}>
-                  {usdCompact(row.held)}
-                </span>
-                <span
-                  className={cn(CELL, "text-right")}
-                  style={{ color: muted ? "#6B6660" : "#C9C4BD" }}
-                >
-                  {usdCompact(row.avgHeld)}
-                </span>
+                {!narrow && (
+                  <span className={cn(CELL, "text-right")} style={{ color }}>
+                    {usdCompact(row.held)}
+                  </span>
+                )}
+                {!narrow && (
+                  <span
+                    className={cn(CELL, "text-right")}
+                    style={{ color: muted ? "#6B6660" : "#C9C4BD" }}
+                  >
+                    {usdCompact(row.avgHeld)}
+                  </span>
+                )}
               </div>
             );
           })}
