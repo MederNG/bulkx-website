@@ -474,53 +474,28 @@ function withGroupShares(data: CategoryBreakdownItem[]): CategoryChartRow[] {
   }));
 }
 
-function collapseSmallCategories(data: CategoryChartRow[], topN: number = 7) {
-  const MIN_GROUP_SHARE = 2.5;
+function collapseSmallCategories(data: CategoryChartRow[]) {
+  const MIN_GROUP_SHARE = 1;
 
   const prominent = data.filter((item) => item.groupShare >= MIN_GROUP_SHARE || item.key === "others");
   const tiny = data.filter((item) => item.groupShare < MIN_GROUP_SHARE && item.key !== "others");
 
-  let working =
-    tiny.length > 0 && prominent.length > 0
-      ? [
-          ...prominent,
-          {
-            key: "others-small",
-            category: "Others",
-            points: tiny.reduce((sum, item) => sum + item.points, 0),
-            share: tiny.reduce((sum, item) => sum + item.share, 0),
-            groupShare: tiny.reduce((sum, item) => sum + item.groupShare, 0),
-          },
-        ]
-      : [...data];
-
-  if (working.length <= topN + 1) {
-    const othersCategories =
-      tiny.length > 0
-        ? tiny.map((item) => ({
-            category: item.category,
-            points: item.points,
-            share: item.share,
-            groupShare: item.groupShare,
-          }))
-        : [];
-    return { chartData: working, othersCategories };
+  if (tiny.length === 0 || prominent.length === 0) {
+    return { chartData: [...data], othersCategories: [] };
   }
 
-  const head = working.slice(0, topN);
-  const rest = working.slice(topN);
   return {
     chartData: [
-      ...head,
+      ...prominent,
       {
-        key: "others",
+        key: "others-small",
         category: "Others",
-        points: rest.reduce((sum, item) => sum + item.points, 0),
-        share: rest.reduce((sum, item) => sum + item.share, 0),
-        groupShare: rest.reduce((sum, item) => sum + item.groupShare, 0),
+        points: tiny.reduce((sum, item) => sum + item.points, 0),
+        share: tiny.reduce((sum, item) => sum + item.share, 0),
+        groupShare: tiny.reduce((sum, item) => sum + item.groupShare, 0),
       },
     ],
-    othersCategories: rest.map((item) => ({
+    othersCategories: tiny.map((item) => ({
       category: item.category,
       points: item.points,
       share: item.share,
@@ -549,17 +524,14 @@ export function CategoryCharts({ data }: CategoryChartsProps) {
 
   const { chartData, othersCategories } = useMemo(() => {
     const withShares = withGroupShares(filtered);
-    // Overview buckets are Retro/Week N/Other — a bounded, meaningful set that
-    // should never be swallowed into "Others" just because the campaign has
-    // run long enough to exceed the drill-down TOP_N.
-    const collapsed = collapseSmallCategories(withShares, isDrillDown ? 7 : Number.POSITIVE_INFINITY);
+    const collapsed = collapseSmallCategories(withShares);
     return {
       ...collapsed,
       // Largest to smallest, top to bottom — and gold on the biggest slice,
       // the same assignment the Overview ring uses.
       chartData: [...collapsed.chartData].sort((a, b) => b.groupShare - a.groupShare),
     };
-  }, [filtered, isDrillDown]);
+  }, [filtered]);
 
   const colored = useMemo(
     () =>

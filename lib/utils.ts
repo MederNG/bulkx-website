@@ -44,6 +44,13 @@ export function categoryLabel(key: string): string {
   const weekPrefixMatch = key.match(/^week\d+_(.+)$/i);
   if (weekPrefixMatch) return categoryLabel(weekPrefixMatch[1]);
 
+  const parts = key.split("_").filter((part) => part.toLowerCase() !== "protocol");
+  if (parts.length !== key.split("_").length) {
+    return categoryLabel(parts.join("_"));
+  }
+
+  if (key === "bulk_validator_stake") return "Validator Stake";
+
   return key
     .replace(/_/g, " ")
     .replace(/\bweek(\d+)/gi, "week $1")
