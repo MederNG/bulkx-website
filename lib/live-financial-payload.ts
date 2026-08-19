@@ -1,10 +1,11 @@
 import type { DepositAuraPredictContext } from "@/lib/deposit-aura-predict";
-import { getLeaderboard } from "@/lib/fetcher";
+import { getLeaderboard, getLeaderboardMtimeMs } from "@/lib/fetcher";
 import { getLeaderboardForApp } from "@/lib/live-leaderboard";
 import { getLiveTotals } from "@/lib/live-totals";
 import { computeProjectedSnapshotTvl, type ProjectedSnapshotTvl } from "@/lib/projected-snapshot-tvl";
+import { getSnapshotsMtimeMs } from "@/lib/snapshots";
 import { getChartSnapshots, getDepositAuraPredictContext } from "@/lib/stats";
-import { readTotals } from "@/lib/totals";
+import { getTotalsMtimeMs, readTotals } from "@/lib/totals";
 import type { LeaderboardEntry, Totals } from "@/types";
 import {
   computeTvlKpiSecondaryMetrics,
@@ -75,9 +76,19 @@ function assembleLiveFinancialPayload(
 
 /** Sync disk snapshot for the root layout — no upstream fetch, so tab
  * switches are not blocked on a dynamic layout. The client provider
- * refreshes from /api/live-financials after paint. */
+ * refreshes from /api/live-financials after paint.
+ *
+ * Assembling this walks the full leaderboard (~52k rows) plus weekly Aura
+ * pools. The root layout re-renders on every client navigation, so the
+ * result is cached against the three source files' mtimes. */
+let diskPayloadCache: { key: string; data: LiveFinancialPayload } | null = null;
+
 export function buildLiveFinancialPayloadFromDisk(): LiveFinancialPayload {
-  return assembleLiveFinancialPayload(readTotals(), getLeaderboard());
+  const key = `${getLeaderboardMtimeMs()}:${getTotalsMtimeMs()}:${getSnapshotsMtimeMs()}`;
+  if (diskPayloadCache?.key === key) return diskPayloadCache.data;
+  const data = assembleLiveFinancialPayload(readTotals(), getLeaderboard());
+  diskPayloadCache = { key, data };
+  return data;
 }
 
 export async function buildLiveFinancialPayload(options?: {

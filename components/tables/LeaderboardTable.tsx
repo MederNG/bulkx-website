@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import type { LeaderboardEntry } from "@/types";
 import {
@@ -130,7 +130,16 @@ function defaultSortDirForKey(tab: LeaderboardTab, key: string): LeaderboardSort
   return "desc";
 }
 
-export function LeaderboardTable() {
+function cacheKey(tab: LeaderboardTab, sortKey: string, sortDir: LeaderboardSortDir) {
+  return `${tab}:${sortKey}:${sortDir}`;
+}
+
+export function LeaderboardTable({
+  initialRows = [],
+}: {
+  /** Aura ranking from the server, so the first paint is a table, not a wait. */
+  initialRows?: LeaderboardEntry[];
+}) {
   const [tab, setTab] = useState<LeaderboardTab>("aura");
   // Bumped on every press and used as the underline's key, so the mark
   // restarts even when the tab pressed is the one already open. Same control
@@ -142,17 +151,31 @@ export function LeaderboardTable() {
   const [sortDir, setSortDir] = useState<LeaderboardSortDir>(
     LEADERBOARD_TAB_DEFAULT_SORT.aura.dir
   );
-  const [rows, setRows] = useState<LeaderboardEntry[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [rows, setRows] = useState<LeaderboardEntry[]>(initialRows);
+  const [loading, setLoading] = useState(initialRows.length === 0);
+  const cacheRef = useRef(new Map<string, LeaderboardEntry[]>());
   const pageSize = 25;
 
   const columns = useMemo(() => getColumns(tab), [tab]);
 
   useEffect(() => {
+    const auraKey = cacheKey("aura", LEADERBOARD_TAB_DEFAULT_SORT.aura.key, LEADERBOARD_TAB_DEFAULT_SORT.aura.dir);
+    if (initialRows.length > 0 && !cacheRef.current.has(auraKey)) {
+      cacheRef.current.set(auraKey, initialRows);
+    }
+  }, [initialRows]);
+
+  useEffect(() => {
     let cancelled = false;
+    const key = cacheKey(tab, sortKey, sortDir);
+    const cached = cacheRef.current.get(key);
+    if (cached) {
+      setRows(cached);
+      setLoading(false);
+    }
 
     async function load() {
-      setLoading(true);
+      if (!cached) setLoading(true);
       try {
         const params = new URLSearchParams({
           tab,
@@ -163,9 +186,10 @@ export function LeaderboardTable() {
         const res = await fetch(`/api/leaderboard?${params.toString()}`);
         if (!res.ok) throw new Error("Failed to load leaderboard");
         const data = (await res.json()) as { items: LeaderboardEntry[] };
+        cacheRef.current.set(key, data.items);
         if (!cancelled) setRows(data.items);
       } catch {
-        if (!cancelled) setRows([]);
+        if (!cancelled && !cached) setRows([]);
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -176,6 +200,29 @@ export function LeaderboardTable() {
       cancelled = true;
     };
   }, [tab, sortKey, sortDir]);
+
+  useEffect(() => {
+    const others: LeaderboardTab[] = ["deposit", "efficiency", "referral"];
+    const timer = window.setTimeout(() => {
+      for (const other of others) {
+        const defaults = LEADERBOARD_TAB_DEFAULT_SORT[other];
+        const key = cacheKey(other, defaults.key, defaults.dir);
+        if (cacheRef.current.has(key)) continue;
+        const params = new URLSearchParams({
+          tab: other,
+          sort: defaults.key,
+          dir: defaults.dir,
+          limit: String(LEADERBOARD_TOP_LIMIT),
+        });
+        void fetch(`/api/leaderboard?${params.toString()}`)
+          .then((res) => (res.ok ? res.json() : null))
+          .then((data: { items: LeaderboardEntry[] } | null) => {
+            if (data?.items) cacheRef.current.set(key, data.items);
+          });
+      }
+    }, 250);
+    return () => window.clearTimeout(timer);
+  }, []);
 
   const filtered = useMemo(() => {
     if (!search.trim()) return rows;

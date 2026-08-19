@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -32,12 +32,21 @@ function isActive(pathname: string, item: NavItem): boolean {
 
 export function SiteNav() {
   const pathname = usePathname() ?? "/";
+  const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     setMenuOpen(false);
   }, [pathname]);
+
+  // Hidden mobile-menu links are out of the viewport, so Next does not
+  // prefetch them on its own. Warm every section once the shell is up.
+  useEffect(() => {
+    for (const item of NAV) {
+      router.prefetch(item.href);
+    }
+  }, [router]);
 
   useEffect(() => {
     if (!menuOpen) return;

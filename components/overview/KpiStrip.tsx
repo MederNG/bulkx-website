@@ -199,8 +199,8 @@ function AprWeekBars({
           >
             <div
               className={cn(
-                "w-full rounded-[2px] transition-[background-color]",
-                pulsing && "apr-week-pulse",
+                "w-full rounded-[2px]",
+                pulsing ? "apr-week-pulse" : "transition-[background-color]",
                 activeWeek != null && !active && "opacity-45"
               )}
               style={{

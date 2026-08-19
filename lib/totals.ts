@@ -8,6 +8,14 @@ const TOTALS_FILE = path.join(process.cwd(), "data", "totals.json");
 // file mtime so repeated reads within a process don't re-parse the file.
 let cache: { mtimeMs: number; data: Totals | null } | null = null;
 
+export function getTotalsMtimeMs(): number {
+  try {
+    return fs.statSync(TOTALS_FILE).mtimeMs;
+  } catch {
+    return 0;
+  }
+}
+
 export function readTotals(): Totals | null {
   if (!fs.existsSync(TOTALS_FILE)) return null;
   const mtimeMs = fs.statSync(TOTALS_FILE).mtimeMs;

@@ -1,3 +1,4 @@
+import type { LeaderboardEntry } from "@/types";
 import { NextRequest, NextResponse } from "next/server";
 import { getLeaderboardWithLiveFinancials } from "@/lib/live-leaderboard-financials";
 import {
@@ -11,6 +12,9 @@ import {
 export const revalidate = 300;
 
 const VALID_TABS: LeaderboardTab[] = ["aura", "deposit", "efficiency", "referral"];
+
+const TOP_CACHE_MS = 30_000;
+const topCache = new Map<string, { at: number; items: LeaderboardEntry[] }>();
 
 export async function GET(request: NextRequest) {
   const tabParam = request.nextUrl.searchParams.get("tab") ?? "aura";
@@ -30,8 +34,22 @@ export async function GET(request: NextRequest) {
     Math.max(1, Number.isFinite(limitParam) ? limitParam : LEADERBOARD_TOP_LIMIT)
   );
 
+  const cacheKey = `${selectedTab}:${sortKey}:${sortDir}:${limit}`;
+  const cached = topCache.get(cacheKey);
+  if (cached && Date.now() - cached.at < TOP_CACHE_MS) {
+    return NextResponse.json({
+      items: cached.items,
+      total: cached.items.length,
+      tab: selectedTab,
+      sort: sortKey,
+      dir: sortDir,
+      limit,
+    });
+  }
+
   const entries = await getLeaderboardWithLiveFinancials();
   const items = getLeaderboardTop(entries, selectedTab, sortKey, sortDir, limit);
+  topCache.set(cacheKey, { at: Date.now(), items });
 
   return NextResponse.json({
     items,

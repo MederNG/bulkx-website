@@ -9,6 +9,14 @@ export function getLeaderboardPath(): string {
   return LEADERBOARD_FILE;
 }
 
+export function getLeaderboardMtimeMs(): number {
+  try {
+    return fs.statSync(LEADERBOARD_FILE).mtimeMs;
+  } catch {
+    return 0;
+  }
+}
+
 export function readLeaderboardFromDisk(): LeaderboardEntry[] {
   if (!fs.existsSync(LEADERBOARD_FILE)) {
     return [];
