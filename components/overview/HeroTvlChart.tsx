@@ -33,22 +33,9 @@ export const TVL_TOGGLE_GROUP_W = 158;
  * below. */
 const Y_AXIS_W = 56;
 
-/** Room held to the left of the first point so its date can be centred under
- * it like every other one — a label is 33px wide, so 20 is half of one with a
- * little to spare.
- *
- * Anchoring that label flush to the edge instead costs nothing in overflow but
- * shifts the text half its own width to the right of the point it belongs to,
- * which measures as a shorter gap to its neighbour — 22px shorter at both ends
- * of the full range, exactly the unevenness it was meant to prevent.
- *
- * The room is taken from the card's own padding rather than from the plot: the
- * wrapper below is pulled left by this same amount (-ml-5, matching PanelCard's
- * p-5), so the line still begins on the card's content edge, level with the
- * legend above it, and only the overhanging half of that first label sits in
- * the padding. The right side needs no equivalent — the y-axis band already
- * leaves more than this past the last tick. */
-const X_LABEL_HALF_W = 20;
+/** Hairline so the first dot isn't clipped by the plot's left edge. The
+ * first reading itself sits on that edge, flush with the legend above. */
+const PLOT_PAD_L = 8;
 
 const RANGE_MS: Record<Exclude<Range, "ALL">, number> = {
   "7D": 7 * 86_400_000,
@@ -114,18 +101,9 @@ const MIN_LABEL_SPACING_PX = 58;
 
 
 
-/** A date label, centred on its own tick — except the very first, which starts
- * on it instead.
- *
- * The plot reserves X_LABEL_HALF_W on the left, which is exactly half a
- * label's width: room for a CENTRED label there without it running past the
- * card's content edge. It is not room to spare, though, so a centred first
- * label still spills into that reserve right up to the edge, which reads as
- * hanging off the chart rather than sitting under its first point. Starting
- * it on the tick instead keeps its text entirely to the right, flush with
- * where the curve itself begins. Every other label keeps the centred
- * treatment — the y-axis band gives the last one all the room it needs, and
- * the ones in between are never near an edge at all. */
+/** A date label, centred on its tick — except the first, which starts on it
+ * so the opening reading can sit on the left edge instead of being indented
+ * by half a caption. */
 function AxisDateTick({
   x,
   y,
@@ -151,6 +129,32 @@ function AxisDateTick({
     >
       {labels?.[payload.value] ?? ""}
     </text>
+  );
+}
+
+/** Only captioned readings get a mark. In-between days sit on the line but
+ * would otherwise cluster against a labelled neighbour when that step spans
+ * several dates (Aug 16 sitting on a tick, Aug 17 a few pixels later). */
+function TvlDot({
+  cx,
+  cy,
+  payload,
+}: {
+  cx?: number;
+  cy?: number;
+  payload?: Point;
+}) {
+  if (cx == null || cy == null || payload?.tvl == null) return null;
+  if (Math.abs(payload.x - Math.round(payload.x)) > 1e-6) return null;
+  return (
+    <circle
+      cx={cx}
+      cy={cy}
+      r={2.4}
+      fill="#ffb547"
+      stroke="#0b0b0c"
+      strokeWidth={1.5}
+    />
   );
 }
 
@@ -190,7 +194,7 @@ export function HeroTvlChart({
   const [wrapWidth, setWrapWidth] = useState(0);
   /** That width minus the y-axis gutter, the chart's right margin and the
    * left reserve — the strip the date labels actually have to share. */
-  const labelStripWidth = Math.max(0, wrapWidth - Y_AXIS_W - 8 - X_LABEL_HALF_W);
+  const labelStripWidth = Math.max(0, wrapWidth - Y_AXIS_W - 8 - PLOT_PAD_L);
 
   // Range switching is immediate. It used to ease the window from the old
   // range to the new one over about a second, which meant the axes had to be
@@ -205,24 +209,14 @@ export function HeroTvlChart({
    *
    * The x axis is NOT time. It is measured in label steps: the captioned
    * readings sit on whole numbers 0, 1, 2 … k, and everything drawn between
-   * two of them is placed proportionally by its timestamp inside that step.
+   * two of them is placed by how many daily readings sit inside that step
+   * (not by the raw timestamps). Timestamp spacing inside a step is what
+   * glued Aug 16 to Aug 17 when the next caption was Aug 20: one day of a
+   * four-day interval, a few pixels from the tick.
    *
-   * That inversion is what finally holds all four rules at once — a caption on
-   * the first point and on the last, every caption under its own point, and
-   * identical distance between them. On a time axis it cannot be done, and
-   * every previous attempt here traded one rule for another: the readings are
-   * a day apart but the newest is the live figure, read whenever the page was
-   * opened, so its step came out 1.5 days wide and its caption sat 50px
-   * further out than the rest; and a window that begins "seven days ago"
-   * begins between two readings, so counting captions off from the end left
-   * the first one 39px short of where the line starts. Neither is a rounding
-   * error to be tuned away — they are what a time axis means. Laying the axis
-   * out in label steps makes the spacing structural instead: tick j sits at
-   * x = j because the reading it belongs to IS x = j.
-   *
-   * The cost is that the line is stretched slightly inside a step spanning
-   * more time than its neighbours. With daily readings that is a fraction of a
-   * day across ~60px, and it buys an axis that cannot come out uneven.
+   * One reading per UTC day, with live TVL replacing today's snapshot rather
+   * than sitting a few hours beside it — that pair was the extra mark over
+   * "Aug 20".
    */
   const chart = useMemo(() => {
     const history = snapshots
@@ -235,20 +229,26 @@ export function HeroTvlChart({
         ? history
         : history.filter((p) => referenceTimeMs - p.t <= RANGE_MS[range]);
 
-    const readings: { t: number; tvl: number | null; projected: number | null }[] = windowed.map(
-      (p) => ({ t: p.t, tvl: p.tvl, projected: null })
-    );
-
-    // The live TVL is usually fresher than the last stored snapshot. Added as
-    // its own reading at its own timestamp — writing it onto the last snapshot
-    // instead would bend that snapshot to today's value and draw a vertical
-    // cliff wherever the two disagree.
-    const newest = readings[readings.length - 1];
-    if (!newest || referenceTimeMs - newest.t > 60_000) {
-      readings.push({ t: referenceTimeMs, tvl: currentTvl, projected: currentTvl });
-    } else {
-      newest.projected = newest.tvl;
+    // Last snapshot of each UTC day — opening-day bursts and a same-day live
+    // reading would otherwise each claim a mark a few pixels apart.
+    const byDay = new Map<number, { t: number; tvl: number }>();
+    for (const p of windowed) {
+      byDay.set(Math.floor(p.t / DAY_MS), p);
     }
+    const today = Math.floor(referenceTimeMs / DAY_MS);
+    const existingToday = byDay.get(today);
+    byDay.set(today, {
+      t: Math.max(existingToday?.t ?? 0, referenceTimeMs),
+      tvl: currentTvl,
+    });
+
+    const readings: { t: number; tvl: number | null; projected: number | null }[] = [
+      ...byDay.entries(),
+    ]
+      .sort((a, b) => a[0] - b[0])
+      .map(([, p]) => ({ t: p.t, tvl: p.tvl, projected: null }));
+    const lastReading = readings[readings.length - 1];
+    if (lastReading) lastReading.projected = lastReading.tvl;
 
     if (readings.length < 2) {
       const points: Point[] = readings.map((r, idx) => ({ x: idx, ...r }));
@@ -262,77 +262,50 @@ export function HeroTvlChart({
       };
     }
 
-    // Rungs a caption may stand on: the first reading of each UTC day, so one
-    // rung means one day whatever the snapshot cadence does. Where a day holds
-    // several — the campaign's opening day has nine, hours apart — the extras
-    // stay drawn but share their day's step, instead of each claiming one and
-    // stretching that single day across a ninth of the chart.
-    const rungIdx: number[] = [];
-    const seenDays = new Set<number>();
-    readings.forEach((r, idx) => {
-      const day = Math.floor(r.t / DAY_MS);
-      if (seenDays.has(day)) return;
-      seenDays.add(day);
-      rungIdx.push(idx);
-    });
-
-    // The newest reading closes the ladder, because the line ends on it and
-    // the last point has to carry a date. If today already put a rung down,
-    // the live reading takes it over rather than adding a second one.
     const lastIdx = readings.length - 1;
-    const tail = rungIdx[rungIdx.length - 1];
-    if (tail !== lastIdx) {
-      if (Math.floor(readings[tail].t / DAY_MS) === Math.floor(readings[lastIdx].t / DAY_MS)) {
-        rungIdx[rungIdx.length - 1] = lastIdx;
-      } else {
-        rungIdx.push(lastIdx);
-      }
-    }
+    const rungCount = readings.length;
 
-    // How many steps the strip can hold, capped by how many rungs exist. Every
-    // step is the same width by construction, so this is the only place the
-    // available width enters the layout at all.
+    // Projection lengthens the domain past the last historical tick, which
+    // compresses every label. Count that stretch before choosing how many
+    // captions fit, otherwise 7D Projected on a phone glues Aug 14 to Aug 15.
+    const spanMs = readings[lastIdx].t - readings[0].t;
+    const projMs =
+      withProjection && projection.available
+        ? Math.max(0, projection.nextSnapshotTimestamp - readings[lastIdx].t)
+        : 0;
+    const stretch = spanMs > 0 ? 1 + projMs / spanMs : 1;
     const steps = Math.max(
       1,
-      Math.min(rungIdx.length - 1, Math.floor(labelStripWidth / MIN_LABEL_SPACING_PX))
+      Math.min(
+        rungCount - 1,
+        Math.floor(labelStripWidth / MIN_LABEL_SPACING_PX / stretch)
+      )
     );
 
-    // Which rungs actually get captions, spread evenly along the ladder. The
-    // rounding can leave one caption seven days from its neighbour and the
-    // next eight — invisible, because both are one step and every step is the
-    // same width. The ends are exact: j = 0 is the first reading, j = steps
-    // the last.
     const captionAt = Array.from(
       { length: steps + 1 },
-      (_, j) => rungIdx[Math.round((j * (rungIdx.length - 1)) / steps)]
-    );
+      (_, j) => Math.round((j * (rungCount - 1)) / steps)
+    ).filter((idx, i, arr) => i === 0 || idx !== arr[i - 1]);
+    const captionSteps = Math.max(1, captionAt.length - 1);
 
-    // Everything between two captioned readings is placed by its timestamp
-    // inside that step, so the shape of the line still follows real time; only
-    // the width each step is given is fixed.
     const xs = new Array<number>(readings.length);
-    for (let j = 0; j < steps; j++) {
+    for (let j = 0; j < captionSteps; j++) {
       const a = captionAt[j];
       const b = captionAt[j + 1];
-      const ta = readings[a].t;
-      const tb = readings[b].t;
       for (let idx = a; idx <= b; idx++) {
-        xs[idx] = tb > ta ? j + (readings[idx].t - ta) / (tb - ta) : j;
+        xs[idx] = b > a ? j + (idx - a) / (b - a) : j;
       }
     }
 
     const points: Point[] = readings.map((r, idx) => ({ x: xs[idx], ...r }));
-    let xMax = steps;
+    let xMax = captionSteps;
 
     if (withProjection && projection.available) {
-      // The forecast runs past the last reading. Placed on the same scale — a
-      // step's worth of time to a step's worth of width — so it reads as a
-      // continuation rather than a jump.
-      const stepMs = (readings[lastIdx].t - readings[0].t) / steps;
+      const stepMs = spanMs / captionSteps;
       const x =
         stepMs > 0
-          ? steps + (projection.nextSnapshotTimestamp - readings[lastIdx].t) / stepMs
-          : steps;
+          ? captionSteps + (projection.nextSnapshotTimestamp - readings[lastIdx].t) / stepMs
+          : captionSteps;
       points.push({
         x,
         t: projection.nextSnapshotTimestamp,
@@ -346,7 +319,7 @@ export function HeroTvlChart({
 
     return {
       points,
-      ticks: Array.from({ length: steps + 1 }, (_, j) => j),
+      ticks: Array.from({ length: captionSteps + 1 }, (_, j) => j),
       labels: captionAt.map((idx) => formatAxisDate(readings[idx].t)),
       xMax,
       value: values.length
@@ -470,18 +443,11 @@ export function HeroTvlChart({
         )}
       </div>
 
-      {/* Pulled left by the card's padding and given that same amount back as
-          the plot's left margin, so the two cancel: the line starts on the
-          card's content edge, level with the legend above it, while the first
-          date label still has room to sit centred under its own point. Without
-          the pull the plot began X_LABEL_HALF_W short of that edge; without the
-          margin the label would be clipped by this wrapper's overflow. */}
-      <div ref={chartWrapRef} className="relative mt-2 -ml-5 min-h-[220px] flex-1 overflow-hidden xl:min-h-0">
+      <div ref={chartWrapRef} className="relative mt-2 min-h-[220px] flex-1 overflow-hidden xl:min-h-0">
         <ResponsiveContainer width="100%" height="100%" minHeight={90}>
           <ComposedChart
             data={data}
-            // Cancels the wrapper's -ml-5 — see the comment on it above.
-            margin={{ top: 6, right: 8, bottom: 0, left: X_LABEL_HALF_W }}
+            margin={{ top: 6, right: 8, bottom: 0, left: PLOT_PAD_L }}
           >
             <defs>
               <linearGradient id="heroTvlFill" x1="0" y1="0" x2="0" y2="1">
@@ -494,8 +460,7 @@ export function HeroTvlChart({
               <linearGradient id="heroTvlLineFade" x1="0" y1="0" x2="1" y2="0">
                 <stop offset="0%" stopColor="#ffb547" stopOpacity={0} />
                 <stop offset="7%" stopColor="#ffb547" stopOpacity={1} />
-                <stop offset="93%" stopColor="#ffb547" stopOpacity={1} />
-                <stop offset="100%" stopColor="#ffb547" stopOpacity={0} />
+                <stop offset="100%" stopColor="#ffb547" stopOpacity={1} />
               </linearGradient>
             </defs>
             <CartesianGrid stroke="rgba(255,255,255,.05)" vertical={false} />
@@ -593,18 +558,11 @@ export function HeroTvlChart({
               strokeLinecap="round"
               fill="url(#heroTvlFill)"
               connectNulls={false}
-              // Real readings marked, so a stretch with none is visible as
-              // one. Snapshots can lag — the set currently jumps from Aug 12
-              // straight to the live point — and drawn as a bare line that
-              // gap looks like ordinary data you simply can't hover. With the
-              // points marked it reads correctly: there is nothing in
-              // between. Suppressed past ~40 points, where per-point dots
-              // turn into a solid beaded line and stop meaning anything.
-              dot={
-                data.length <= 40
-                  ? { r: 2.4, fill: "#ffb547", stroke: "#0b0b0c", strokeWidth: 1.5 }
-                  : false
-              }
+              // Marks sit on captioned days only — see TvlDot. Drawing every
+              // reading turned a lag between snapshots into a pair of beads
+              // glued to the nearer label (16 against 17, today's snapshot
+              // against the live figure).
+              dot={<TvlDot />}
               activeDot={{ r: 4, fill: "#ffb547", stroke: "#0b0b0c", strokeWidth: 2 }}
               // Entrance animation off, and not just for taste: Recharts
               // holds the dots back until the animation reports finished, and
