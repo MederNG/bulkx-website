@@ -449,8 +449,8 @@ export function KpiStrip({
       </KpiCard>
 
       <KpiCard
-        label="OG Hodlers"
-        icon={<HelpDot label="Who counts as an OG Hodler" onOpenChange={setOgExplained} />}
+        label="Gayest Gays"
+        icon={<HelpDot label="Who counts as a Gayest Gay" onOpenChange={setOgExplained} />}
         centered
       >
         <div className="relative">
