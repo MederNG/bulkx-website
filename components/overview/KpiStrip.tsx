@@ -146,8 +146,8 @@ const TONE_NAMED: Record<"positive" | "negative" | "neutral", string> = {
 
 const COMPACT_TVL_LABELS: Record<string, string> = {
   "Expected growth": "Expected",
-  "Weighted daily flow": "Daily flow",
-  "24H net flow": "24H flow",
+  "Weighted daily flow": "Flow",
+  "24H net flow": "24H",
 };
 
 /** One campaign week's modelled APR. */
