@@ -471,7 +471,8 @@ body {
 }
 
 .help-dot:hover,
-.help-dot:focus-visible {
+.help-dot:focus-visible,
+.help-dot[aria-expanded="true"] {
   color: #00b481;
   border-color: #00b481;
 }

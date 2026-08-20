@@ -29,8 +29,20 @@ export function InfoTooltip({ text, className, panelClassName, floating }: InfoT
   const [coords, setCoords] = useState<{ top: number; left: number } | null>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
+  const touchPointer = useRef(false);
 
   useEffect(() => setMounted(true), []);
+
+  useEffect(() => {
+    if (!open) return;
+    function onPointerDown(event: PointerEvent) {
+      const target = event.target as Node;
+      if (triggerRef.current?.contains(target) || panelRef.current?.contains(target)) return;
+      setOpen(false);
+    }
+    document.addEventListener("pointerdown", onPointerDown);
+    return () => document.removeEventListener("pointerdown", onPointerDown);
+  }, [open]);
 
   useLayoutEffect(() => {
     if (!floating || !open) return;
@@ -83,11 +95,29 @@ export function InfoTooltip({ text, className, panelClassName, floating }: InfoT
         ref={triggerRef}
         type="button"
         aria-label="More information"
-        onMouseEnter={show}
-        onMouseLeave={hide}
-        onFocus={show}
-        onBlur={hide}
-        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+        onPointerDown={(event) => {
+          touchPointer.current = event.pointerType !== "mouse";
+          if (!touchPointer.current) return;
+          event.preventDefault();
+          setOpen((wasOpen) => !wasOpen);
+        }}
+        onMouseEnter={() => {
+          if (!touchPointer.current) show();
+        }}
+        onMouseLeave={() => {
+          if (!touchPointer.current) hide();
+        }}
+        onFocus={() => {
+          if (!touchPointer.current) show();
+        }}
+        onBlur={() => {
+          if (!touchPointer.current) hide();
+        }}
+        onClick={(event) => {
+          if (event.detail !== 0) return;
+          setOpen((wasOpen) => !wasOpen);
+        }}
         className="help-dot flex h-[17px] w-[17px] cursor-default items-center justify-center rounded-full border text-[10.5px] font-semibold leading-none transition-colors focus:outline-none"
       >
         ?
