@@ -476,7 +476,7 @@ export function HeroTvlChart({
           date label still has room to sit centred under its own point. Without
           the pull the plot began X_LABEL_HALF_W short of that edge; without the
           margin the label would be clipped by this wrapper's overflow. */}
-      <div ref={chartWrapRef} className="relative mt-2 -ml-5 min-h-0 flex-1 overflow-hidden">
+      <div ref={chartWrapRef} className="relative mt-2 -ml-5 min-h-[220px] flex-1 overflow-hidden xl:min-h-0">
         <ResponsiveContainer width="100%" height="100%" minHeight={90}>
           <ComposedChart
             data={data}
