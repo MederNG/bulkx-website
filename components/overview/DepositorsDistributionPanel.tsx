@@ -233,11 +233,12 @@ export function DepositorsDistributionPanel({ tiers }: { tiers: DepositTier[] })
   }, [tiers, peak, metric]);
 
   const hoveredRow = rows.find((r) => r.id === hovered) ?? null;
+  const hoveredIndex = hoveredRow ? rows.findIndex((r) => r.id === hoveredRow.id) : -1;
 
-  // The hover card tracks the cursor instead of parking over the hovered
-  // bar's column. Measured rather than assumed: the clamp that keeps the card
-  // inside the plot needs its real size, and that changes with the toggle —
-  // Value carries a third row, so the card is taller than in Count.
+  // Plot hover follows the cursor. Table hover parks over that tier's bar —
+  // the pointer is in the other card, so the last plot position would leave
+  // the card sitting on the wrong column (highlight correct, tooltip not).
+  const [hoverSource, setHoverSource] = useState<"plot" | "table" | null>(null);
   const plotRef = useRef<HTMLDivElement | null>(null);
   const cardRef = useRef<HTMLDivElement | null>(null);
   const [pointer, setPointer] = useState({ x: 0, y: 0 });
@@ -245,24 +246,51 @@ export function DepositorsDistributionPanel({ tiers }: { tiers: DepositTier[] })
   const [cardSize, setCardSize] = useState({ w: 0, h: 0 });
 
   useEffect(() => {
+    const el = plotRef.current;
+    if (!el) return;
+    const measure = () => {
+      const r = el.getBoundingClientRect();
+      setPlotSize({ w: r.width, h: r.height });
+    };
+    measure();
+    window.addEventListener("resize", measure);
+    const observer = typeof ResizeObserver !== "undefined" ? new ResizeObserver(measure) : null;
+    observer?.observe(el);
+    return () => {
+      window.removeEventListener("resize", measure);
+      observer?.disconnect();
+    };
+  }, []);
+
+  useEffect(() => {
     const el = cardRef.current;
     if (!el) return;
     setCardSize({ w: el.offsetWidth, h: el.offsetHeight });
   }, [hovered, metric]);
 
-  // Never past an edge — a card left free to follow the pointer runs off the
-  // panel on the outermost tiers, which is exactly where it is most needed.
   const half = cardSize.w / 2;
-  const cardX = Math.min(Math.max(pointer.x, half), Math.max(half, plotSize.w - half));
-  // Above the cursor by preference, below it when there isn't the room.
-  // Clamping to the top instead would pin the card there for most of the
-  // plot's height — it is 170px tall and the card is most of 72 — leaving it
-  // sliding along one rail rather than following the pointer.
-  const above = pointer.y - cardSize.h - 14;
+  const barAnchor = (() => {
+    if (hoverSource !== "table" || !hoveredRow || hoveredIndex < 0 || plotSize.w <= 0) {
+      return null;
+    }
+    const slotW = plotSize.w / rows.length;
+    const pairW = barW * 2 + barGap;
+    const pairLeft = hoveredIndex * slotW + (slotW - pairW) / 2;
+    const x =
+      metric === "count"
+        ? pairLeft + barW / 2
+        : pairLeft + barW + barGap + barW / 2;
+    const heightPct = metric === "count" ? hoveredRow.countHeight : hoveredRow.valueHeight;
+    return { x, y: plotSize.h * (1 - heightPct / 100) };
+  })();
+  const followX = barAnchor?.x ?? pointer.x;
+  const followY = barAnchor?.y ?? pointer.y;
+  const cardX = Math.min(Math.max(followX, half), Math.max(half, plotSize.w - half));
+  const above = followY - cardSize.h - 14;
   const cardY =
     above >= 0
       ? above
-      : Math.min(pointer.y + 18, Math.max(0, plotSize.h - cardSize.h));
+      : Math.min(followY + 18, Math.max(0, plotSize.h - cardSize.h));
 
   /** Dimmed by a selection elsewhere, not by the cursor: hovering brightens
    * its own tier, selecting mutes every other one. */
@@ -443,7 +471,10 @@ export function DepositorsDistributionPanel({ tiers }: { tiers: DepositTier[] })
                   return (
                     <div
                       key={row.id}
-                      onMouseEnter={() => setHovered(row.id)}
+                      onMouseEnter={() => {
+                        setHovered(row.id);
+                        setHoverSource("plot");
+                      }}
                       onMouseLeave={() => setHovered(null)}
                       onClick={() => toggleSelected(row.id)}
                       className="flex h-full flex-1 cursor-pointer items-end justify-center transition-opacity"
@@ -658,7 +689,14 @@ export function DepositorsDistributionPanel({ tiers }: { tiers: DepositTier[] })
             return (
               <div
                 key={row.id}
-                onMouseEnter={() => setHovered(row.id)}
+                onMouseEnter={() => {
+                  setHovered(row.id);
+                  setHoverSource("table");
+                  const el = plotRef.current;
+                  if (!el) return;
+                  const r = el.getBoundingClientRect();
+                  setPlotSize({ w: r.width, h: r.height });
+                }}
                 onMouseLeave={() => setHovered(null)}
                 onClick={() => toggleSelected(row.id)}
                 className={cn(
