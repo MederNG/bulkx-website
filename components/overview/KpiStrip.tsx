@@ -44,7 +44,7 @@ function KpiCard({
     // One gap on the column instead of a margin picked per child (they were
     // 4px under the title and 6–8px under the value), so every block in every
     // one of these cards is the same distance from the one above it.
-    <div className="flex min-w-0 flex-col gap-2 rounded-[10px] border border-[var(--color-line)] bg-[var(--color-bulk-base)] px-5 py-4">
+    <div className="flex min-w-0 flex-col gap-2 rounded-[10px] border border-[var(--color-line)] bg-[var(--color-bulk-base)] px-3 py-3 lg:px-5 lg:py-4">
       {/* leading-none, here and on the lines under each value: at its default
           line height the 11px title carries ~5px of dead space inside its own
           box, which the flex gap then adds to. Equal gaps between the boxes
@@ -144,6 +144,12 @@ const TONE_NAMED: Record<"positive" | "negative" | "neutral", string> = {
   neutral: "text-text-primary",
 };
 
+const COMPACT_TVL_LABELS: Record<string, string> = {
+  "Expected growth": "Expected",
+  "Weighted daily flow": "Daily flow",
+  "24H net flow": "24H flow",
+};
+
 /** One campaign week's modelled APR. */
 interface AprWeek {
   week: number;
@@ -220,11 +226,14 @@ function AprWeekBars({
  * pair reads as two columns of a small table under the rule above them. */
 function SubStat({
   label,
+  compactLabel,
   value,
   sub,
   tone,
 }: {
   label: string;
+  /** Shorter copy for the two-column KPI strip below `lg`. */
+  compactLabel?: string;
   value: string;
   /** Optional trailing qualifier, e.g. the percentage behind an amount. */
   sub?: string;
@@ -232,16 +241,24 @@ function SubStat({
 }) {
   return (
     <div className="min-w-0 px-2 text-center">
-      <p className="m-0 truncate text-[9.5px] uppercase leading-none tracking-[0.1em] text-text-muted">
-        {label}
+      <p className="m-0 truncate text-[9.5px] uppercase leading-none tracking-[0.08em] text-text-muted lg:tracking-[0.1em]">
+        {compactLabel ? (
+          <>
+            <span className="lg:hidden">{compactLabel}</span>
+            <span className="hidden lg:inline">{label}</span>
+          </>
+        ) : (
+          label
+        )}
       </p>
       {/* The qualifier sits on the same line, just after the figure — smaller
           and unbolded so it reads as an aside to the number rather than a
           second number. Its own line pushed this column a row taller than the
-          one beside it, leaving the pair visibly uneven. */}
+          one beside it, leaving the pair visibly uneven. On the two-column
+          strip it is dropped: the dollar figure already fills the cell. */}
       <p className={cn("m-0 mt-2 truncate text-[13px] font-semibold leading-none", tone)}>
         {value}
-        {sub && <span className="ml-1.5 text-[11px] font-normal">{sub}</span>}
+        {sub && <span className="ml-1.5 hidden text-[11px] font-normal lg:inline">{sub}</span>}
       </p>
     </div>
   );
@@ -314,7 +331,8 @@ export function KpiStrip({
       <KpiCard
         label={
           <>
-            Total Value Locked
+            <span className="lg:hidden">TVL</span>
+            <span className="hidden lg:inline">Total Value Locked</span>
             {/* Spelled out when projected: the same card showing a
                 forward-looking figure under an unqualified "Total Value
                 Locked" would read as the amount on-chain right now.
@@ -322,10 +340,13 @@ export function KpiStrip({
                 A second word after a divider rather than a bordered pill —
                 at this size the pill's own border and padding made it the
                 loudest thing in the title row, competing with the heading it
-                qualifies. The rule and the accent colour carry it. */}
+                qualifies. The rule and the accent colour carry it.
+
+                Below lg the card is half a two-column strip, so the full
+                phrase plus Projected truncates. TVL fits. */}
             {isProjected && (
               <>
-                <span className="mx-2 font-normal text-text-dim">|</span>
+                <span className="mx-1.5 font-normal text-text-dim lg:mx-2">|</span>
                 <span className="text-accent">Projected</span>
               </>
             )}
@@ -353,6 +374,7 @@ export function KpiStrip({
             <SubStat
               key={stat.label}
               label={stat.label}
+              compactLabel={COMPACT_TVL_LABELS[stat.label]}
               value={stat.value}
               sub={stat.sub}
               tone={TONE_NAMED[stat.tone ?? "neutral"]}

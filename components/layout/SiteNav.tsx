@@ -76,9 +76,9 @@ export function SiteNav() {
             width={83}
             height={32}
             priority
-            className="block"
+            className="hidden sm:block"
           />
-          <span className="hidden text-[17px] font-normal tracking-[0.16em] text-text-secondary sm:inline">
+          <span className="text-[17px] font-normal tracking-[0.16em] text-text-secondary">
             INTELLIGENCE
           </span>
         </Link>
