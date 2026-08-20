@@ -190,7 +190,7 @@ export function AuraDonut({
     avail.w === 0
       ? 0
       : stacked
-        ? Math.max(MIN_RING, Math.min(avail.w, 280))
+        ? Math.max(MIN_RING, Math.min(avail.w, 242))
         : Math.max(
           Math.min(MIN_RING, avail.h),
           Math.min(avail.h, leftover)
@@ -297,7 +297,7 @@ export function AuraDonut({
       ref={rowRef}
       className={cn(
         "flex min-h-0 min-w-0 flex-1",
-        stacked ? "flex-col items-stretch gap-4 overflow-visible" : "gap-5 overflow-hidden",
+        stacked ? "flex-col items-stretch gap-3 overflow-visible" : "gap-5 overflow-hidden",
         !stacked && (sourcesLayout ? "items-start" : "items-center")
       )}
       style={{ paddingLeft: stacked ? 0 : METRIC_TABLE_LEAD_INSET }}
