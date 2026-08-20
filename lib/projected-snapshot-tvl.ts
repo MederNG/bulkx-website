@@ -200,13 +200,23 @@ export function formatRemainingDuration(ms: number): string {
   return `${days}d ${hours}h ${minutes}m`;
 }
 
+function compactUsdAbs(abs: number): string {
+  const unit =
+    abs >= 1_000_000_000
+      ? { n: abs / 1_000_000_000, suffix: "B" }
+      : abs >= 1_000_000
+        ? { n: abs / 1_000_000, suffix: "M" }
+        : abs >= 1_000
+          ? { n: abs / 1_000, suffix: "K" }
+          : null;
+  if (!unit) return `$${Math.round(abs).toLocaleString("en-US")}`;
+  return `$${unit.n.toFixed(1).replace(/\.0$/, "")}${unit.suffix}`;
+}
+
 export function formatSignedUsd(value: number, compact = false): string {
   const sign = value >= 0 ? "+" : "-";
   const abs = Math.abs(value);
-  if (compact) {
-    if (abs >= 1_000_000) return `${sign}$${(abs / 1_000_000).toFixed(1)}M`;
-    if (abs >= 1_000) return `${sign}$${(abs / 1_000).toFixed(1)}K`;
-  }
+  if (compact) return `${sign}${compactUsdAbs(abs)}`;
   return `${sign}$${Math.round(abs).toLocaleString("en-US")}`;
 }
 
@@ -216,9 +226,5 @@ export function formatSignedPercent(value: number, decimals = 1): string {
 }
 
 export function formatUsdCompact(value: number): string {
-  const abs = Math.abs(value);
-  if (abs >= 1_000_000_000) return `$${(abs / 1_000_000_000).toFixed(1)}B`;
-  if (abs >= 1_000_000) return `$${(abs / 1_000_000).toFixed(1)}M`;
-  if (abs >= 1_000) return `$${(abs / 1_000).toFixed(1)}K`;
-  return `$${Math.round(abs).toLocaleString("en-US")}`;
+  return compactUsdAbs(Math.abs(value));
 }

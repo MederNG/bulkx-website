@@ -148,6 +148,7 @@ const COMPACT_TVL_LABELS: Record<string, string> = {
   "Expected growth": "Expected",
   "Weighted daily flow": "Flow",
   "24H net flow": "24H",
+  "7D growth": "7D",
 };
 
 /** One campaign week's modelled APR. */
@@ -240,8 +241,8 @@ function SubStat({
   tone: string;
 }) {
   return (
-    <div className="min-w-0 px-2 text-center">
-      <p className="m-0 truncate text-[9.5px] uppercase leading-none tracking-[0.08em] text-text-muted lg:tracking-[0.1em]">
+    <div className="min-w-0 px-1 text-center lg:px-2">
+      <p className="m-0 truncate text-[9.5px] uppercase leading-none tracking-[0.04em] text-text-muted lg:tracking-[0.1em]">
         {compactLabel ? (
           <>
             <span className="lg:hidden">{compactLabel}</span>
@@ -256,7 +257,12 @@ function SubStat({
           second number. Its own line pushed this column a row taller than the
           one beside it, leaving the pair visibly uneven. On the two-column
           strip it is dropped: the dollar figure already fills the cell. */}
-      <p className={cn("m-0 mt-2 truncate text-[13px] font-semibold leading-none", tone)}>
+      <p
+        className={cn(
+          "m-0 mt-2 truncate text-[12px] font-semibold leading-none tabular-nums lg:text-[13px]",
+          tone
+        )}
+      >
         {value}
         {sub && <span className="ml-1.5 hidden text-[11px] font-normal lg:inline">{sub}</span>}
       </p>
