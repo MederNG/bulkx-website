@@ -1,5 +1,8 @@
 import { aggregateBySource, type CategoryBreakdownItem } from "@/lib/aura-category-groups";
-import type { ProjectedSnapshotTvl } from "@/lib/projected-snapshot-tvl";
+import {
+  formatUsdCompact,
+  type ProjectedSnapshotTvl,
+} from "@/lib/projected-snapshot-tvl";
 import type { TvlKpiSecondaryMetrics } from "@/lib/tvl-kpi-secondary";
 import type { Snapshot } from "@/types";
 
@@ -122,7 +125,7 @@ function signedPct(value: number | null): string | null {
 
 function signedUsd(value: number | null): string {
   if (value == null) return "—";
-  return `${value >= 0 ? "+" : "−"}${usdFull(Math.abs(value))}`;
+  return `${value >= 0 ? "+" : "−"}${formatUsdCompact(Math.abs(value))}`;
 }
 
 /**
