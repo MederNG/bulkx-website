@@ -241,6 +241,21 @@
     gloss-shimmer 9s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
 }
 
+/* On phones the drifting gold wash sits right on the TVL floor and donut
+   apex — dial it back so strokes stay readable. */
+@media (max-width: 640px) {
+  .gloss-drift {
+    opacity: 0.4;
+  }
+}
+
+/* Chart SVGs paint above the gloss; isolation keeps screen-blend from
+   reconstituting the wash over thin gold strokes. */
+.hero-tvl-chart {
+  isolation: isolate;
+  z-index: 1;
+}
+
 html {
   scroll-padding-top: 4.75rem;
 }

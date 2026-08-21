@@ -91,7 +91,12 @@ function niceValueDomain(min: number, max: number): { lo: number; hi: number; st
     return { lo: min - step, hi: max + step, step };
   }
   const step = niceStep((max - min) / 4);
-  return { lo: Math.floor(min / step) * step, hi: Math.ceil(max / step) * step, step };
+  let lo = Math.floor(min / step) * step;
+  const hi = Math.ceil(max / step) * step;
+  // Keep the lowest reading off the axis floor. On phones the card gloss
+  // pools in that band and a gold stroke sitting on $22.0M washes out.
+  if (min - lo < step * 0.25) lo -= step;
+  return { lo, hi, step };
 }
 
 const DAY_MS = 86_400_000;
@@ -393,7 +398,7 @@ export function HeroTvlChart({
         </div>
       </div>
 
-      <div className="mt-2.5 flex flex-wrap items-center gap-4 text-[11px] text-text-muted">
+      <div className="mt-2.5 flex flex-wrap items-center gap-4 text-[11px] text-text-muted select-none [-webkit-touch-callout:none]">
         <span className="inline-flex items-center gap-[7px]">
           <span className="h-[2px] w-4 bg-accent" />
           Historical TVL
@@ -406,11 +411,11 @@ export function HeroTvlChart({
         )}
       </div>
 
-      <div ref={chartWrapRef} className="relative mt-2 min-h-[220px] flex-1 overflow-hidden xl:min-h-0">
+      <div ref={chartWrapRef} className="hero-tvl-chart relative mt-2 min-h-[220px] flex-1 overflow-hidden xl:min-h-0">
         <ResponsiveContainer width="100%" height="100%" minHeight={90}>
           <ComposedChart
             data={data}
-            margin={{ top: 6, right: 8, bottom: 0, left: PLOT_PAD_L }}
+            margin={{ top: 6, right: 8, bottom: 4, left: PLOT_PAD_L }}
           >
             <defs>
               <linearGradient id="heroTvlFill" x1="0" y1="0" x2="0" y2="1">
@@ -517,7 +522,7 @@ export function HeroTvlChart({
               type="natural"
               dataKey="tvl"
               stroke="url(#heroTvlLineFade)"
-              strokeWidth={1.25}
+              strokeWidth={1.75}
               strokeLinecap="round"
               fill="url(#heroTvlFill)"
               connectNulls={false}
