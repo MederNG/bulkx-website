@@ -402,7 +402,7 @@ export function AuraDonut({
               paddingAngle={(chartData.length > 5 ? 1 : 2) * sweep}
               isAnimationActive={false}
               activeIndex={paintIndex}
-              activeShape={(props) =>
+              activeShape={(props: unknown) =>
                 renderActiveShape(
                   props,
                   activeVisible,
