@@ -26,6 +26,7 @@ import {
   formatSnapshotUtcParts,
   formatUsdCompact,
 } from "@/lib/projected-snapshot-tvl";
+import { CHART_GOLD_PULSE, CHART_GOLD_PULSE_TRANSITION, CHART_GOLD_PULSE_UNDERLAY } from "@/lib/chart-gold-pulse";
 import { cn, formatNumber } from "@/lib/utils";
 import { useNarrowViewport } from "@/lib/use-narrow-viewport";
 import { InfoTooltip } from "@/components/ui/InfoTooltip";
@@ -775,15 +776,44 @@ export function CategoryCharts({ data }: CategoryChartsProps) {
                   // upper edge sits on margin.top (donut apex), not centred
                   // several px below it.
                   shape={(props: unknown) => {
-                    const p = props as RectangleProps;
+                    const p = props as RectangleProps & { index?: number; className?: string };
                     const h = Math.min(28, Number(p.height) || 28);
+                    const idx = typeof p.index === "number" ? p.index : -1;
+                    const pulsing = idx >= 0 && sharedHover === idx;
+                    if (!pulsing) {
+                      return (
+                        <Rectangle
+                          {...p}
+                          height={h}
+                          radius={[0, 2, 2, 0]}
+                        />
+                      );
+                    }
+                    // Idle primary is gold — bed it on slate like every other
+                    // slice so the opacity beat reads gold↔gray, not gold↔gold.
+                    const idle = colored[idx]?.color ?? CHART_GOLD;
+                    const bed =
+                      idx === 0 || idle === CHART_GOLD
+                        ? CHART_GOLD_PULSE_UNDERLAY
+                        : idle;
+                    const geom = {
+                      x: p.x,
+                      y: p.y,
+                      width: p.width,
+                      height: h,
+                      radius: [0, 2, 2, 0] as [number, number, number, number],
+                    };
                     return (
-                      <Rectangle
-                        {...p}
-                        height={h}
-                        // `y` is already the band's top — leave it.
-                        radius={[0, 2, 2, 0]}
-                      />
+                      <g>
+                        <Rectangle {...geom} fill={bed} />
+                        <motion.g
+                          initial={false}
+                          animate={CHART_GOLD_PULSE}
+                          transition={CHART_GOLD_PULSE_TRANSITION}
+                        >
+                          <Rectangle {...geom} fill={CHART_GOLD} />
+                        </motion.g>
+                      </g>
                     );
                   }}
                 >
@@ -809,12 +839,7 @@ export function CategoryCharts({ data }: CategoryChartsProps) {
                             ? 1
                             : 0.4
                         }
-                        className={
-                          i === 0 && (sharedHover == null || sharedHover === 0)
-                            ? "chart-gold-pulse"
-                            : undefined
-                        }
-                        style={{ transition: "opacity 0.25s ease, fill 0.25s ease" }}
+                        style={{ transition: "fill 0.25s ease" }}
                       />
                     );
                   })}

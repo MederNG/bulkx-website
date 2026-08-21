@@ -401,14 +401,17 @@ body {
   animation: apr-current-week-pulse 1150ms ease-in-out infinite;
 }
 
-/* Same beat as APR week bars — gold chart marks / legend dots. */
+/* Same beat as APR week bars — gold chart marks / legend dots.
+   Brightness (not opacity): the primary slice is already solid gold, so an
+   opacity pulse is invisible on top of itself, and Chromium also cancels
+   opacity animations when the same node has a transition on opacity. */
 @keyframes chart-gold-pulse {
   0%,
   100% {
-    opacity: 1;
+    filter: brightness(1.06) drop-shadow(0 0 5px rgba(255, 181, 71, 0.35));
   }
   50% {
-    opacity: 0.55;
+    filter: brightness(0.72) drop-shadow(0 0 1px rgba(255, 181, 71, 0.1));
   }
 }
 
