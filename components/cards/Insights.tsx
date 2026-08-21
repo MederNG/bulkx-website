@@ -1,29 +1,25 @@
 import { KpiTerminalCounter, type NumberFormat } from "@/components/cards/KpiTerminalCounter";
 import { CopyableWallet } from "@/components/ui/CopyableWallet";
 import { PanelCard, PanelLabel } from "@/components/overview/PanelCard";
+import { CATEGORY_NAME } from "@/components/overview/MetricTable";
 import { cn } from "@/lib/utils";
 import type { AlphaInsight } from "@/types";
 
 export function AlphaSection({ insights }: { insights: AlphaInsight[] }) {
   return (
-    <div className="card card-highlight p-4 md:p-5">
+    <PanelCard glossy glossDelay={-3}>
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {insights.map((insight) => (
-          <div
-            key={insight.label}
-            className="group rounded border border-[rgba(198,182,186,0.12)] bg-bulk-base p-3.5"
-          >
-            <p className="text-[10px] uppercase tracking-wider text-text-secondary">
-              {insight.label}
-            </p>
-            <p className="mt-1.5 font-mono text-sm font-semibold tabular-nums text-accent">
+          <div key={insight.label} className="min-w-0">
+            <p className="font-label text-text-muted">{insight.label}</p>
+            <p className="mt-1.5 font-data text-sm font-semibold text-accent">
               {insight.value}
             </p>
             {insight.detail && (
               <div
                 className={cn(
                   "mt-1 text-xs text-text-secondary",
-                  insight.mono && "font-mono"
+                  insight.mono && "font-data"
                 )}
               >
                 {insight.copyValue ? (
@@ -36,7 +32,7 @@ export function AlphaSection({ insights }: { insights: AlphaInsight[] }) {
           </div>
         ))}
       </div>
-    </div>
+    </PanelCard>
   );
 }
 
@@ -61,14 +57,14 @@ export function NorthStarMetrics({
   return (
     <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
       {metrics.map((m) => (
-        <div key={m.label} className="card card-highlight p-5 text-center">
-          <p className="section-title mb-2 text-accent">{m.label}</p>
+        <PanelCard key={m.label} className="text-center">
+          <PanelLabel>{m.label}</PanelLabel>
           <KpiTerminalCounter
             value={m.value}
             format={m.format}
-            className="block font-mono text-2xl font-bold tabular-nums md:text-3xl"
+            className="font-figure mt-2 block text-2xl md:text-3xl"
           />
-        </div>
+        </PanelCard>
       ))}
     </div>
   );
@@ -96,22 +92,27 @@ export function DistributionStats({
   ];
 
   return (
-    <PanelCard glossy glossDelay={-3} className="h-full font-sans">
+    <PanelCard glossy glossDelay={-3} className="h-full">
       <PanelLabel>Distribution Metrics</PanelLabel>
-      <div className="mt-3 -mx-3 sm:-mx-5">
+      <div className="mt-3 flex min-h-0 flex-1 flex-col justify-between">
         {stats.map((s, i) => (
           <div
             key={s.label}
             className={cn(
-              "group flex h-[30px] items-center justify-between px-3 text-[13px] leading-none transition-colors sm:px-5",
+              "group -mx-2.5 flex min-h-[30px] flex-1 cursor-default items-center justify-between rounded-md px-2.5 leading-none transition-colors",
               i > 0 && "border-t border-[var(--color-line-soft)]",
-              "hover:bg-[rgba(255,255,255,0.04)]"
+              "hover:border-transparent hover:bg-[rgba(255,255,255,0.045)]"
             )}
           >
-            <span className="text-text-secondary transition-colors group-hover:text-text-primary">
+            <span
+              className={cn(
+                CATEGORY_NAME,
+                "text-text-secondary transition-colors group-hover:text-text-primary"
+              )}
+            >
               {s.label}
             </span>
-            <span className="tabular-nums text-text-primary">{s.value}</span>
+            <span className="font-data text-text-primary">{s.value}</span>
           </div>
         ))}
       </div>

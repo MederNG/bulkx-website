@@ -47,7 +47,7 @@ function getColumns(tab: LeaderboardTab): ColumnDef[] {
     label: "Aura",
     align: "right",
     render: (entry) => (
-      <span className="tabular-nums text-accent">
+      <span className="font-data text-accent">
         {formatNumber(tab === "efficiency" ? computeDepositAura(entry) : entry.aura)}
       </span>
     ),
@@ -58,7 +58,7 @@ function getColumns(tab: LeaderboardTab): ColumnDef[] {
     label: "Deposit",
     align: "right",
     render: (entry) => (
-      <span className="tabular-nums">{formatUsd(entry.current_amount)}</span>
+      <span className="font-data">{formatUsd(entry.current_amount)}</span>
     ),
   };
 
@@ -67,7 +67,7 @@ function getColumns(tab: LeaderboardTab): ColumnDef[] {
     label: "Deposit",
     align: "right",
     render: (entry) => (
-      <span className="tabular-nums">{formatUsd(entry.deposited_amount)}</span>
+      <span className="font-data">{formatUsd(entry.deposited_amount)}</span>
     ),
   };
 
@@ -76,7 +76,7 @@ function getColumns(tab: LeaderboardTab): ColumnDef[] {
     label: "Referred Amount",
     align: "right",
     render: (entry) => (
-      <span className="tabular-nums">
+      <span className="font-data">
         {formatUsd(entry.referees_total_deposited ?? 0)}
       </span>
     ),
@@ -87,7 +87,7 @@ function getColumns(tab: LeaderboardTab): ColumnDef[] {
     label: "Efficiency",
     align: "right",
     render: (entry) => (
-      <span className="tabular-nums text-bid-green">
+      <span className="font-data text-bid-green">
         {computeEfficiency(entry).toFixed(3)}
       </span>
     ),
@@ -98,7 +98,7 @@ function getColumns(tab: LeaderboardTab): ColumnDef[] {
     label: "Sent",
     align: "right",
     render: (entry) => (
-      <span className="tabular-nums">{entry.referrals_sent}</span>
+      <span className="font-data">{entry.referrals_sent}</span>
     ),
   };
 
@@ -107,7 +107,7 @@ function getColumns(tab: LeaderboardTab): ColumnDef[] {
     label: "Qualified",
     align: "right",
     render: (entry) => (
-      <span className="tabular-nums">{entry.referrals_qualified}</span>
+      <span className="font-data">{entry.referrals_qualified}</span>
     ),
   };
 
@@ -349,7 +349,7 @@ export function LeaderboardTable({
               pageData.map((entry, i) => (
                 <tr
                   key={entry.wallet}
-                  className="group border-b border-[var(--color-line-soft)] transition-colors hover:bg-[rgba(255,255,255,0.04)]"
+                  className="group border-b border-[var(--color-line-soft)] transition-colors hover:bg-[rgba(255,255,255,0.045)] [&>td:first-child]:rounded-l-md [&>td:last-child]:rounded-r-md"
                 >
                   {columns.map((col) => {
                     const value = col.isDisplayRank
@@ -363,7 +363,7 @@ export function LeaderboardTable({
                         className={cn(
                           "px-4 py-2.5",
                           alignRight ? "text-right" : "text-left",
-                          col.isDisplayRank && "tabular-nums text-text-muted"
+                          col.isDisplayRank && "font-data text-text-muted"
                         )}
                       >
                         {alignRight && sortable ? (
@@ -385,28 +385,33 @@ export function LeaderboardTable({
       </div>
 
       <div className="flex items-center justify-between border-t border-[var(--color-line)] px-4 py-3">
-        <p className="text-[13px] text-text-muted">
+        <p className="font-data text-[12px] text-text-muted">
           {search.trim()
             ? `Showing ${pageData.length} of ${filtered.length} matches (top ${LEADERBOARD_TOP_LIMIT} in category)`
             : `Top ${LEADERBOARD_TOP_LIMIT} · showing ${pageData.length} of ${filtered.length}`}
         </p>
-        <div className="flex gap-2">
+        <div className="term-seg">
           <button
-            className="btn-ghost"
+            type="button"
+            className={cn("term-seg-btn", page <= 1 || loading ? "is-off opacity-40" : "is-off")}
             disabled={page <= 1 || loading}
             onClick={() => setPage((p) => p - 1)}
           >
-            Prev
+            <span className="relative z-10">Prev</span>
           </button>
-          <span className="flex items-center px-2 text-[13px] tabular-nums text-text-muted">
+          <span className="font-data flex items-center px-2 text-[12px] text-text-muted">
             {page}/{totalPages}
           </span>
           <button
-            className="btn-ghost"
+            type="button"
+            className={cn(
+              "term-seg-btn",
+              page >= totalPages || loading ? "is-off opacity-40" : "is-off"
+            )}
             disabled={page >= totalPages || loading}
             onClick={() => setPage((p) => p + 1)}
           >
-            Next
+            <span className="relative z-10">Next</span>
           </button>
         </div>
       </div>
@@ -445,7 +450,7 @@ function SortableHeader({
   direction: LeaderboardSortDir | null;
   onClick: () => void;
 }) {
-  const th = "px-4 py-3 text-[10px] font-medium uppercase tracking-[0.1em]";
+  const th = "font-label px-4 py-3";
 
   if (!sortable) {
     return (

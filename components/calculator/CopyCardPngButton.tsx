@@ -49,7 +49,7 @@ export function CopyCardPngButton({ exportRef, filename, className }: CopyCardPn
       onClick={copyPng}
       disabled={copying}
       className={cn(
-        "btn-ghost inline-flex shrink-0 items-center gap-1.5 !px-2 !py-1 text-[11px] text-text-secondary hover:text-text-primary",
+        "inline-flex shrink-0 items-center gap-1.5 rounded-md px-2 py-1 text-[11px] font-semibold text-text-secondary transition-colors hover:text-text-primary",
         className
       )}
       title={`Copy ${filename} as PNG`}
@@ -71,7 +71,7 @@ function ToolExportSurface({
 }) {
   return (
     <div className="pointer-events-none fixed -left-[9999px] top-0 opacity-100" aria-hidden="true">
-      <div ref={exportRef} className="card p-4 md:p-5" style={{ width }}>
+      <div ref={exportRef} className="rounded-[12px] bg-[var(--color-bulk-base)] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.07)] md:p-5" style={{ width }}>
         {children}
       </div>
     </div>
@@ -81,8 +81,8 @@ function ToolExportSurface({
 function ExportField({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <p className="mb-1 text-xs text-text-secondary">{label}</p>
-      <p className="rounded border border-[rgba(198,182,186,0.15)] bg-bulk-base px-3 py-2 font-mono text-sm tabular-nums text-text-primary">
+      <p className="font-label mb-1 text-text-muted">{label}</p>
+      <p className="rounded-[10px] border border-[var(--color-line)] bg-[var(--color-bulk-base)] px-3 py-2 font-data text-sm text-text-primary">
         {value}
       </p>
     </div>

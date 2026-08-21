@@ -45,8 +45,8 @@ export function AuraDropCountdown({
   return (
     <div className="leading-none">
       <div className={cn("flex items-baseline gap-1.5", centered && "justify-center")}>
-        <span className="text-[11px] text-text-muted">{label}</span>
-        <span className="text-[13px] font-semibold text-text-primary">
+        <span className="font-sans text-[11px] text-text-muted">{label}</span>
+        <span className="font-data font-semibold text-text-primary">
           {remainingMs != null ? formatRemainingDuration(remainingMs) : "—"}
         </span>
       </div>

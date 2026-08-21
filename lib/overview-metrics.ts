@@ -95,17 +95,63 @@ export interface OverviewMetricView {
  * Drill-down views (Retro, Week N) can have more than six slices; the extra
  * four stop Roles / Others wrapping back onto Bulk validator stake / Testnet
  * and give the ten Aura buckets a unique bar each. */
+/** Overview / Aura ring duochrome: primary gold, secondary slate blues.
+ * Index 0 (usually the largest share) takes gold; the rest step through
+ * slate so proportions stay readable without a rainbow. */
+export const CHART_GOLD = "#FFB547";
+/** Ordered bright→dull slate companions (subset of SLATE_RAMP). Prefer
+ * `chartPrimaryRamp` when the series length is known. */
+export const CHART_SLATE = [
+  "#C5D6E6",
+  "#8AABC4",
+  "#5E819E",
+  "#4A6B84",
+  "#3D5A73",
+  "#263B4E",
+] as const;
+
+/** Ordered bright→dull slate for sequential charts (Aura histogram buckets).
+ * Unlike chartDuochrome this never injects gold mid-series. */
+const SLATE_RAMP = [
+  "#C5D6E6",
+  "#A8C0D4",
+  "#8AABC4",
+  "#7296B0",
+  "#5E819E",
+  "#4A6B84",
+  "#3D5A73",
+  "#314B61",
+  "#263B4E",
+  "#1C2E3E",
+] as const;
+
+export function chartSlateRamp(index: number, count: number): string {
+  if (count <= 1) return SLATE_RAMP[0];
+  const t = Math.min(1, Math.max(0, index / (count - 1)));
+  const i = Math.round(t * (SLATE_RAMP.length - 1));
+  return SLATE_RAMP[i];
+}
+
+/** Gold on the primary (index 0), then bright→dull slate for the rest.
+ * Idle gold lives on the first mark; hover transfers it (caller borrows). */
+export function chartPrimaryRamp(index: number, count: number): string {
+  if (index <= 0) return CHART_GOLD;
+  return chartSlateRamp(index - 1, Math.max(1, count - 1));
+}
+
+/** Fallback when series length is unknown — same ramp as chartPrimaryRamp. */
+export function chartDuochrome(index: number, count = CHART_SLATE.length + 1): string {
+  return chartPrimaryRamp(index, count);
+}
+
+export const CHART_RED = "#E55A4E";
+export const CHART_TEAL = "#1FB88A";
+
 export const DONUT_COLORS = [
-  "#FFB547", // accent gold
-  "#EF4A3C", // red
-  "#00B481", // green
-  "#A27643", // tan
-  "#FFFEEF", // cream
-  "#C6B6BA", // mauve grey
-  "#5B9BD4", // steel blue
-  "#C47A8A", // dusty rose
-  "#6BB3A8", // aqua
-  "#B08AC4", // orchid
+  CHART_GOLD,
+  ...CHART_SLATE,
+  "#5B9BD4",
+  "#8AABC4",
 ];
 
 /** Homepage ring stays at six named sources even though the palette now
@@ -320,7 +366,7 @@ export function buildOverviewPanels(input: {
     donut: sources.map((source, i) => ({
       id: source.key,
       label: source.category,
-      color: DONUT_COLORS[i % DONUT_COLORS.length],
+      color: chartPrimaryRamp(i, sources.length),
       pct: source.share,
       points: source.points,
     })),
@@ -345,42 +391,42 @@ export function buildOverviewPanels(input: {
       label: "Snowflake (<$100)",
       count: depositSizeDistribution[0]?.count ?? 0,
       held: depositSizeDistribution[0]?.held ?? 0,
-      color: "#FFB547",
+      color: chartPrimaryRamp(0, 6),
     },
     {
       id: "bulker",
       label: "Bulker ($100-1K)",
       count: depositSizeDistribution[1]?.count ?? 0,
       held: depositSizeDistribution[1]?.held ?? 0,
-      color: "#EF4A3C",
+      color: chartPrimaryRamp(1, 6),
     },
     {
       id: "lilYeti",
       label: "Lil Yeti ($1K-10K)",
       count: depositSizeDistribution[2]?.count ?? 0,
       held: depositSizeDistribution[2]?.held ?? 0,
-      color: "#00B481",
+      color: chartPrimaryRamp(2, 6),
     },
     {
       id: "bulkingYeti",
       label: "Bulking Yeti ($10K-100K)",
       count: depositSizeDistribution[3]?.count ?? 0,
       held: depositSizeDistribution[3]?.held ?? 0,
-      color: "#A27643",
+      color: chartPrimaryRamp(3, 6),
     },
     {
       id: "auramaxer",
       label: "Auramaxer ($100K-500K)",
       count: depositSizeDistribution[4]?.count ?? 0,
       held: depositSizeDistribution[4]?.held ?? 0,
-      color: "#FFFEEF",
+      color: chartPrimaryRamp(4, 6),
     },
     {
       id: "megalodon",
       label: "Megalodon ($500K+)",
       count: depositSizeDistribution.slice(5).reduce((sum, b) => sum + b.count, 0),
       held: depositSizeDistribution.slice(5).reduce((sum, b) => sum + b.held, 0),
-      color: "#C6B6BA",
+      color: chartPrimaryRamp(5, 6),
     },
   ];
 

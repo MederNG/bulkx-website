@@ -43,7 +43,7 @@ export function MetricCard({
       <KpiTerminalCounter
         value={value}
         format={format}
-        className="block font-mono text-xl font-semibold tabular-nums text-text-primary md:text-2xl"
+        className="block font-figure text-xl text-text-primary md:text-2xl"
       />
       {sublabel && <p className="mt-1 text-xs text-text-secondary">{sublabel}</p>}
       {hasSecondary && (
@@ -52,10 +52,10 @@ export function MetricCard({
           <div className="mt-3 grid grid-cols-2 gap-x-3 gap-y-2.5 border-t border-[rgba(198,182,186,0.12)] pt-3 text-left">
             {secondaryMetrics!.map((metric) => (
               <div key={metric.label}>
-                <p className="text-[10px] uppercase tracking-wider text-text-secondary">{metric.label}</p>
+                <p className="font-label text-text-muted">{metric.label}</p>
                 <p
                   className={cn(
-                    "mt-0.5 font-mono text-xs font-medium tabular-nums text-text-secondary md:text-[13px]",
+                    "mt-0.5 font-data text-xs font-medium text-text-secondary md:text-[13px]",
                     metric.valueClassName
                   )}
                 >

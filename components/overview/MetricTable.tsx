@@ -1,5 +1,22 @@
 import { cn } from "@/lib/utils";
 
+/** Category / tier names — Familjen 13 medium. Shared by the donut legend
+ * and the Category Share Y-axis so the two panels read as one list. */
+export const CATEGORY_NAME =
+  "font-sans text-[13px] font-medium leading-none";
+
+/** SVG twin of CATEGORY_NAME for Recharts axis ticks. */
+export const CATEGORY_NAME_SVG = {
+  fontFamily: "var(--font-sans), system-ui, sans-serif",
+  fontSize: 13,
+  fontWeight: 500,
+} as const;
+
+/** Height of MetricTableHeader (label + pb-1.5 + hairline). Kept for callers
+ * that need to match the legend's chrome; Category Share aligns to the donut
+ * apex directly via chart margin instead. */
+export const METRIC_TABLE_HEADER_H = 24;
+
 /** The three columns both tables end with — label, count, share — are the
  * same fixed widths in both, and both tables hang them off their right edge.
  * That is what puts the tier table's Size / Depositors / Share directly under
@@ -94,7 +111,7 @@ export function metricTableMinWidth(
   return LABEL_W + COUNT_W + SHARE_W + gapAt(viewportWidth) * 2;
 }
 
-const HEADING = "text-[10px] uppercase tracking-[0.1em] text-text-muted";
+const HEADING = "font-label text-text-muted";
 
 export function MetricTableHeader({
   columns,
@@ -120,7 +137,13 @@ export function MetricTableHeader({
         : shapeFor(columns.length);
   return (
     <div
-      className={cn(GRID, shape.justify, "shrink-0 border-b border-[var(--color-line)] pb-1.5")}
+      className={cn(
+        GRID,
+        shape.justify,
+        // Same horizontal inset as the body rows so columns stay aligned when
+        // a row's highlight pads past the bullets.
+        "-mx-2.5 shrink-0 border-b border-[var(--color-line)] px-2.5 pb-1.5"
+      )}
       style={{ gridTemplateColumns: shape.template }}
     >
       {/* Each heading sits the same way its column's values do, so it always
@@ -149,6 +172,7 @@ export function MetricTableRow({
   active,
   dimmed,
   pulse,
+  pulseDot,
   isFirst,
   wide,
   onMouseEnter,
@@ -171,6 +195,8 @@ export function MetricTableRow({
    * the cursor being on this row. Optional: tables with nothing linked to
    * them never pass it. */
   pulse?: boolean;
+  /** Pulse the colour swatch (gold primary marks). */
+  pulseDot?: boolean;
   /** No divider above the first row — the header's own border-b already
    * draws that line, so a border-t here would double it up. */
   isFirst: boolean;
@@ -199,11 +225,13 @@ export function MetricTableRow({
       className={cn(
         GRID,
         shape.justify,
-        "shrink-0 cursor-pointer items-center transition-colors",
+        // px/mx always on — only the fill toggles — so hovering doesn't shift
+        // columns. The inset clears the scaled bullet and softens the cut at
+        // the panel edge with rounded corners.
+        "-mx-2.5 shrink-0 cursor-pointer items-center rounded-md px-2.5 transition-colors",
         !isFirst && "border-t border-[var(--color-line-soft)]",
-        // The pulse animates the same background, so the static tint would
-        // only be the colour it starts from — let one or the other own it.
-        active && !pulse && "bg-[rgba(255,255,255,0.03)]",
+        active && !isFirst && "border-transparent",
+        active && !pulse && "bg-[rgba(255,255,255,0.045)]",
         active && pulse && "tier-row-pulse"
       )}
       // An explicit height rather than vertical padding: padding leaves the
@@ -217,12 +245,15 @@ export function MetricTableRow({
           column of rows with names of different lengths gets a column of dots
           at as many different x positions. Anchoring the group left puts every
           dot on one vertical line and every name at one starting x. */}
-      <span className="flex min-w-0 items-center gap-2 text-[13px]" style={{ color: textColor }}>
+      <span className={cn("flex min-w-0 items-center gap-2", CATEGORY_NAME)} style={{ color: textColor }}>
         <span
-          className="h-[9px] w-[9px] shrink-0 rounded-full transition-transform"
+          className={cn(
+            "h-[9px] w-[9px] shrink-0 rounded-full transition-[transform,background-color]",
+            pulseDot && "chart-gold-pulse"
+          )}
           style={{
             background: color,
-            opacity: dimmed ? 0.4 : 1,
+            opacity: dimmed && !pulseDot ? 0.4 : 1,
             transform: active ? "scale(1.25)" : "scale(1)",
           }}
         />
@@ -238,7 +269,7 @@ export function MetricTableRow({
           // shade smaller while this cell still carried the label column's
           // 17px bullet indent, which left too little room for the longest
           // range; without the indent the full 13px fits.
-          className="truncate text-right text-[13px]"
+          className="font-data truncate text-right"
           style={{ color: textColor }}
         >
           {detail}
@@ -247,14 +278,11 @@ export function MetricTableRow({
       {/* Flush right, along with every column except the names. Digits line up
           by place value that way — the thousands column under the thousands
           column — which is the whole reason these are tabular figures. */}
-      <span className="text-right text-[13px] tabular-nums" style={{ color: textColor }}>
+      <span className="font-data text-right" style={{ color: textColor }}>
         {count}
       </span>
       {share != null && (
-        <span
-          className="text-right text-[13px] font-semibold tabular-nums"
-          style={{ color: textColor }}
-        >
+        <span className="font-data text-right font-semibold" style={{ color: textColor }}>
           {share}
         </span>
       )}

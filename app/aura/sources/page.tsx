@@ -15,7 +15,7 @@ export default async function AuraSourcesPage() {
           share one column gap. */}
       <CategoryCharts data={metrics.categoryBreakdown} />
       <div className="grid items-stretch gap-4 lg:grid-cols-3">
-        <div className="lg:col-span-2">
+        <div className="min-h-0 lg:col-span-2">
           <AuraHistogram data={metrics.auraDistribution} />
         </div>
         <DistributionStats

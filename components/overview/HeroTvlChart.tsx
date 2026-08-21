@@ -1,6 +1,7 @@
 ﻿"use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { motion } from "framer-motion";
 import {
   Area,
   CartesianGrid,
@@ -12,6 +13,7 @@ import {
   YAxis,
 } from "recharts";
 import type { ProjectedSnapshotTvl } from "@/lib/projected-snapshot-tvl";
+import { CHART_GOLD } from "@/lib/overview-metrics";
 import { cn } from "@/lib/utils";
 import type { Snapshot } from "@/types";
 
@@ -94,16 +96,14 @@ function niceValueDomain(min: number, max: number): { lo: number; hi: number; st
 
 const DAY_MS = 86_400_000;
 
-/** Room one "Aug 08" label needs before it starts touching its neighbour. The
- * text itself measures 44-49px depending on its digits, so this leaves at
- * least 9px of air between any two. */
-const MIN_LABEL_SPACING_PX = 58;
+/** Room one "Aug 08" needs in Overpass Mono 12px before it touches its
+ * neighbour. The glyphs run ~52–56px wide; 72 leaves ~16px of air. */
+const MIN_LABEL_SPACING_PX = 72;
 
 
 
-/** A date label, centred on its tick — except the first, which starts on it
- * so the opening reading can sit on the left edge instead of being indented
- * by half a caption. */
+/** A date label, centred on its tick — except the first (flush left) and
+ * the last (flush right), so end captions don't spill into their neighbour. */
 function AxisDateTick({
   x,
   y,
@@ -117,15 +117,17 @@ function AxisDateTick({
   labels?: string[];
 }) {
   if (x == null || y == null || !payload) return null;
+  const last = labels != null && payload.value === labels.length - 1;
+  const anchor = payload.value === 0 ? "start" : last ? "end" : "middle";
 
   return (
     <text
       x={x}
       y={y + 12}
-      textAnchor={payload.value === 0 ? "start" : "middle"}
+      textAnchor={anchor}
       fill="var(--color-text-secondary)"
       fontSize={11}
-      fontFamily="var(--font-ibm-plex-sans)"
+      fontFamily="var(--font-mono)"
     >
       {labels?.[payload.value] ?? ""}
     </text>
@@ -150,10 +152,10 @@ function TvlDot({
     <circle
       cx={cx}
       cy={cy}
-      r={2.4}
-      fill="#ffb547"
+      r={1.5}
+      fill={CHART_GOLD}
       stroke="#0b0b0c"
-      strokeWidth={1.5}
+      strokeWidth={1.1}
     />
   );
 }
@@ -183,14 +185,9 @@ export function HeroTvlChart({
   const [range, setRange] = useState<Range>("7D");
   const withProjection = showProjection && projection.available;
 
-  // The travelling glint follows the line's own rendered shape exactly —
-  // rather than approximating Recharts' curve math ourselves, this mirrors
-  // the `d` of the actual stroke path Recharts already drew onto an overlay
-  // path stacked on top of it.
+  // Plot width only — used to keep the x-axis from asking for more date
+  // labels than actually fit side by side.
   const chartWrapRef = useRef<HTMLDivElement | null>(null);
-  const pulseSvgRef = useRef<SVGSVGElement | null>(null);
-  /** Plot width, used to keep the x-axis from asking for more date labels
-   * than actually fit side by side. */
   const [wrapWidth, setWrapWidth] = useState(0);
   /** That width minus the y-axis gutter, the chart's right margin and the
    * left reserve — the strip the date labels actually have to share. */
@@ -274,11 +271,17 @@ export function HeroTvlChart({
         ? Math.max(0, projection.nextSnapshotTimestamp - readings[lastIdx].t)
         : 0;
     const stretch = spanMs > 0 ? 1 + projMs / spanMs : 1;
+    // 30D / ALL need fewer captions — daily-ish ticks pack "Aug 08" into
+    // each other even after the mono spacing floor. Cap the rung count so
+    // those windows read as a handful of dates, not a crowded strip.
+    const maxSteps =
+      range === "ALL" ? 4 : range === "30D" ? 5 : rungCount - 1;
     const steps = Math.max(
       1,
       Math.min(
+        maxSteps,
         rungCount - 1,
-        Math.floor(labelStripWidth / MIN_LABEL_SPACING_PX / stretch)
+        Math.max(1, Math.floor(labelStripWidth / MIN_LABEL_SPACING_PX / stretch))
       )
     );
 
@@ -342,54 +345,12 @@ export function HeroTvlChart({
     const wrap = chartWrapRef.current;
     if (!wrap) return;
 
-    // Written straight to the DOM node rather than through React state. The
-    // Area's entrance is JS-driven (react-smooth) and rewrites `d` every
-    // frame, so routing each frame through a state update meant the overlay
-    // rendered one frame behind the curve it was tracing — visible as the
-    // glint hanging off the old shape while the line moved under it.
-    const sync = () => {
-      setWrapWidth(wrap.clientWidth);
-      const layers = pulseSvgRef.current?.querySelectorAll<SVGPathElement>(".tvl-pulse-line");
-      if (!layers?.length) return;
-      const d = wrap
-        .querySelector<SVGPathElement>(".recharts-area-curve")
-        ?.getAttribute("d");
-      layers.forEach((dst) => {
-        if (d) {
-          if (dst.getAttribute("d") !== d) dst.setAttribute("d", d);
-          dst.style.visibility = "";
-        } else {
-          // No curve drawn at all (empty range) — hide rather than leave a
-          // stale shape floating over an empty chart.
-          dst.style.visibility = "hidden";
-        }
-      });
-    };
-
+    const sync = () => setWrapWidth(wrap.clientWidth);
     sync();
-
-    // A MutationObserver rather than a timer or rAF loop: it fires on the
-    // very mutation that changes `d`, in the same tick and before paint, so
-    // the clone is never even one frame stale. It also needs no dependency
-    // on `data` — a range switch reaches us as the same attribute mutation
-    // that any other reshape does. (rAF would have been wrong here anyway:
-    // browsers suspend it entirely in a backgrounded tab, the reason this
-    // glint previously failed to appear at all until the tab was focused.)
-    const mo = new MutationObserver(sync);
-    mo.observe(wrap, {
-      subtree: true,
-      childList: true,
-      attributes: true,
-      attributeFilter: ["d"],
-    });
 
     const ro = new ResizeObserver(sync);
     ro.observe(wrap);
-
-    return () => {
-      mo.disconnect();
-      ro.disconnect();
-    };
+    return () => ro.disconnect();
   }, []);
 
   return (
@@ -406,27 +367,29 @@ export function HeroTvlChart({
             content-sized pills came out three different widths inside a
             group that is meant to read as one control. Same width as the view
             toggle beside it — see TVL_TOGGLE_GROUP_W. */}
-        <div className="flex shrink-0 gap-1.5" style={{ width: TVL_TOGGLE_GROUP_W }}>
-          {RANGES.map((r) => (
-            <button
-              key={r}
-              type="button"
-              onClick={() => changeRange(r)}
-              className={cn(
-                "flex-1 px-2.5 py-[3px] text-[11px]",
-                // The transparent border on the active pill is load-bearing:
-                // .ghost-pill carries a 1px border and .cta doesn't, and
-                // with flex-basis:0 under border-box each button's base size
-                // is its own padding plus border — so without this the
-                // selected pill came out 2px narrower than the two beside it.
-                r === range
-                  ? "cta border border-transparent font-medium"
-                  : "ghost-pill cursor-pointer"
-              )}
-            >
-              {r}
-            </button>
-          ))}
+        <div className="term-seg" style={{ width: TVL_TOGGLE_GROUP_W }}>
+          {RANGES.map((r) => {
+            const on = r === range;
+            return (
+              <button
+                key={r}
+                type="button"
+                onClick={() => changeRange(r)}
+                aria-pressed={on}
+                className={cn("term-seg-btn", on ? "is-on" : "is-off")}
+              >
+                {on && (
+                  <motion.span
+                    layoutId="tvl-range-toggle-pill"
+                    className="term-seg-pill"
+                    aria-hidden="true"
+                    transition={{ type: "spring", stiffness: 480, damping: 32 }}
+                  />
+                )}
+                <span className="relative z-10">{r}</span>
+              </button>
+            );
+          })}
         </div>
       </div>
 
@@ -451,16 +414,16 @@ export function HeroTvlChart({
           >
             <defs>
               <linearGradient id="heroTvlFill" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="rgba(255,181,71,0.30)" />
+                <stop offset="0%" stopColor="rgba(255,181,71,0.12)" />
                 <stop offset="100%" stopColor="rgba(255,181,71,0)" />
               </linearGradient>
               {/* Softly fades the line's own opacity toward both ends —
                   objectBoundingBox coordinates, so 0%/100% track the line's
                   own left/right extent regardless of the visible range. */}
               <linearGradient id="heroTvlLineFade" x1="0" y1="0" x2="1" y2="0">
-                <stop offset="0%" stopColor="#ffb547" stopOpacity={0} />
-                <stop offset="7%" stopColor="#ffb547" stopOpacity={1} />
-                <stop offset="100%" stopColor="#ffb547" stopOpacity={1} />
+                <stop offset="0%" stopColor={CHART_GOLD} stopOpacity={0} />
+                <stop offset="7%" stopColor={CHART_GOLD} stopOpacity={1} />
+                <stop offset="100%" stopColor={CHART_GOLD} stopOpacity={1} />
               </linearGradient>
             </defs>
             <CartesianGrid stroke="rgba(255,255,255,.05)" vertical={false} />
@@ -504,7 +467,7 @@ export function HeroTvlChart({
               tick={{
                 fontSize: 10.5,
                 fill: "#8b8580",
-                fontFamily: "var(--font-ibm-plex-sans)",
+                fontFamily: "var(--font-mono)",
                 textAnchor: "end",
                 dx: Y_AXIS_W,
               }}
@@ -554,7 +517,7 @@ export function HeroTvlChart({
               type="natural"
               dataKey="tvl"
               stroke="url(#heroTvlLineFade)"
-              strokeWidth={1.8}
+              strokeWidth={1.25}
               strokeLinecap="round"
               fill="url(#heroTvlFill)"
               connectNulls={false}
@@ -563,69 +526,33 @@ export function HeroTvlChart({
               // glued to the nearer label (16 against 17, today's snapshot
               // against the live figure).
               dot={<TvlDot />}
-              activeDot={{ r: 4, fill: "#ffb547", stroke: "#0b0b0c", strokeWidth: 2 }}
+              activeDot={{ r: 2.75, fill: CHART_GOLD, stroke: "#0b0b0c", strokeWidth: 1.4 }}
               // Entrance animation off, and not just for taste: Recharts
               // holds the dots back until the animation reports finished, and
               // that animation runs on requestAnimationFrame — which browsers
               // suspend in a background tab. Loaded in one, the curve drew but
-              // the dots never appeared at all. Same rAF trap the donuts and
-              // the shimmer already had to avoid.
+              // the dots never appeared at all.
               isAnimationActive={false}
             />
             {withProjection && (
               <Line
                 type="linear"
                 dataKey="projected"
-                stroke="#ffb547"
-                strokeWidth={1.6}
-                strokeDasharray="6 4"
-                strokeOpacity={0.55}
+                stroke={CHART_GOLD}
+                strokeWidth={1.15}
+                strokeDasharray="5 4"
+                strokeOpacity={0.5}
                 dot={false}
                 // Without this the whole projected stretch was dead to the
                 // cursor: the TVL series has no points out there, so hovering
                 // the right-hand ~18% of the plot produced no dot at all.
-                activeDot={{ r: 4, fill: "#ffb547", stroke: "#0b0b0c", strokeWidth: 2 }}
+                activeDot={{ r: 2.75, fill: CHART_GOLD, stroke: "#0b0b0c", strokeWidth: 1.4 }}
                 connectNulls
                 isAnimationActive={false}
               />
             )}
           </ComposedChart>
         </ResponsiveContainer>
-
-        {/* Always mounted, its `d` filled in by the effect above — gating the
-            element on state would mean unmounting and remounting it on every
-            reshape, which restarts the CSS animation from zero each time. */}
-        <svg
-          ref={pulseSvgRef}
-          className="pointer-events-none absolute inset-0 h-full w-full"
-          aria-hidden="true"
-        >
-          <defs>
-            {/* Coordinates are fractions of the path's own bounding box, so
-                the sweep spans the visible line at any range without needing
-                a pixel width. x1/x2 move together, keeping the band a
-                constant 0.3 of the width; SMIL rather than CSS because CSS
-                cannot animate gradient coordinates. */}
-            <linearGradient id="tvlShimmer" x1="-0.3" y1="0" x2="0" y2="0">
-              <stop offset="0%" stopColor="#ffb547" stopOpacity="0" />
-              <stop offset="50%" stopColor="#fff3d6" stopOpacity="0.9" />
-              <stop offset="100%" stopColor="#ffb547" stopOpacity="0" />
-              <animate
-                attributeName="x1"
-                values="-0.3;1"
-                dur="7s"
-                repeatCount="indefinite"
-              />
-              <animate attributeName="x2" values="0;1.3" dur="7s" repeatCount="indefinite" />
-            </linearGradient>
-          </defs>
-          <path
-            fill="none"
-            stroke="url(#tvlShimmer)"
-            className="tvl-pulse-line"
-            style={{ visibility: "hidden" }}
-          />
-        </svg>
       </div>
     </div>
   );

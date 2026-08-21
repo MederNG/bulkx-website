@@ -28,11 +28,7 @@ export function TvlPanel({ snapshots }: { snapshots: Snapshot[] }) {
   // the chart instead, which sits it beside the range buttons on one line.
   const viewToggle =
     views.length > 1 ? (
-      <div
-        className="flex shrink-0 gap-1 rounded-lg border border-[var(--color-line-strong)] p-0.5"
-        // Same width as the range group beside it — see TVL_TOGGLE_GROUP_W.
-        style={{ width: TVL_TOGGLE_GROUP_W }}
-      >
+      <div className="term-seg" style={{ width: TVL_TOGGLE_GROUP_W }}>
         {views.map((view) => {
           const on = view.id === active.id;
           return (
@@ -41,17 +37,12 @@ export function TvlPanel({ snapshots }: { snapshots: Snapshot[] }) {
               type="button"
               onClick={() => setViewId(view.id)}
               aria-pressed={on}
-              className={cn(
-                "relative flex-1 rounded-md px-2.5 py-1 text-center text-[11px] transition-colors",
-                on
-                  ? "font-medium text-[var(--color-bulk-base)]"
-                  : "font-medium text-text-secondary hover:text-text-primary"
-              )}
+              className={cn("term-seg-btn", on ? "is-on" : "is-off")}
             >
               {on && (
                 <motion.span
                   layoutId="tvl-toggle-pill"
-                  className="absolute inset-0 rounded-md bg-accent"
+                  className="term-seg-pill"
                   transition={{ type: "spring", stiffness: 480, damping: 32 }}
                 />
               )}
@@ -63,7 +54,7 @@ export function TvlPanel({ snapshots }: { snapshots: Snapshot[] }) {
     ) : null;
 
   return (
-    <PanelCard className="h-full flex-1">
+    <PanelCard className="h-full flex-1" glossy glossDelay={-4}>
       {/* No headline number here either — the TVL figure, its 7D change and
           both sub-stats all live in the KPI card at the top of the page, so
           repeating them would be saying the same thing twice and would cost

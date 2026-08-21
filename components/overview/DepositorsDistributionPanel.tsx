@@ -3,7 +3,9 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import type { DepositTier } from "@/lib/overview-metrics";
+import { CHART_GOLD } from "@/lib/overview-metrics";
 import { PanelCard } from "@/components/overview/PanelCard";
+import { CATEGORY_NAME } from "@/components/overview/MetricTable";
 import { cn } from "@/lib/utils";
 import { useNarrowViewport } from "@/lib/use-narrow-viewport";
 
@@ -35,11 +37,9 @@ function usdExact(value: number): string {
   return `$${Math.round(value).toLocaleString("en-US")}`;
 }
 
-/** Type scale, taken from what the rest of the Overview already uses rather
- * than from the mock this panel was drawn from. Mono is kept for figures
- * only, which is what it is loaded for. */
-const HEADING = "text-[10px] uppercase tracking-[0.1em] text-text-muted";
-const CELL = "text-[13px] tabular-nums";
+/** Type scale — Familjen labels/names, Overpass Mono data cells. */
+const HEADING = "font-label text-text-muted";
+const CELL = "font-data";
 /** The name column is capped at 180 so a wide viewport doesn't strand
  * "Megalodon" hundreds of pixels from its own row of figures — that was the
  * old bug this column existed to avoid. The five numeric ones are fixed to
@@ -87,8 +87,8 @@ const HEAD_H = 30;
 /** Both bars sit in every tier's slot at once, side by side with a hairline
  * between them, so the pair reads as one object — the two readings of a
  * single tier — rather than two unrelated bars that happen to be adjacent. */
-const BAR_W = 32;
-const BAR_GAP = 6;
+const BAR_W = 20;
+const BAR_GAP = 8;
 /** Only for a tier that really is empty — anything with wallets in it gets a
  * height off the scale below, which never rounds to nothing. */
 const MIN_BAR_PCT = 1.2;
@@ -145,8 +145,8 @@ export function DepositorsDistributionPanel({ tiers }: { tiers: DepositTier[] })
   const [hovered, setHovered] = useState<string | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
   const narrow = useNarrowViewport();
-  const barW = narrow ? 14 : BAR_W;
-  const barGap = narrow ? 3 : BAR_GAP;
+  const barW = narrow ? 10 : BAR_W;
+  const barGap = narrow ? 4 : BAR_GAP;
   const yAxisW = narrow ? 36 : Y_AXIS_W;
   const tableCols = narrow ? TABLE_COLS_NARROW : TABLE_COLS;
 
@@ -234,6 +234,14 @@ export function DepositorsDistributionPanel({ tiers }: { tiers: DepositTier[] })
 
   const hoveredRow = rows.find((r) => r.id === hovered) ?? null;
   const hoveredIndex = hoveredRow ? rows.findIndex((r) => r.id === hoveredRow.id) : -1;
+  const primaryId = rows[0]?.id;
+  /** Hovering a non-primary tier: gold leaves Snowflake and the lit tier
+   * takes it — same transfer as the Overview donut. */
+  const borrowColor =
+    hovered && primaryId && hovered !== primaryId
+      ? (rows.find((r) => r.id === hovered)?.color ?? null)
+      : null;
+  const primaryIdle = borrowColor == null;
 
   // Plot hover follows the cursor. Table hover parks over that tier's bar —
   // the pointer is in the other card, so the last plot position would leave
@@ -329,7 +337,7 @@ export function DepositorsDistributionPanel({ tiers }: { tiers: DepositTier[] })
             id, and both toggles are mounted on the page at once, so sharing
             the id would have this pill leap across the page toward the TVL
             one's position the instant either changed. */}
-        <div className="flex shrink-0 gap-1 rounded-lg border border-[var(--color-line-strong)] p-0.5">
+        <div className="term-seg">
           {(["count", "value"] as const).map((m) => {
             const on = m === metric;
             return (
@@ -338,17 +346,12 @@ export function DepositorsDistributionPanel({ tiers }: { tiers: DepositTier[] })
                 type="button"
                 onClick={() => setMetric(m)}
                 aria-pressed={on}
-                className={cn(
-                  "relative rounded-md px-2.5 py-1 text-center text-[11px] transition-colors",
-                  on
-                    ? "font-medium text-[var(--color-bulk-base)]"
-                    : "font-medium text-text-secondary hover:text-text-primary"
-                )}
+                className={cn("term-seg-btn", on ? "is-on" : "is-off")}
               >
                 {on && (
                   <motion.span
                     layoutId="deposit-metric-toggle-pill"
-                    className="absolute inset-0 rounded-md bg-accent"
+                    className="term-seg-pill"
                     transition={{ type: "spring", stiffness: 480, damping: 32 }}
                   />
                 )}
@@ -402,7 +405,7 @@ export function DepositorsDistributionPanel({ tiers }: { tiers: DepositTier[] })
                   // 10.5px / text-muted, is what actually renders. Matched
                   // here literally since this panel isn't recharts and gets
                   // no such override.
-                  className="absolute right-2 -translate-y-1/2 whitespace-nowrap text-[11px] leading-none tabular-nums text-text-secondary"
+                  className="font-data absolute right-2 -translate-y-1/2 whitespace-nowrap text-[11px] leading-none text-text-secondary"
                   style={{ top: (i * (ROW_H * 5)) / 5 }}
                 >
                   {label}
@@ -457,10 +460,14 @@ export function DepositorsDistributionPanel({ tiers }: { tiers: DepositTier[] })
                   shift either by the width of the border toggling on and
                   off. */}
               <div className="absolute inset-0 flex items-end">
-                {rows.map((row) => {
+                {rows.map((row, i) => {
                   const muted = isMuted(row.id);
                   const countActive = metric === "count";
                   const isHovered = hovered === row.id;
+                  const isPrimary = i === 0;
+                  const baseColor =
+                    isPrimary ? (borrowColor ?? CHART_GOLD) : row.color;
+                  const dimOthers = hovered != null && !isHovered;
                   // Only the series the toggle is showing solid takes the
                   // highlight. Lighting both bars of the pair made the hover
                   // read as "this tier", when what it marks is the one figure
@@ -477,55 +484,68 @@ export function DepositorsDistributionPanel({ tiers }: { tiers: DepositTier[] })
                       }}
                       onMouseLeave={() => setHovered(null)}
                       onClick={() => toggleSelected(row.id)}
-                      className="flex h-full flex-1 cursor-pointer items-end justify-center transition-opacity"
-                      style={{ gap: barGap, opacity: muted ? 0.22 : 1 }}
+                      className="flex h-full flex-1 cursor-pointer items-end justify-center transition-opacity duration-250"
+                      style={{
+                        gap: barGap,
+                        opacity: muted ? 0.22 : dimOthers ? 0.4 : 1,
+                      }}
                     >
                       {/* Depositors — solid while Count is active, an
                           outline of the same colour otherwise. */}
                       <div
-                        className="rounded-t-[2px] border transition-[height,background-color,border-color,outline-color] duration-300"
+                        className={cn(
+                          "rounded-t-[2px] border-[0.5px] transition-[height,background-color,border-color,outline-color,filter] duration-300",
+                          isPrimary &&
+                            primaryIdle &&
+                            countActive &&
+                            !countLit &&
+                            "chart-gold-pulse"
+                        )}
                         style={{
                           width: barW,
                           height: `${row.countHeight}%`,
                           background: countActive
-                            ? row.color
-                            : `color-mix(in srgb, ${row.color} 25%, transparent)`,
+                            ? countLit
+                              ? CHART_GOLD
+                              : baseColor
+                            : countLit
+                              ? `color-mix(in srgb, ${CHART_GOLD} 40%, transparent)`
+                              : `color-mix(in srgb, ${baseColor} 35%, transparent)`,
                           borderColor: countActive
                             ? "transparent"
-                            : `color-mix(in srgb, ${row.color} 85%, transparent)`,
-                          // Same highlight the /tools charts give an active
-                          // bar: a bright hairline round the shape plus a
-                          // gold bloom. Drawn as an outline rather than a
-                          // border so it can't shift the bar by its own
-                          // width, and kept mounted in transparent at rest so
-                          // the colour transitions instead of snapping on.
+                            : `color-mix(in srgb, ${baseColor} 65%, transparent)`,
                           outline: `1px solid ${countLit ? "#FFFEEF" : "transparent"}`,
                           filter: countLit
-                            ? "drop-shadow(0 0 6px rgba(255,181,71,0.45))"
+                            ? "drop-shadow(0 0 4px rgba(255,181,71,0.28))"
                             : undefined,
                         }}
                       />
                       {/* Deposits — the mirror: solid while Value is active. */}
                       <div
-                        className="rounded-t-[2px] border transition-[height,background-color,border-color,outline-color] duration-300"
+                        className={cn(
+                          "rounded-t-[2px] border-[0.5px] transition-[height,background-color,border-color,outline-color,filter] duration-300",
+                          isPrimary &&
+                            primaryIdle &&
+                            !countActive &&
+                            !valueLit &&
+                            "chart-gold-pulse"
+                        )}
                         style={{
                           width: barW,
                           height: `${row.valueHeight}%`,
                           background: !countActive
-                            ? row.color
-                            : `color-mix(in srgb, ${row.color} 25%, transparent)`,
+                            ? valueLit
+                              ? CHART_GOLD
+                              : baseColor
+                            : valueLit
+                              ? `color-mix(in srgb, ${CHART_GOLD} 40%, transparent)`
+                              : `color-mix(in srgb, ${baseColor} 35%, transparent)`,
                           borderColor: !countActive
                             ? "transparent"
-                            : `color-mix(in srgb, ${row.color} 85%, transparent)`,
-                          // Same highlight the /tools charts give an active
-                          // bar: a bright hairline round the shape plus a
-                          // gold bloom. Drawn as an outline rather than a
-                          // border so it can't shift the bar by its own
-                          // width, and kept mounted in transparent at rest so
-                          // the colour transitions instead of snapping on.
+                            : `color-mix(in srgb, ${baseColor} 65%, transparent)`,
                           outline: `1px solid ${valueLit ? "#FFFEEF" : "transparent"}`,
                           filter: valueLit
-                            ? "drop-shadow(0 0 6px rgba(255,181,71,0.45))"
+                            ? "drop-shadow(0 0 4px rgba(255,181,71,0.28))"
                             : undefined,
                         }}
                       />
@@ -547,13 +567,13 @@ export function DepositorsDistributionPanel({ tiers }: { tiers: DepositTier[] })
               >
                 <div
                   ref={cardRef}
-                  className="-translate-x-1/2 rounded-[4px] border border-[rgba(198,182,186,0.2)] bg-[#1B1A14] px-3 py-2.5 text-[12px] shadow-[0_14px_36px_rgba(0,0,0,.55)]"
+                  className="-translate-x-1/2 rounded-[4px] border border-[rgba(198,182,186,0.2)] bg-[#1B1A14] px-3 py-2.5 shadow-[0_14px_36px_rgba(0,0,0,.55)]"
                 >
                   {/* Tier name alone, centred. The size band it used to carry
                       is the same string the table's own SIZE column shows for
                       this row a few inches away, and the range labels under
                       the bars repeat it a third time. */}
-                  <div className="mb-2 whitespace-nowrap text-center leading-none text-[#FFFEEF]">
+                  <div className="mb-2 whitespace-nowrap text-center font-sans text-[13px] font-medium leading-none text-[#FFFEEF]">
                     {hoveredRow.name}
                   </div>
                   {/* Only the pair the active toggle actually explains: Count
@@ -582,8 +602,8 @@ export function DepositorsDistributionPanel({ tiers }: { tiers: DepositTier[] })
                         ] as const)
                     ).map(([label, value]) => (
                       <Fragment key={label}>
-                        <span className="text-text-muted">{label} :</span>
-                        <span className="text-right tabular-nums text-[#FFB547]">{value}</span>
+                        <span className="font-label text-text-muted">{label}</span>
+                        <span className="font-data text-right text-[#FFB547]">{value}</span>
                       </Fragment>
                     ))}
                   </div>
@@ -647,7 +667,7 @@ export function DepositorsDistributionPanel({ tiers }: { tiers: DepositTier[] })
       {/* ------------------------------------------------ table card */}
       {/* A different gloss delay from the chart card's, so the two drift out
           of step with each other rather than lighting up in unison. */}
-      <PanelCard glossy glossDelay={-11}>
+      <PanelCard>
         {/* Reserves exactly the height of the toggle sitting in the card
             beside this one. Without it the table's header rule — and every
             tier row under it — would ride a toggle's worth higher than the
@@ -662,7 +682,11 @@ export function DepositorsDistributionPanel({ tiers }: { tiers: DepositTier[] })
             on the right, rather than stretching the columns into it. */}
         <div className="flex min-w-0 flex-col">
           <div
-            className={cn(tableCols, HEADING, "border-b border-[var(--color-line)]")}
+            className={cn(
+              tableCols,
+              HEADING,
+              "-mx-2.5 border-b border-[var(--color-line)] px-2.5"
+            )}
             style={{ height: HEAD_H }}
           >
             <span className="pl-[17px] text-left">Tier</span>
@@ -701,18 +725,32 @@ export function DepositorsDistributionPanel({ tiers }: { tiers: DepositTier[] })
                 onClick={() => toggleSelected(row.id)}
                 className={cn(
                   tableCols,
-                  "shrink-0 cursor-pointer transition-colors",
+                  // Same always-on inset as MetricTableRow: highlight clears
+                  // the scaled bullet and rounds instead of cutting the edge.
+                  "-mx-2.5 shrink-0 cursor-pointer rounded-md px-2.5 transition-colors",
                   i > 0 && "border-t border-[var(--color-line-soft)]",
-                  lit && "bg-[rgba(255,255,255,0.03)]"
+                  lit && i > 0 && "border-transparent",
+                  lit && "bg-[rgba(255,255,255,0.045)]"
                 )}
                 style={{ height: ROW_H }}
               >
-                <span className="flex min-w-0 items-center gap-2 text-[13px]" style={{ color }}>
+                <span className={cn("flex min-w-0 items-center gap-2", CATEGORY_NAME)} style={{ color }}>
                   <span
-                    className="h-[9px] w-[9px] shrink-0 rounded-full transition-transform"
+                    className={cn(
+                      "h-[9px] w-[9px] shrink-0 rounded-full transition-[transform,background-color,opacity]",
+                      i === 0 && primaryIdle && !lit && "chart-gold-pulse"
+                    )}
                     style={{
-                      background: row.color,
-                      opacity: muted ? 0.4 : 1,
+                      background: lit
+                        ? CHART_GOLD
+                        : i === 0 && borrowColor
+                          ? borrowColor
+                          : row.color,
+                      opacity: muted
+                        ? 0.45
+                        : hovered != null && !lit && !(i === 0 && borrowColor)
+                          ? 0.4
+                          : 1,
                       transform: lit ? "scale(1.25)" : "scale(1)",
                     }}
                   />

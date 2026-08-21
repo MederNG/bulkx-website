@@ -78,7 +78,7 @@ export function SiteNav() {
             priority
             className="hidden sm:block"
           />
-          <span className="text-[17px] font-normal tracking-[0.16em] text-text-secondary">
+          <span className="font-sans text-[17px] font-semibold tracking-[-0.02em] text-text-secondary">
             INTELLIGENCE
           </span>
         </Link>
@@ -91,7 +91,7 @@ export function SiteNav() {
                 <Link
                   href={item.href}
                   className={cn(
-                    "site-nav-link relative py-[6px] text-sm transition-colors",
+                    "site-nav-link font-sans relative py-[6px] text-[12px] font-semibold uppercase tracking-[0.14em] transition-colors",
                     active ? "text-accent" : "text-text-muted hover:text-text-primary"
                   )}
                   data-active={active || undefined}

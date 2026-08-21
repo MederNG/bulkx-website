@@ -44,7 +44,7 @@ function KpiCard({
     // One gap on the column instead of a margin picked per child (they were
     // 4px under the title and 6–8px under the value), so every block in every
     // one of these cards is the same distance from the one above it.
-    <div className="flex min-w-0 flex-col gap-2 rounded-[10px] border border-[var(--color-line)] bg-[var(--color-bulk-base)] px-3 py-3 lg:px-5 lg:py-4">
+    <div className="flex min-w-0 flex-col gap-2 rounded-[12px] border-0 bg-[var(--color-bulk-base)] px-3 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.07)] lg:px-5 lg:py-4">
       {/* leading-none, here and on the lines under each value: at its default
           line height the 11px title carries ~5px of dead space inside its own
           box, which the flex gap then adds to. Equal gaps between the boxes
@@ -183,7 +183,7 @@ function AprWeekBars({
 
   return (
     <div
-      className="mt-auto flex h-[30px] items-stretch gap-[3px]"
+      className="mt-auto flex h-[28px] items-stretch justify-center gap-[4px]"
       onMouseLeave={() => onActiveWeekChange(null)}
     >
       {weeks.map((w) => {
@@ -199,20 +199,20 @@ function AprWeekBars({
             // The hover target is the full-height column, not the bar: a
             // short bar is a few px tall and would be near-impossible to
             // land on otherwise.
-            className="flex flex-1 cursor-default items-end"
+            className="flex w-[7px] shrink-0 cursor-default items-end"
             onMouseEnter={() => onActiveWeekChange(w.week)}
             role="img"
             aria-label={`Week ${w.week}: ${w.apr.toFixed(1)}% APR`}
           >
             <div
               className={cn(
-                "w-full rounded-[2px]",
+                "w-full rounded-[1px]",
                 pulsing ? "apr-week-pulse" : "transition-[background-color]",
                 activeWeek != null && !active && "opacity-45"
               )}
               style={{
                 height: `${Math.max(8, (w.apr / max) * 100)}%`,
-                background: active || w.isCurrent ? "#ffb547" : "rgba(255,181,71,0.32)",
+                background: active || w.isCurrent ? "#ffb547" : "#5E819E",
               }}
             />
           </div>
@@ -242,7 +242,7 @@ function SubStat({
 }) {
   return (
     <div className="min-w-0 px-1 text-center lg:px-2">
-      <p className="m-0 truncate text-[9.5px] uppercase leading-none tracking-[0.04em] text-text-muted lg:tracking-[0.1em]">
+      <p className="font-label m-0 truncate text-text-muted">
         {compactLabel ? (
           <>
             <span className="lg:hidden">{compactLabel}</span>
@@ -259,7 +259,7 @@ function SubStat({
           strip it is dropped: the dollar figure already fills the cell. */}
       <p
         className={cn(
-          "m-0 mt-2 truncate text-[12px] font-semibold leading-none tabular-nums lg:text-[13px]",
+          "font-data m-0 mt-2 truncate leading-none",
           tone
         )}
       >
@@ -363,7 +363,7 @@ export function KpiStrip({
         {/* Centred, unlike the headline in the other three cards: this one
             sits over a two-column rule-and-stats block, so left-aligning it
             hung the figure off the left edge of a symmetrical layout. */}
-        <p className="m-0 min-w-0 text-center text-[clamp(20px,2.1vw,27px)] font-semibold leading-none tracking-[-0.02em]">
+        <p className="font-figure m-0 min-w-0 text-center text-[clamp(20px,2.1vw,27px)] font-semibold leading-none tracking-[-0.02em]">
           <KpiTerminalCounter value={tvlView.valueNumber} format="usd-full" />
         </p>
         {/* Rule between the headline and its supporting figures, and a second
@@ -399,7 +399,7 @@ export function KpiStrip({
         centered
       >
         <div className="relative">
-          <p className="m-0 truncate text-center text-[clamp(20px,2.1vw,27px)] font-semibold leading-none tracking-[-0.02em] text-accent">
+          <p className="font-figure m-0 truncate text-center text-[clamp(20px,2.1vw,27px)] font-semibold leading-none tracking-[-0.02em] text-accent">
             {shownApr != null ? `${shownApr.toFixed(1)}%` : "—"}
           </p>
           {aprExplained && aprPercent != null && (
@@ -415,7 +415,7 @@ export function KpiStrip({
             Always rendered, not only while hovering: the number changes under
             the cursor, and without a label it would be unclear that it had. */}
         {shownApr != null && aprWeeks.length > 0 && (
-          <p className="m-0 text-center text-[11px] leading-none text-text-muted">
+          <p className="font-data m-0 text-center leading-none text-text-muted">
             W{shownWeek}
           </p>
         )}
@@ -429,7 +429,7 @@ export function KpiStrip({
       </KpiCard>
 
       <KpiCard label="Current Week" centered>
-        <p className="m-0 truncate text-center text-[clamp(20px,2.1vw,27px)] font-semibold leading-none tracking-[-0.02em] text-text-primary">
+        <p className="font-figure m-0 truncate text-center text-[clamp(20px,2.1vw,27px)] font-semibold leading-none tracking-[-0.02em] text-text-primary">
           {`W${live.depositPredict.campaignWeek}`}
         </p>
         {/* Was a static "Aug 15 – Aug 22, 2026" date range — replaced with
@@ -454,7 +454,7 @@ export function KpiStrip({
         centered
       >
         <div className="relative">
-          <p className="m-0 truncate text-center text-[clamp(20px,2.1vw,27px)] font-semibold leading-none tracking-[-0.02em] text-[#00B481]">
+          <p className="font-figure m-0 truncate text-center text-[clamp(20px,2.1vw,27px)] font-semibold leading-none tracking-[-0.02em] text-text-primary">
             {ogHodlers.count.toLocaleString("en-US")}
           </p>
           {ogExplained && (
@@ -468,8 +468,8 @@ export function KpiStrip({
             </p>
           )}
         </div>
-        <p className="m-0 mt-auto truncate text-center text-[11.5px] leading-none text-text-muted">
-          {ogHodlers.pctOfDepositors.toFixed(1)}% of total depositors
+        <p className="m-0 mt-auto text-center font-data text-[10.5px] leading-snug text-text-muted">
+          {ogHodlers.pctOfDepositors.toFixed(1)}% of depositors
         </p>
       </KpiCard>
     </div>
