@@ -81,7 +81,8 @@ function renderActiveShape(
   rawProps: unknown,
   lit: boolean,
   baseFill: string,
-  pulse = false
+  pulse = false,
+  pulseKey = 0
 ) {
   const props = rawProps as ActiveShapeProps;
   const { cx, cy, innerRadius, outerRadius, startAngle, endAngle } = props;
@@ -103,8 +104,13 @@ function renderActiveShape(
         stroke="var(--color-bulk-base)"
         strokeWidth={1}
       />
+      {/* key remounts the beat when the active slice changes. Without it,
+          switching from the primary (which opened via opacity 0→pulse) to
+          another slice mounts motion already on CHART_GOLD_PULSE with
+          initial={false}, and Chromium never starts the keyframe loop. */}
       <motion.g
-        initial={false}
+        key={pulse && lit ? `gold-pulse-${pulseKey}` : `gold-idle-${pulseKey}`}
+        initial={{ opacity: pulse && lit ? 1 : 0 }}
         animate={
           pulse && lit
             ? CHART_GOLD_PULSE
@@ -442,7 +448,8 @@ export function AuraDonut({
                   props,
                   activeVisible,
                   paintIndex != null ? chartData[paintIndex].color : CHART_GOLD,
-                  paintIndex != null
+                  paintIndex != null,
+                  paintIndex ?? 0
                 )
               }
               onMouseEnter={(_, i) => setHoverIndex(i)}
