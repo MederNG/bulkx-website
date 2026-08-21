@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Search, Loader2 } from "lucide-react";
 import type { WalletData } from "@/types";
 import type { AuraSourceBreakdown } from "@/lib/wallet-aura-breakdown";
+import { PanelCard, PanelLabel } from "@/components/overview/PanelCard";
 import { formatNumber, formatUsd, truncateWallet } from "@/lib/utils";
 
 export function WalletLookup() {
@@ -35,15 +36,15 @@ export function WalletLookup() {
   }
 
   return (
-    <div className="card card-highlight p-4 md:p-5">
-      <p className="section-title mb-3">Wallet Lookup</p>
-      <form onSubmit={handleSearch} className="flex gap-2">
+    <PanelCard glossy glossDelay={-8}>
+      <PanelLabel>Wallet Lookup</PanelLabel>
+      <form onSubmit={handleSearch} className="mt-3 flex gap-2">
         <input
           type="text"
           value={address}
           onChange={(e) => setAddress(e.target.value)}
           placeholder="Enter Solana wallet address..."
-          className="input-field font-mono text-sm"
+          className="input-field font-data text-sm"
         />
         <button type="submit" className="btn-primary flex shrink-0 items-center gap-2" disabled={loading}>
           {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
@@ -84,7 +85,7 @@ export function WalletLookup() {
           </div>
         </>
       )}
-    </div>
+    </PanelCard>
   );
 }
 
@@ -108,9 +109,9 @@ function AuraBreakdownCard({
       <div className="grid grid-cols-2 gap-x-6 gap-y-2 sm:grid-cols-4">
         {rows.map((row) => (
           <div key={row.label}>
-            <p className="text-[10px] uppercase tracking-wider text-text-secondary">{row.label}</p>
+            <p className="font-label text-text-muted">{row.label}</p>
             <p
-              className={`mt-0.5 font-mono text-sm font-medium tabular-nums ${row.accent ? "text-accent" : ""}`}
+              className={`mt-0.5 font-data text-sm font-medium ${row.accent ? "text-accent" : ""}`}
             >
               {formatNumber(row.value)}
             </p>
@@ -134,9 +135,9 @@ function Stat({
 }) {
   return (
     <div className="rounded border border-[rgba(198,182,186,0.08)] bg-bulk-base p-3">
-      <p className="text-[10px] uppercase tracking-wider text-text-secondary">{label}</p>
+      <p className="font-label text-text-muted">{label}</p>
       <p
-        className={`mt-1 text-sm font-medium tabular-nums ${mono ? "font-mono" : ""} ${accent ? "text-accent" : ""}`}
+        className={`mt-1 text-sm font-medium tabular-nums ${mono ? "font-data" : ""} ${accent ? "text-accent" : ""}`}
       >
         {value}
       </p>

@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Cell, Pie, PieChart, Sector } from "recharts";
 import type { OverviewDonutSegment } from "@/lib/overview-metrics";
+import { CHART_GOLD, chartPrimaryRamp } from "@/lib/overview-metrics";
 import { cn } from "@/lib/utils";
 import { useNarrowViewport } from "@/lib/use-narrow-viewport";
 import {
@@ -24,12 +25,12 @@ const START_ANGLE = 90;
  * fixed pixels — the box is sized by the surrounding layout, so deriving the
  * radii from it is what keeps the ring in proportion at any viewport instead
  * of only at the one a hardcoded radius was tuned for. */
-const RING_OUTER_RATIO = 0.448;
-const RING_INNER_RATIO = 0.284;
-/** How far past outerRadius the hover glow's outermost ring reaches. The
- * radius is capped so this always stays inside the canvas — at small sizes
- * that cap, not the ratio above, is what limits the ring. */
-const GLOW_HEADROOM = 12;
+const RING_OUTER_RATIO = 0.45;
+/** Thinner band than before — leaves a larger hole so the centre figure
+ * can sit in proportion with the ring instead of floating in empty space. */
+const RING_INNER_RATIO = 0.398;
+/** Room so sector strokes never clip the canvas edge. */
+const GLOW_HEADROOM = 6;
 /** Square well the Aura analytics page gives the ring, so every group
  * (Overview / Retro / Week N) draws at the same size. Exported so the
  * Category Share chart can share that well and sit on the same top edge. */
@@ -60,43 +61,39 @@ interface ActiveShapeProps {
   fill: string;
 }
 
-/** Just the hover glow — the centre text is an HTML overlay instead (see
- * below), which sidesteps SVG text-wrapping entirely. */
-function renderActiveShape(rawProps: unknown) {
+/**
+ * Room-light hover: base sector stays put so the ring never punches a black
+ * hole; gold only fades in/out on top — on = lights up, off = lights out.
+ */
+function renderActiveShape(rawProps: unknown, lit: boolean, baseFill: string) {
   const props = rawProps as ActiveShapeProps;
-  const { cx, cy, innerRadius, outerRadius, startAngle, endAngle, fill } = props;
+  const { cx, cy, innerRadius, outerRadius, startAngle, endAngle } = props;
   return (
     <g>
       <Sector
         cx={cx}
         cy={cy}
         innerRadius={innerRadius}
-        outerRadius={outerRadius + 6}
+        outerRadius={outerRadius}
         startAngle={startAngle}
         endAngle={endAngle}
-        fill={fill}
-        stroke="#FFB547"
-        strokeWidth={1.5}
-        style={{ filter: "drop-shadow(0 0 5px rgba(255,181,71,0.45))" }}
+        fill={baseFill}
+        stroke="var(--color-bulk-base)"
+        strokeWidth={1}
       />
       <Sector
         cx={cx}
         cy={cy}
-        innerRadius={outerRadius + 8}
-        outerRadius={outerRadius + 10}
+        innerRadius={innerRadius}
+        outerRadius={outerRadius}
         startAngle={startAngle}
         endAngle={endAngle}
-        fill="rgba(255,181,71,0.22)"
-      />
-      <Sector
-        cx={cx}
-        cy={cy}
-        innerRadius={outerRadius + 10}
-        outerRadius={outerRadius + 12}
-        startAngle={startAngle}
-        endAngle={endAngle}
-        fill="#FFB547"
-        style={{ filter: "drop-shadow(0 0 6px rgba(255,181,71,0.55))" }}
+        fill={CHART_GOLD}
+        stroke="none"
+        style={{
+          opacity: lit ? 1 : 0,
+          transition: "opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1)",
+        }}
       />
     </g>
   );
@@ -117,15 +114,62 @@ export function AuraDonut({
   segments,
   totalAuraNumber,
   showShare = true,
+  hoverIndex: hoverIndexProp,
+  onHoverIndexChange,
 }: {
   segments: OverviewDonutSegment[];
   totalAuraNumber: number;
   /** Overview keeps Share so the legend lines up with the tier table under
    * it. Aura sources already has a Category Share chart beside the donut. */
   showShare?: boolean;
+  /** Controlled hover — Aura sources shares this with Category Share so a
+   * legend row, a bar, or a Y-label all light the same slice. */
+  hoverIndex?: number | undefined;
+  onHoverIndexChange?: (index: number | undefined) => void;
 }) {
-  const [activeIndex, setActiveIndex] = useState<number | undefined>(undefined);
+  const [localHover, setLocalHover] = useState<number | undefined>(undefined);
+  const controlled = onHoverIndexChange != null;
+  const hoverIndex = controlled ? hoverIndexProp : localHover;
+  const setHoverIndex = controlled ? onHoverIndexChange! : setLocalHover;
+  /** Sector kept under activeShape while opacity eases out after leave. */
+  const [paintIndex, setPaintIndex] = useState<number | undefined>(undefined);
+  const [activeVisible, setActiveVisible] = useState(false);
   const narrow = useNarrowViewport();
+  const closeTimer = useRef(0);
+  const openRef = useRef(false);
+
+  useEffect(() => {
+    window.clearTimeout(closeTimer.current);
+
+    if (hoverIndex != null) {
+      const alreadyOpen = openRef.current;
+      setPaintIndex(hoverIndex);
+      if (alreadyOpen) {
+        openRef.current = true;
+        setActiveVisible(true);
+        return;
+      }
+      openRef.current = true;
+      setActiveVisible(false);
+      let cancelled = false;
+      const id = requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          if (!cancelled) setActiveVisible(true);
+        });
+      });
+      return () => {
+        cancelled = true;
+        cancelAnimationFrame(id);
+      };
+    }
+
+    openRef.current = false;
+    setActiveVisible(false);
+    closeTimer.current = window.setTimeout(() => {
+      setPaintIndex(undefined);
+    }, 520);
+    return () => window.clearTimeout(closeTimer.current);
+  }, [hoverIndex]);
 
   // Measured off the ROW, not the donut's own box, and against both axes.
   // The ring is square, so its size is bounded by whichever of the two runs
@@ -232,11 +276,13 @@ export function AuraDonut({
 
   const chartData = useMemo<DonutRow[]>(
     () =>
-      segments.map((s) => ({
+      segments.map((s, i) => ({
         category: s.label,
         share: s.pct,
         points: s.points,
-        color: s.color,
+        // Prefer the colour the caller already assigned (primary ramp) so the
+        // ring matches its legend / companion chart.
+        color: s.color || chartPrimaryRamp(i, segments.length),
       })),
     [segments]
   );
@@ -245,8 +291,11 @@ export function AuraDonut({
   // Recharts' sector boundary without ever firing its onMouseLeave, leaving
   // the active slice highlighted indefinitely.
   useEffect(() => {
-    if (activeIndex === undefined) return;
-    const clear = () => setActiveIndex(undefined);
+    if (hoverIndex === undefined) return;
+    const clear = () => setHoverIndex(undefined);
+    // Controlled hover is owned by the parent row — don't clear on window
+    // blur from here or the Category Share sync drops mid-drag.
+    if (controlled) return;
     window.addEventListener("blur", clear);
     document.addEventListener("visibilitychange", clear);
     document.addEventListener("mouseleave", clear);
@@ -255,9 +304,14 @@ export function AuraDonut({
       document.removeEventListener("visibilitychange", clear);
       document.removeEventListener("mouseleave", clear);
     };
-  }, [activeIndex]);
+  }, [hoverIndex, controlled, setHoverIndex]);
 
-  const active = activeIndex != null ? chartData[activeIndex] : undefined;
+  const active = hoverIndex != null ? chartData[hoverIndex] : undefined;
+  /** Hovering a non-primary slice: gold leaves the primary mark and that
+   * slice takes it — Overview donut transfer. */
+  const borrowColor =
+    hoverIndex != null && hoverIndex > 0 ? chartData[hoverIndex].color : null;
+  const primaryIdle = borrowColor == null;
 
   // Radii, and everything sized against them, derived from the measured
   // canvas. The cap keeps the hover glow inside the canvas; without it the
@@ -281,14 +335,13 @@ export function AuraDonut({
   // top so it doesn't balloon on a tall panel, and floored so it stays
   // legible on a short one.
   const holeDiameter = innerRadius * 2;
-  // 0.16 is set from the widest value this shows: a ten-character grouped
-  // number runs about 5.4x the font size, so 0.16 leaves roughly 15% of the
-  // hole as clearance either side. A looser ratio hit the 20px cap and
-  // stopped scaling while the hole kept shrinking, which is what let the
-  // number reach the ring on a shorter viewport.
+  // Grouped ten-digit values run ~5.4× the font size; ~0.19 of the hole
+  // keeps ~15% clearance either side. Cap is high enough that the figure
+  // actually fills a normal Overview hole (the old 20px ceiling left it
+  // stranded in the middle of a ~200px opening).
   const tightHole = holeDiameter > 0 && holeDiameter < 96;
-  const valueFontPx = Math.max(10, Math.min(20, holeDiameter * (tightHole ? 0.2 : 0.16)));
-  const captionFontPx = Math.max(8.5, Math.min(10, holeDiameter * 0.13));
+  const valueFontPx = Math.max(11, Math.min(28, holeDiameter * (tightHole ? 0.22 : 0.19)));
+  const captionFontPx = Math.max(8.5, Math.min(11, holeDiameter * 0.055));
 
   const sourcesLayout = !showShare;
 
@@ -301,7 +354,9 @@ export function AuraDonut({
         !stacked && (sourcesLayout ? "items-start" : "items-center")
       )}
       style={{ paddingLeft: stacked ? 0 : METRIC_TABLE_LEAD_INSET }}
-      onMouseLeave={() => setActiveIndex(undefined)}
+      onMouseLeave={() => {
+        if (!controlled) setHoverIndex(undefined);
+      }}
     >
       {/* Sized from the measurement above rather than by a width class, so
           the ring shrinks to fit a short panel instead of spilling out of
@@ -346,14 +401,47 @@ export function AuraDonut({
               minAngle={5 * sweep}
               paddingAngle={(chartData.length > 5 ? 1 : 2) * sweep}
               isAnimationActive={false}
-              activeIndex={activeIndex}
-              activeShape={renderActiveShape}
-              onMouseEnter={(_, i) => setActiveIndex(i)}
-              onMouseLeave={() => setActiveIndex(undefined)}
+              activeIndex={paintIndex}
+              activeShape={(props) =>
+                renderActiveShape(
+                  props,
+                  activeVisible,
+                  paintIndex != null ? chartData[paintIndex].color : CHART_GOLD
+                )
+              }
+              onMouseEnter={(_, i) => setHoverIndex(i)}
+              onMouseLeave={() => {
+                if (!controlled) setHoverIndex(undefined);
+              }}
             >
-              {chartData.map((row) => (
-                <Cell key={row.category} fill={row.color} stroke="#141310" strokeWidth={1} />
-              ))}
+              {chartData.map((row, i) => {
+                const isPrimary = i === 0;
+                // Gold stays on the primary at rest; on a secondary hover it
+                // borrows that slice's slate so the gold can move over.
+                const fill =
+                  isPrimary && borrowColor != null
+                    ? borrowColor
+                    : isPrimary
+                      ? CHART_GOLD
+                      : row.color;
+                return (
+                  <Cell
+                    key={row.category}
+                    fill={fill}
+                    stroke="var(--color-bulk-base)"
+                    strokeWidth={1}
+                    opacity={
+                      hoverIndex == null ||
+                      hoverIndex === i ||
+                      (isPrimary && borrowColor != null)
+                        ? 1
+                        : 0.5
+                    }
+                    className={isPrimary && primaryIdle ? "chart-gold-pulse" : undefined}
+                    style={{ transition: "opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1), fill 0.5s cubic-bezier(0.4, 0, 0.2, 1)" }}
+                  />
+                );
+              })}
             </Pie>
           </PieChart>
         )}
@@ -367,10 +455,10 @@ export function AuraDonut({
             style={{ width: holeDiameter ? holeDiameter * 0.92 : undefined }}
           >
             <p
-              className="m-0 truncate font-semibold leading-tight"
+              className="font-figure m-0 truncate font-semibold leading-tight"
               style={{
                 fontSize: valueFontPx,
-                color: active ? active.color : "var(--color-text-primary)",
+                color: active ? CHART_GOLD : "var(--color-text-primary)",
                 maxWidth: "100%",
               }}
             >
@@ -380,7 +468,7 @@ export function AuraDonut({
             </p>
             <p
               className={cn(
-                "m-0 mt-1 uppercase leading-tight tracking-[0.1em] text-text-muted",
+                "font-label m-0 mt-0.5 leading-tight text-text-muted",
                 tightHole ? "whitespace-normal" : "truncate"
               )}
               style={{ fontSize: captionFontPx, maxWidth: "100%" }}
@@ -405,7 +493,10 @@ export function AuraDonut({
               ? {
                   minWidth: avail.legendFloor,
                   maxWidth: "100%",
-                  paddingTop: ringLeftInset,
+                  // Same constant the Category Share chart uses, so CATEGORY /
+                  // AURA sit on the donut apex even when the measured ring
+                  // inset drifts with leftover width.
+                  paddingTop: donutApexInset(AURA_SOURCES_DONUT_WELL),
                 }
               : { width: avail.legendFloor, minWidth: 0, maxWidth: "100%" }
         }
@@ -416,21 +507,36 @@ export function AuraDonut({
           }
           wide={sourcesLayout || stacked}
         />
-        {chartData.map((row, i) => (
-          <MetricTableRow
-            key={row.category}
-            color={row.color}
-            name={row.category}
-            count={Math.round(row.points).toLocaleString("en-US")}
-            share={showShare ? `${Math.round(row.share)}%` : undefined}
-            wide={sourcesLayout || stacked}
-            active={activeIndex === i}
-            dimmed={activeIndex !== undefined && activeIndex !== i}
-            isFirst={i === 0}
-            onMouseEnter={() => setActiveIndex(i)}
-            onMouseLeave={() => setActiveIndex(undefined)}
-          />
-        ))}
+        {chartData.map((row, i) => {
+          const legendColor =
+            hoverIndex === i
+              ? CHART_GOLD
+              : i === 0 && borrowColor
+                ? borrowColor
+                : row.color;
+          return (
+            <MetricTableRow
+              key={row.category}
+              color={legendColor}
+              pulseDot={i === 0 && primaryIdle}
+              name={row.category}
+              count={Math.round(row.points).toLocaleString("en-US")}
+              share={showShare ? `${Math.round(row.share)}%` : undefined}
+              wide={sourcesLayout || stacked}
+              active={hoverIndex === i}
+              dimmed={
+                hoverIndex !== undefined &&
+                hoverIndex !== i &&
+                !(i === 0 && borrowColor != null)
+              }
+              isFirst={i === 0}
+              onMouseEnter={() => setHoverIndex(i)}
+              onMouseLeave={() => {
+                if (!controlled) setHoverIndex(undefined);
+              }}
+            />
+          );
+        })}
       </div>
     </div>
   );

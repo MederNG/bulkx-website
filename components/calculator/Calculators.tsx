@@ -214,7 +214,7 @@ function FdvAxisTick({
       textAnchor={isFirst ? "start" : isLast ? "end" : "middle"}
       fill="var(--color-text-primary)"
       fontSize={fontSize}
-      fontFamily="var(--font-ibm-plex-sans)"
+      fontFamily="var(--font-mono)"
     >
       {fdvTick(payload?.value ?? 0)}
     </text>
@@ -245,7 +245,7 @@ function FdvYAxisTick({
       textAnchor="end"
       fill="var(--color-text-primary)"
       fontSize={12}
-      fontFamily="var(--font-ibm-plex-sans)"
+      fontFamily="var(--font-mono)"
     >
       {formatAxisUsd(payload?.value ?? 0)}
     </text>
@@ -592,7 +592,7 @@ function FdvValueChart({
       <div className="flex flex-wrap items-start justify-between gap-x-6 gap-y-3">
         <div className="min-w-0">
           <PanelLabel>Your Airdrop Value</PanelLabel>
-          <p className="m-0 mt-2 truncate text-[clamp(24px,3vw,34px)] font-semibold leading-none tracking-[-0.02em] text-accent">
+          <p className="m-0 mt-2 truncate font-figure text-[clamp(24px,3vw,34px)] leading-none text-accent">
             {formatUsdExact(shownValue)}
           </p>
         </div>
@@ -602,13 +602,13 @@ function FdvValueChart({
         <div className="flex shrink-0 items-start gap-4 border-l border-[var(--color-line)] pl-4 sm:gap-6 sm:pl-6">
           <div className="text-right">
             <PanelLabel>Price per Aura</PanelLabel>
-            <p className="m-0 mt-1.5 text-[12px] font-semibold tabular-nums text-accent">
+            <p className="font-data m-0 mt-1.5 text-[12px] font-semibold text-accent">
               ${shownAuraValue.toFixed(4)}
             </p>
           </div>
           <div className="text-right">
             <PanelLabel>Airdrop market cap</PanelLabel>
-            <p className="m-0 mt-1.5 text-[12px] font-semibold tabular-nums text-accent">
+            <p className="font-data m-0 mt-1.5 text-[12px] font-semibold text-accent">
               {formatUsd(shownPoolValue)}
             </p>
           </div>
@@ -761,20 +761,20 @@ function FdvScenarioPanel({
         {/* Same shape as the Overview tables: a 10px uppercase heading row on
             a hairline, then fixed-height rows divided by the softer one, first
             column left, every number right. */}
-        <div className="grid grid-cols-4 items-center gap-x-2 border-b border-[var(--color-line)] pb-1.5 sm:gap-x-8">
-          <span className="text-[10px] uppercase tracking-[0.1em] text-text-muted">
+        <div className="-mx-2.5 grid grid-cols-4 items-center gap-x-2 border-b border-[var(--color-line)] px-2.5 pb-1.5 sm:gap-x-8">
+          <span className="font-label text-text-muted">
             <span className="sm:hidden">FDV</span>
             <span className="hidden sm:inline">FDV (millions USD)</span>
           </span>
-          <span className="text-right text-[10px] uppercase tracking-[0.1em] text-text-muted">
+          <span className="text-right font-label text-text-muted">
             <span className="sm:hidden">Price</span>
             <span className="hidden sm:inline">Price per Aura</span>
           </span>
-          <span className="text-right text-[10px] uppercase tracking-[0.1em] text-text-muted">
+          <span className="text-right font-label text-text-muted">
             <span className="sm:hidden">Value</span>
             <span className="hidden sm:inline">Your Value</span>
           </span>
-          <span className="text-right text-[10px] uppercase tracking-[0.1em] text-text-muted">
+          <span className="text-right font-label text-text-muted">
             <span className="sm:hidden">vs now</span>
             <span className="hidden sm:inline">vs. Current</span>
           </span>
@@ -783,20 +783,16 @@ function FdvScenarioPanel({
           <div
             key={row.key}
             className={cn(
-              "grid grid-cols-4 items-center gap-x-2 sm:gap-x-8",
+              "-mx-2.5 grid grid-cols-4 items-center gap-x-2 rounded-md px-2.5 sm:gap-x-8",
               i > 0 && "border-t border-[var(--color-line-soft)]",
               "cursor-default transition-colors",
-              // Only the cursor tints a row now. The live row is marked by its
-              // text turning gold instead: a band that jumped between rows on
-              // every keystroke in the FDV box was the most moving thing on
-              // the page, for the one row the reader already knows they typed.
-              "hover:bg-[rgba(255,255,255,0.04)]"
+              "hover:border-transparent hover:bg-[rgba(255,255,255,0.045)]"
             )}
             style={{ height: 42 }}
           >
             <span
               className={cn(
-                "truncate text-[13px] font-medium tabular-nums",
+                "font-data truncate text-[13px]",
                 row.isCurrent ? "text-accent" : "text-text-primary"
               )}
             >
@@ -804,7 +800,7 @@ function FdvScenarioPanel({
             </span>
             <span
               className={cn(
-                "text-right text-[13px] tabular-nums",
+                "font-data text-right text-[13px]",
                 row.isCurrent ? "text-accent" : "text-text-secondary"
               )}
             >
@@ -812,7 +808,7 @@ function FdvScenarioPanel({
             </span>
             <span
               className={cn(
-                "text-right text-[13px] font-semibold tabular-nums",
+                "font-data text-right text-[13px] font-semibold",
                 row.isCurrent ? "text-accent" : "text-text-primary"
               )}
             >
@@ -820,7 +816,7 @@ function FdvScenarioPanel({
             </span>
             <span
               className={cn(
-                "text-right text-[13px] font-medium tabular-nums",
+                "font-data text-right text-[13px] font-medium",
                 row.isCurrent
                   ? "text-accent"
                   : row.delta >= 0
@@ -991,28 +987,28 @@ export function DepositAuraPredictor({
 
       <PanelCard glossy glossDelay={-11}>
         <PanelLabel>Projection</PanelLabel>
-        <p className="m-0 mt-3 text-[clamp(28px,3.2vw,44px)] font-semibold leading-none tracking-[-0.02em] text-accent tabular-nums">
+        <p className="m-0 mt-3 font-figure text-[clamp(28px,3.2vw,44px)] leading-none text-accent tabular-nums">
           {formatNumber(Math.round(shownAura))}
         </p>
-        <p className="m-0 mt-2 text-[11px] uppercase tracking-[0.11em] text-text-muted">
+        <p className="m-0 mt-2 font-label text-text-muted">
           {shownCaption}
         </p>
 
         <div className="mt-4 h-px w-full bg-[var(--color-line)]" />
         <div className="grid grid-cols-2 divide-x divide-[var(--color-line)]">
           <div className="min-w-0 px-2 py-3 text-center">
-            <p className="m-0 text-[11px] uppercase tracking-[0.11em] text-text-muted">
+            <p className="m-0 font-label text-text-muted">
               Efficiency
             </p>
-            <p className="m-0 mt-1.5 truncate text-[13px] font-semibold leading-none tabular-nums">
+            <p className="font-data m-0 mt-1.5 truncate text-[13px] font-semibold leading-none">
               {result.efficiency.toFixed(4)} A/$
             </p>
           </div>
           <div className="min-w-0 px-2 py-3 text-center">
-            <p className="m-0 text-[11px] uppercase tracking-[0.11em] text-text-muted">
+            <p className="m-0 font-label text-text-muted">
               {holdSinceActive ? "Lifetime USD-hours" : "Your USD-hours"}
             </p>
-            <p className="m-0 mt-1.5 truncate text-[13px] font-semibold leading-none tabular-nums">
+            <p className="font-data m-0 mt-1.5 truncate text-[13px] font-semibold leading-none">
               {formatUsdHours(result.userUsdHours)}
             </p>
           </div>
@@ -1101,8 +1097,8 @@ function PoolShareTrack({ pct }: { pct: number }) {
   return (
     <div className="mt-4">
       <div className="flex items-baseline justify-between gap-3">
-        <p className="m-0 text-[11px] uppercase tracking-[0.11em] text-text-muted">Your slice</p>
-        <p className="m-0 text-[13px] tabular-nums text-text-secondary">{label}</p>
+        <p className="m-0 font-label text-text-muted">Your slice</p>
+        <p className="m-0 text-[13px] font-data text-text-secondary">{label}</p>
       </div>
       <div className="relative mt-1.5 h-1.5 overflow-hidden rounded-full bg-[rgba(255,181,71,0.12)]">
         <span
@@ -1128,12 +1124,7 @@ function SegmentToggle({
   allowDeselect?: boolean;
 }) {
   return (
-    <div
-      className={cn(
-        "flex rounded-[10px] border border-[var(--color-line-strong)] bg-[var(--color-bulk-base)] p-0.5",
-        disabled && "pointer-events-none opacity-45"
-      )}
-    >
+    <div className={cn("term-seg w-full", disabled && "pointer-events-none opacity-45")}>
       {options.map(({ value: optionValue, label }, i) => {
         const selected = value === optionValue;
         return (
@@ -1149,17 +1140,12 @@ function SegmentToggle({
               onChange(optionValue);
             }}
             aria-pressed={selected}
-            className={cn(
-              "relative min-w-0 flex-1 rounded-md px-2 py-[0.5rem] text-[13px] font-medium transition-colors",
-              selected
-                ? "text-[var(--color-bulk-base)]"
-                : "text-text-secondary hover:text-text-primary"
-            )}
+            className={cn("term-seg-btn", selected ? "is-on" : "is-off")}
           >
             {selected && (
               <motion.span
                 layoutId="predictor-hold-toggle"
-                className="absolute inset-0 rounded-md bg-accent"
+                className="term-seg-pill"
                 transition={{ type: "spring", stiffness: 480, damping: 32 }}
               />
             )}
@@ -1182,7 +1168,7 @@ function FieldLabel({
 }) {
   return (
     <span className="flex min-w-0 items-center gap-1.5">
-      <span className="text-xs text-text-secondary">{label}</span>
+      <span className="font-label text-text-muted">{label}</span>
       {hint ? <span className="truncate text-[11px] text-text-muted">{hint}</span> : null}
       {info ? <InfoTooltip text={info} floating panelClassName="w-64" /> : null}
     </span>
@@ -1204,7 +1190,7 @@ function PillToggle<T extends string>({
   layoutId: string;
 }) {
   return (
-    <div className="flex shrink-0 gap-0.5 rounded-md border border-[var(--color-line-strong)] p-0.5">
+    <div className="term-seg shrink-0">
       {options.map((option) => {
         const on = option.id === value;
         return (
@@ -1214,17 +1200,12 @@ function PillToggle<T extends string>({
             onClick={() => onChange(option.id)}
             aria-pressed={on}
             title={option.title}
-            className={cn(
-              "relative rounded px-1.5 py-0.5 text-[11px] font-semibold transition-colors",
-              on
-                ? "text-[var(--color-bulk-base)]"
-                : "text-text-secondary hover:text-text-primary"
-            )}
+            className={cn("term-seg-btn !px-1.5 !py-0.5 !text-[11px]", on ? "is-on" : "is-off")}
           >
             {on && (
               <motion.span
                 layoutId={layoutId}
-                className="absolute inset-0 rounded bg-accent"
+                className="term-seg-pill"
                 transition={{ type: "spring", stiffness: 480, damping: 32 }}
               />
             )}

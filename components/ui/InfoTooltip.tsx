@@ -84,7 +84,7 @@ export function InfoTooltip({ text, className, panelClassName, floating }: InfoT
   const hide = () => setOpen(false);
 
   const panelClasses = cn(
-    "z-50 rounded border border-[rgba(255,181,71,0.25)] bg-bg-primary p-3 text-left text-xs leading-relaxed font-normal text-text-secondary shadow-[0_12px_30px_rgba(0,0,0,0.45)]",
+    "z-50 rounded-lg border border-[var(--color-line-strong)] bg-[#17171a] p-3 text-left text-xs font-normal leading-relaxed text-text-secondary shadow-[0_12px_30px_rgba(0,0,0,0.45)]",
     floating ? "w-60" : "absolute bottom-full left-1/2 mb-2 w-60 -translate-x-1/2",
     panelClassName
   );

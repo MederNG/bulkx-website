@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { IBM_Plex_Mono, IBM_Plex_Sans } from "next/font/google";
+import localFont from "next/font/local";
 import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 import { SiteNav } from "@/components/layout/SiteNav";
@@ -8,23 +8,21 @@ import { LIVE_FINANCIAL_SEED } from "@/lib/live-financial-seed";
 import { ScrollToTop } from "@/components/layout/ScrollToTop";
 import { HashScrollOnLoad } from "@/components/layout/HashScrollOnLoad";
 
-const ibmPlexSans = IBM_Plex_Sans({
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
-  variable: "--font-ibm-plex-sans",
+/** Nav, labels, tier names, big KPI figures. */
+const familjenGrotesk = localFont({
+  src: "../fonts/FamiljenGrotesk-VariableFont_wght.ttf",
+  variable: "--font-familjen",
+  weight: "100 900",
+  display: "swap",
 });
 
-const ibmPlexMono = IBM_Plex_Mono({
-  subsets: ["latin"],
-  weight: ["400", "500", "600"],
-  variable: "--font-ibm-plex-mono",
+/** Table cells, axis ticks, week markers, TVL deltas. */
+const overpassMono = localFont({
+  src: "../fonts/OverpassMono-VariableFont_wght.ttf",
+  variable: "--font-overpass-mono",
+  weight: "100 900",
+  display: "swap",
 });
-
-// Alte DIN 1451 was trialled as the UI face here and reverted: it ships no
-// `gasp` table (so small sizes get no grid-fitting hints) and leaves
-// OS/2 sxHeight/sCapHeight unset at -1, which is why body copy at 10-12px
-// rendered visibly rougher than IBM Plex Sans. It's a signage typeface —
-// built for large display, not small interface text.
 
 const siteUrl = "https://www.aurabulk.xyz";
 const siteTitle = "AURA Intelligence | BULK Analytics Terminal";
@@ -75,7 +73,7 @@ export default function RootLayout({
   const live = LIVE_FINANCIAL_SEED;
 
   return (
-    <html lang="en" className={`${ibmPlexSans.variable} ${ibmPlexMono.variable}`}>
+    <html lang="en" className={`${familjenGrotesk.variable} ${overpassMono.variable}`}>
       <body className="antialiased">
         <LiveFinancialProvider initial={live}>
           <HashScrollOnLoad />

@@ -100,14 +100,14 @@ function ProjectedTvlCard({ projection }: { projection: Extract<ProjectedSnapsho
       <KpiTerminalCounter
         value={projection.projectedTvl}
         format="usd-full"
-        className="block font-mono text-xl font-semibold tabular-nums text-text-primary md:text-2xl"
+        className="block font-figure text-xl text-text-primary md:text-2xl"
       />
       <p className="mt-2 text-xs text-text-secondary">
         Snapshot: {formatSnapshotUtc(projection.nextSnapshotTimestamp)}
       </p>
       <p className="mt-1 text-xs text-text-secondary">
         Expected Growth:{" "}
-        <span className="font-mono tabular-nums text-bid-green">
+        <span className="font-data text-bid-green">
           {formatSignedUsd(projection.expectedGrowth, true)} ({formatSignedPercent(projection.expectedGrowthPercent)})
         </span>
       </p>
@@ -115,16 +115,16 @@ function ProjectedTvlCard({ projection }: { projection: Extract<ProjectedSnapsho
       <div className="mt-3 grid grid-cols-2 gap-x-3 gap-y-2.5 border-t border-[rgba(198,182,186,0.12)] pt-3 text-left">
         <div>
           <div className="flex items-center gap-1">
-            <p className="text-[10px] uppercase tracking-wider text-text-secondary">Weighted Daily Flow</p>
+            <p className="font-label text-text-muted">Weighted Daily Flow</p>
             <InfoTooltip text="Recent days receive higher weighting than older days." />
           </div>
-          <p className="mt-0.5 font-mono text-xs font-medium tabular-nums text-bid-green md:text-[13px]">
+          <p className="mt-0.5 font-data text-xs font-medium text-bid-green md:text-[13px]">
             {formatSignedUsd(projection.weightedDailyFlow)}
           </p>
         </div>
         <div>
-          <p className="text-[10px] uppercase tracking-wider text-text-secondary">Days Remaining</p>
-          <p className="mt-0.5 font-mono text-xs font-medium tabular-nums text-text-primary md:text-[13px]">
+          <p className="font-label text-text-muted">Days Remaining</p>
+          <p className="mt-0.5 font-data text-xs font-medium text-text-primary md:text-[13px]">
             {formatRemainingDuration(projection.remainingMs)}
           </p>
         </div>

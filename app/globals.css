@@ -1,10 +1,10 @@
 @import "tailwindcss";
 
 @theme inline {
-  /* Surfaces */
+  /* Surfaces — page is the darkest plane; cards lift one step. */
   --color-bulk-base: #0b0b0c;
-  --color-bg-primary: #131315;
-  --color-bg-raised: #17171a;
+  --color-bg-primary: #121214;
+  --color-bg-raised: #161618;
   --color-bg-secondary: #544a4c;
 
   /* Text — primary reads, secondary supports, muted labels, dim icons */
@@ -13,9 +13,10 @@
   --color-text-muted: #8b8580;
   --color-text-dim: #6b6660;
 
-  /* Accent + data colours */
+  /* Accent + data colours — Overview charts are gold + slate blue. */
   --color-accent: #ffb547;
   --color-accent-hover: #ffcb7d;
+  --color-slate: #6b8cae;
   --color-bid-green: #4ade80;
   --color-ask-red: #f87171;
   /* Deep red for the TVL card's negative supporting figures. Distinct
@@ -25,13 +26,17 @@
   --color-data-blue: #60a5fa;
   --color-live: #22c55e;
 
-  /* Hairlines */
-  --color-line: rgba(255, 255, 255, 0.08);
-  --color-line-soft: rgba(255, 255, 255, 0.06);
-  --color-line-strong: rgba(255, 255, 255, 0.12);
+  /* Hairlines — structural lines stay soft; panels prefer elevation. */
+  --color-line: rgba(255, 255, 255, 0.06);
+  --color-line-soft: rgba(255, 255, 255, 0.04);
+  --color-line-strong: rgba(255, 255, 255, 0.1);
 
-  --font-sans: var(--font-ibm-plex-sans);
-  --font-mono: var(--font-ibm-plex-mono);
+  /* Familjen Grotesk = nav / labels / KPIs; Overpass Mono = data cells. */
+  --font-sans: var(--font-familjen);
+  --font-mono: var(--font-overpass-mono);
+  /* Back-compat for inline chart SVG that still names the old faces. */
+  --font-ibm-plex-sans: var(--font-familjen);
+  --font-ibm-plex-mono: var(--font-overpass-mono);
 }
 
 /* Page shell width — the redesign runs wider than the old 1400px grid. */
@@ -213,12 +218,8 @@
   }
 }
 
-/* Three small, soft, gold patches panned independently along the card's
-   edges only — heavily blurred so no single patch reads as a shape, small
-   enough that only a fraction of the card is lit at once, and never
-   travelling through the centre where the chart/donut content lives. A
-   shared sine-like easing (instead of the default ease-in-out) keeps
-   velocity from ever snapping at a keyframe boundary. */
+/* Two soft gold patches (was three) — half the previous count, still
+   blurred so they don't read as shapes. */
 .gloss-drift {
   position: absolute;
   inset: -14%;
@@ -228,23 +229,15 @@
       rgba(255, 181, 71, 0.14) 45%,
       transparent 78%
     ),
-    radial-gradient(circle at center, rgba(255, 181, 71, 0.23) 0%, rgba(255, 181, 71, 0.09) 45%, transparent 75%),
-    radial-gradient(
-      circle at center,
-      rgba(255, 181, 71, 0.21) 0%,
-      rgba(255, 181, 71, 0.08) 50%,
-      transparent 80%
-    );
+    radial-gradient(circle at center, rgba(255, 181, 71, 0.23) 0%, rgba(255, 181, 71, 0.09) 45%, transparent 75%);
   background-repeat: no-repeat;
-  background-size: 28% 28%, 22% 22%, 25% 25%;
-  background-position: var(--p1x) var(--p1y), var(--p2x) var(--p2y), var(--p3x) var(--p3y);
+  background-size: 28% 28%, 22% 22%;
+  background-position: var(--p1x) var(--p1y), var(--p2x) var(--p2y);
   filter: blur(38px);
   mix-blend-mode: screen;
-  /* 50% faster than the previous pass (40/34/46/14s -> /1.5). */
   animation:
     gloss-pan-1 27s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite,
     gloss-pan-2 23s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite,
-    gloss-pan-3 31s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite,
     gloss-shimmer 9s cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
 }
 
@@ -255,8 +248,32 @@ html {
 body {
   background: var(--color-bulk-base);
   color: var(--color-text-primary);
-  font-family: var(--font-ibm-plex-sans), system-ui, sans-serif;
+  font-family: var(--font-sans), system-ui, sans-serif;
   min-height: 100vh;
+}
+
+/** Eyebrow labels — Familjen, tiny / wide / uppercase. */
+.font-label {
+  font-family: var(--font-sans), system-ui, sans-serif;
+  font-size: 9.5px;
+  font-weight: 600;
+  letter-spacing: 0.17em;
+  text-transform: uppercase;
+}
+
+/** Big KPI / primary readings — Familjen 600, tight tracking. */
+.font-figure {
+  font-family: var(--font-sans), system-ui, sans-serif;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+/** Table cells, axes, week markers, TVL deltas — Overpass Mono. */
+.font-data {
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
 }
 
 .tabular-nums {
@@ -367,6 +384,95 @@ body {
 
 .apr-week-pulse {
   animation: apr-current-week-pulse 1150ms ease-in-out infinite;
+}
+
+/* Same beat as APR week bars — gold chart marks / legend dots. */
+@keyframes chart-gold-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.55;
+  }
+}
+
+.chart-gold-pulse {
+  animation: chart-gold-pulse 1150ms ease-in-out infinite;
+}
+
+/* Donut active sector — opacity only; radius stays put so the arc doesn't
+   rebuild every frame (that path morph was the jerk). */
+.donut-active-show,
+.donut-active-hide {
+  transition: opacity 0.48s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.donut-active-show {
+  opacity: 1;
+}
+
+.donut-active-hide {
+  opacity: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chart-gold-pulse {
+    animation: none;
+  }
+
+  .donut-active-show,
+  .donut-active-hide {
+    transition: none;
+  }
+}
+
+/* Segmented toggles (Current/Projected, 7D/30D/ALL, Count/Value). */
+.term-seg {
+  display: flex;
+  flex-shrink: 0;
+  gap: 2px;
+  padding: 3px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.045);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+}
+
+.term-seg-btn {
+  position: relative;
+  flex: 1 1 0;
+  border-radius: 7px;
+  padding: 5px 10px;
+  font-family: var(--font-sans), system-ui, sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  line-height: 1;
+  text-align: center;
+  transition: color 0.15s ease;
+  cursor: pointer;
+}
+
+.term-seg-btn[aria-pressed="true"],
+.term-seg-btn.is-on {
+  color: var(--color-bulk-base);
+}
+
+.term-seg-btn[aria-pressed="false"],
+.term-seg-btn.is-off {
+  color: var(--color-text-secondary);
+}
+
+.term-seg-btn[aria-pressed="false"]:hover,
+.term-seg-btn.is-off:hover {
+  color: var(--color-text-primary);
+}
+
+.term-seg-pill {
+  position: absolute;
+  inset: 0;
+  border-radius: 7px;
+  background: var(--color-accent);
 }
 
 /* Deposit-size callout: reads as emerging from the headline number above it —
@@ -867,8 +973,9 @@ input[type="number"] {
 
 .recharts-text {
   fill: var(--color-text-secondary) !important;
-  font-family: var(--font-ibm-plex-sans), system-ui, sans-serif;
-  font-size: 11px !important;
+  font-family: var(--font-mono), ui-monospace, monospace !important;
+  font-size: 12px !important;
+  letter-spacing: 0;
 }
 
 /* FDV chart ticks sit over the card gloss; secondary fill disappeared into

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { motion } from "framer-motion";
 import {
   Area,
   ComposedChart,
@@ -10,6 +11,7 @@ import {
   Cell,
   LabelList,
   Line,
+  Rectangle,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -28,9 +30,14 @@ import { useNarrowViewport } from "@/lib/use-narrow-viewport";
 import { InfoTooltip } from "@/components/ui/InfoTooltip";
 import { Select } from "@/components/ui/Select";
 import { PageHeading } from "@/components/layout/PageHeading";
-import { AuraDonut, AURA_SOURCES_DONUT_WELL, donutApexInset } from "@/components/overview/AuraDonut";
 import { PanelCard, PanelLabel } from "@/components/overview/PanelCard";
-import { DONUT_COLORS, type OverviewDonutSegment } from "@/lib/overview-metrics";
+import {
+  AURA_SOURCES_DONUT_WELL,
+  donutApexInset,
+  AuraDonut,
+} from "@/components/overview/AuraDonut";
+import { CATEGORY_NAME_SVG } from "@/components/overview/MetricTable";
+import { chartPrimaryRamp, chartSlateRamp, CHART_GOLD, type OverviewDonutSegment } from "@/lib/overview-metrics";
 import {
   OVERVIEW_GROUP,
   buildCategoryGroupOptions,
@@ -151,19 +158,19 @@ function TvlChartTooltip({
         className="rounded border border-[rgba(198,182,186,0.2)] px-3 py-2 text-xs"
         style={{ background: "#1B1A14" }}
       >
-        <p className="font-medium text-accent">Projected TVL</p>
-        <p className="mt-1 font-mono tabular-nums text-text-primary">
+        <p className="font-label text-accent">Projected TVL</p>
+        <p className="mt-1 font-data text-text-primary">
           {formatUsdCompact(projection.projectedTvl)}
         </p>
-        <p className="mt-2 text-text-secondary">Weighted Daily Flow</p>
-        <p className="mt-0.5 font-mono tabular-nums text-bid-green">
+        <p className="mt-2 font-label text-text-muted">Weighted Daily Flow</p>
+        <p className="mt-0.5 font-data text-bid-green">
           {formatSignedUsd(projection.weightedDailyFlow, true)}/day
         </p>
-        <p className="mt-2 text-text-secondary">Snapshot</p>
-        <p className="mt-0.5 text-text-primary">{snapshotParts.date}</p>
-        <p className="text-text-primary">{snapshotParts.time}</p>
-        <p className="mt-2 text-text-secondary">Expected Growth</p>
-        <p className="mt-0.5 font-mono tabular-nums text-bid-green">
+        <p className="mt-2 font-label text-text-muted">Snapshot</p>
+        <p className="mt-0.5 font-data text-text-primary">{snapshotParts.date}</p>
+        <p className="font-data text-text-primary">{snapshotParts.time}</p>
+        <p className="mt-2 font-label text-text-muted">Expected Growth</p>
+        <p className="mt-0.5 font-data text-bid-green">
           {formatSignedUsd(projection.expectedGrowth, true)}
         </p>
       </div>
@@ -178,10 +185,10 @@ function TvlChartTooltip({
       className="rounded border border-[rgba(198,182,186,0.2)] px-3 py-2 text-xs"
       style={{ background: "#1B1A14" }}
     >
-      <p className="text-text-secondary">
+      <p className="font-label text-text-muted">
         {new Date(label).toLocaleString("en-US", { timeZone: "UTC" })} UTC
       </p>
-      <p className="mt-1 font-mono tabular-nums text-text-primary">${tvl.toLocaleString("en-US")}</p>
+      <p className="mt-1 font-data text-text-primary">${tvl.toLocaleString("en-US")}</p>
     </div>
   );
 }
@@ -222,25 +229,38 @@ export function TvlChart({ data, currentTvl, projection, referenceTimeMs }: TvlC
   );
 
   return (
-    <div ref={ref} className="card p-4 md:p-5">
+    <PanelCard glossy glossDelay={-6} className="h-full">
+      <div ref={ref} className="flex min-h-0 flex-1 flex-col">
       <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">
-          <p className="text-sm font-medium">TVL History &amp; Projection</p>
+          <PanelLabel>TVL History &amp; Projection</PanelLabel>
           <InfoTooltip
             floating
             text="Historical TVL from hourly snapshots. The dashed line projects TVL to the next weekly snapshot using weighted 7-day TVL growth."
           />
         </div>
-        <div className="flex gap-1">
-          {ranges.map((r) => (
-            <button
-              key={r}
-              onClick={() => setRange(r)}
-              className={cn("btn-ghost !px-2 !py-1 !text-[11px]", range === r && "active")}
-            >
-              {r}
-            </button>
-          ))}
+        <div className="term-seg">
+          {ranges.map((r) => {
+            const on = r === range;
+            return (
+              <button
+                key={r}
+                type="button"
+                onClick={() => setRange(r)}
+                aria-pressed={on}
+                className={cn("term-seg-btn", on ? "is-on" : "is-off")}
+              >
+                {on && (
+                  <motion.span
+                    layoutId="legacy-tvl-range-pill"
+                    className="term-seg-pill"
+                    transition={{ type: "spring", stiffness: 480, damping: 32 }}
+                  />
+                )}
+                <span className="relative z-10">{r}</span>
+              </button>
+            );
+          })}
         </div>
       </div>
 
@@ -329,7 +349,8 @@ export function TvlChart({ data, currentTvl, projection, referenceTimeMs }: TvlC
           </ComposedChart>
         </ResponsiveContainer>
       </div>
-    </div>
+      </div>
+    </PanelCard>
   );
 }
 
@@ -360,10 +381,18 @@ function CategoryYTick({
   x,
   y,
   payload,
+  active,
+  dimmed,
+  onHover,
+  onLeave,
 }: {
   x?: number;
   y?: number;
   payload?: { value?: string };
+  active?: boolean;
+  dimmed?: boolean;
+  onHover?: () => void;
+  onLeave?: () => void;
 }) {
   return (
     <text
@@ -371,9 +400,19 @@ function CategoryYTick({
       y={y}
       dy={4}
       textAnchor="end"
-      fill="var(--color-text-primary)"
-      fontSize={12}
-      fontFamily="var(--font-ibm-plex-sans)"
+      fill={
+        active
+          ? CHART_GOLD
+          : dimmed
+            ? "var(--color-text-muted)"
+            : "var(--color-text-primary)"
+      }
+      fontFamily={CATEGORY_NAME_SVG.fontFamily}
+      fontSize={CATEGORY_NAME_SVG.fontSize}
+      fontWeight={CATEGORY_NAME_SVG.fontWeight}
+      style={{ cursor: "pointer", transition: "fill 0.2s ease" }}
+      onMouseEnter={onHover}
+      onMouseLeave={onLeave}
     >
       {payload?.value}
     </text>
@@ -383,6 +422,7 @@ function CategoryYTick({
 export function AuraHistogram({ data }: HistogramProps) {
   const { ref, hasEntered } = useInViewOnce<HTMLDivElement>(0.2);
   const narrow = useNarrowViewport();
+  const n = data.length;
 
   return (
     <PanelCard glossy glossDelay={-6} className="h-full">
@@ -394,15 +434,15 @@ export function AuraHistogram({ data }: HistogramProps) {
               key={hasEntered ? "hist-animate" : "hist-idle"}
               data={data}
               margin={{ top: 8, right: 8, left: 0, bottom: 0 }}
-              barCategoryGap={narrow ? "18%" : "12%"}
+              barCategoryGap={narrow ? "16%" : "18%"}
             >
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis
                 dataKey="bucket"
                 tickFormatter={narrow ? shortAuraBucket : undefined}
                 tick={{
-                  fontSize: narrow ? 10 : 13,
-                  fontFamily: "var(--font-ibm-plex-sans)",
+                  fontSize: narrow ? 10 : 12,
+                  fontFamily: "var(--font-mono)",
                   fill: "var(--color-text-primary)",
                 }}
                 interval={0}
@@ -418,36 +458,44 @@ export function AuraHistogram({ data }: HistogramProps) {
                 }
                 width={narrow ? 36 : 56}
                 tick={{
-                  fontSize: narrow ? 11 : 13,
-                  fontFamily: "var(--font-ibm-plex-sans)",
+                  fontSize: narrow ? 11 : 12,
+                  fontFamily: "var(--font-mono)",
                   fill: "var(--color-text-primary)",
                 }}
               />
               <Tooltip
                 cursor={false}
-                contentStyle={{
-                  background: "#1B1A14",
-                  border: "1px solid rgba(198,182,186,0.2)",
-                  borderRadius: 4,
-                  fontSize: 13,
-                  fontFamily: "var(--font-ibm-plex-sans)",
+                content={({ active, payload, label }) => {
+                  if (!active || !payload?.length) return null;
+                  const value = Number(payload[0]?.value ?? 0);
+                  return (
+                    <div className="rounded-[4px] border border-[rgba(198,182,186,0.2)] bg-[#1B1A14] px-3 py-2.5 shadow-[0_14px_36px_rgba(0,0,0,.55)]">
+                      <p className="m-0 mb-1.5 font-sans text-[13px] font-medium leading-none text-[#FFFEEF]">
+                        {String(label)}
+                      </p>
+                      <div className="grid grid-cols-[auto_auto] gap-x-3 leading-none">
+                        <span className="font-label text-text-muted">Wallets</span>
+                        <span className="font-data text-right text-[#FFB547]">
+                          {value.toLocaleString("en-US")}
+                        </span>
+                      </div>
+                    </div>
+                  );
                 }}
-                itemStyle={{ color: "#FFB547" }}
-                labelStyle={{ color: "#FFFEEF" }}
-                formatter={(value: number) => [value.toLocaleString(), "Wallets"]}
               />
               <Bar
                 dataKey="count"
                 radius={[2, 2, 0, 0]}
+                maxBarSize={narrow ? 22 : 28}
                 isAnimationActive={hasEntered}
                 activeBar={{
-                  stroke: "#FFFEEF",
-                  strokeWidth: 1,
-                  filter: "drop-shadow(0 0 6px rgba(255,181,71,0.45))",
+                  fill: CHART_GOLD,
+                  stroke: "none",
+                  filter: "drop-shadow(0 0 6px rgba(255,181,71,0.35))",
                 }}
               >
                 {data.map((_, i) => (
-                  <Cell key={i} fill={DONUT_COLORS[i % DONUT_COLORS.length]} />
+                  <Cell key={i} fill={chartSlateRamp(i, n)} />
                 ))}
               </Bar>
             </BarChart>
@@ -527,8 +575,8 @@ export function CategoryCharts({ data }: CategoryChartsProps) {
     const collapsed = collapseSmallCategories(withShares);
     return {
       ...collapsed,
-      // Largest to smallest, top to bottom — and gold on the biggest slice,
-      // the same assignment the Overview ring uses.
+      // Largest → smallest, top to bottom, so the bright→dull slate ramp
+      // tracks share rank.
       chartData: [...collapsed.chartData].sort((a, b) => b.groupShare - a.groupShare),
     };
   }, [filtered]);
@@ -537,7 +585,8 @@ export function CategoryCharts({ data }: CategoryChartsProps) {
     () =>
       chartData.map((row, i) => ({
         ...row,
-        color: DONUT_COLORS[i % DONUT_COLORS.length],
+        // Gold primary + slate ramp — same transfer model as the Overview donut.
+        color: chartPrimaryRamp(i, chartData.length),
       })),
     [chartData]
   );
@@ -571,7 +620,7 @@ export function CategoryCharts({ data }: CategoryChartsProps) {
           {othersCategories.map((c) => (
             <span key={c.category} className="flex justify-between gap-3">
               <span>{c.category}</span>
-              <span className="tabular-nums text-text-secondary">
+              <span className="font-data text-text-secondary">
                 {formatNumber(c.points)} Aura · {c.groupShare.toFixed(1)}%
               </span>
             </span>
@@ -581,12 +630,17 @@ export function CategoryCharts({ data }: CategoryChartsProps) {
     ) : null;
 
   const { ref, hasEntered } = useInViewOnce<HTMLDivElement>(0.2);
+  const [sharedHover, setSharedHover] = useState<number | undefined>(undefined);
 
   return (
     <div className="flex flex-col gap-4">
       <PageHeading eyebrow="Aura" title="Aura analytics" centered />
 
-      <div ref={ref} className="grid items-stretch gap-4 lg:grid-cols-2">
+      <div
+        ref={ref}
+        className="grid items-stretch gap-4 lg:grid-cols-2"
+        onMouseLeave={() => setSharedHover(undefined)}
+      >
         <PanelCard glossy glossDelay={-8} className={narrow ? undefined : "min-h-[400px]"}>
           <div className="mb-3 flex min-h-8 items-center justify-between gap-3">
             <div className="flex min-w-0 items-center gap-1.5">
@@ -612,13 +666,15 @@ export function CategoryCharts({ data }: CategoryChartsProps) {
                   segments={segments}
                   totalAuraNumber={totalAuraNumber}
                   showShare={false}
+                  hoverIndex={sharedHover}
+                  onHoverIndexChange={setSharedHover}
                 />
               </div>
             </div>
           )}
         </PanelCard>
 
-        <PanelCard glossy glossDelay={-11}>
+        <PanelCard glossy glossDelay={-11} className={narrow ? undefined : "min-h-[400px]"}>
           <div className="mb-3 flex min-h-8 items-center">
             <div className="flex items-center gap-1.5">
               <PanelLabel>Category Share</PanelLabel>
@@ -629,7 +685,6 @@ export function CategoryCharts({ data }: CategoryChartsProps) {
             className="category-share-chart w-full"
             style={{
               height: narrow ? Math.max(220, colored.length * 44) : AURA_SOURCES_DONUT_WELL,
-              paddingTop: narrow ? 0 : apexInset,
             }}
           >
             <ResponsiveContainer width="100%" height="100%">
@@ -637,9 +692,17 @@ export function CategoryCharts({ data }: CategoryChartsProps) {
                 key={`${hasEntered ? "cat-animate" : "cat-idle"}-${selectedGroup}`}
                 data={colored}
                 layout="vertical"
-                margin={{ top: 0, left: 4, right: narrow ? 36 : 48, bottom: 8 }}
-                barCategoryGap={narrow ? 10 : 8}
-                maxBarSize={28}
+                // top margin = donut apex inset so the first bar's top edge
+                // shares a line with the ring peak (and CATEGORY / AURA).
+                margin={{
+                  top: narrow ? 0 : apexInset,
+                  left: 4,
+                  right: narrow ? 36 : 48,
+                  bottom: 8,
+                }}
+                // Gap 0 so category bands start at margin.top; bars are
+                // top-aligned inside each band via the custom shape below.
+                barCategoryGap={0}
               >
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis
@@ -648,8 +711,8 @@ export function CategoryCharts({ data }: CategoryChartsProps) {
                   tickFormatter={(v) => `${v.toFixed(0)}%`}
                   minTickGap={28}
                   tick={{
-                    fontSize: narrow ? 11 : 13,
-                    fontFamily: "var(--font-ibm-plex-sans)",
+                    fontSize: 12,
+                    fontFamily: "var(--font-mono), ui-monospace, monospace",
                     fill: "var(--color-text-primary)",
                   }}
                 />
@@ -657,26 +720,47 @@ export function CategoryCharts({ data }: CategoryChartsProps) {
                   type="category"
                   dataKey="category"
                   width={narrow ? 92 : isDrillDown ? 128 : 110}
-                  tick={CategoryYTick}
                   interval={0}
+                  padding={{ top: 0, bottom: 0 }}
+                  tick={(props) => {
+                    const i = colored.findIndex((r) => r.category === props.payload?.value);
+                    const borrow =
+                      sharedHover != null && sharedHover > 0
+                        ? colored[sharedHover]?.color
+                        : null;
+                    return (
+                      <CategoryYTick
+                        {...props}
+                        active={sharedHover === i}
+                        dimmed={
+                          sharedHover != null &&
+                          sharedHover !== i &&
+                          !(i === 0 && borrow != null)
+                        }
+                        onHover={() => i >= 0 && setSharedHover(i)}
+                      />
+                    );
+                  }}
                 />
                 <Tooltip
                   cursor={false}
-                  contentStyle={{
-                    background: "#1B1A14",
-                    border: "1px solid rgba(198,182,186,0.2)",
-                    borderRadius: 4,
-                    fontSize: 13,
-                    fontFamily: "var(--font-ibm-plex-sans)",
-                  }}
-                  itemStyle={{ color: "#FFFEEF" }}
-                  labelStyle={{ color: "#FFFEEF" }}
-                  formatter={(value: number, _name, item) => {
-                    const row = item.payload as CategoryChartRow;
-                    return [
-                      `${Number(value).toFixed(1)}% of group · ${row.share.toFixed(2)}% total`,
-                      "Share",
-                    ];
+                  content={({ active, payload, label }) => {
+                    if (!active || !payload?.length) return null;
+                    const row = payload[0]?.payload as CategoryChartRow | undefined;
+                    if (!row) return null;
+                    return (
+                      <div className="rounded-[4px] border border-[rgba(198,182,186,0.2)] bg-[#1B1A14] px-3 py-2.5 shadow-[0_14px_36px_rgba(0,0,0,.55)]">
+                        <p className="m-0 mb-1.5 font-sans text-[13px] font-medium leading-none text-[#FFFEEF]">
+                          {String(label)}
+                        </p>
+                        <div className="grid grid-cols-[auto_auto] gap-x-3 leading-none">
+                          <span className="font-label text-text-muted">Share</span>
+                          <span className="font-data text-right text-[#FFB547]">
+                            {row.groupShare.toFixed(1)}% of group · {row.share.toFixed(2)}% total
+                          </span>
+                        </div>
+                      </div>
+                    );
                   }}
                 />
                 <Bar
@@ -684,23 +768,61 @@ export function CategoryCharts({ data }: CategoryChartsProps) {
                   radius={[0, 2, 2, 0]}
                   minPointSize={3}
                   isAnimationActive={hasEntered}
-                  activeBar={{
-                    fill: "#FFC764",
-                    stroke: "#FFB547",
-                    strokeWidth: 1,
-                    filter: "drop-shadow(0 0 6px rgba(255,181,71,0.45))",
+                  activeBar={false}
+                  onMouseEnter={(_, i) => setSharedHover(i)}
+                  // Top-align within each category band so the first bar's
+                  // upper edge sits on margin.top (donut apex), not centred
+                  // several px below it.
+                  shape={(props) => {
+                    const h = Math.min(28, Number(props.height) || 28);
+                    return (
+                      <Rectangle
+                        {...props}
+                        height={h}
+                        // `y` is already the band's top — leave it.
+                        radius={[0, 2, 2, 0]}
+                      />
+                    );
                   }}
                 >
-                  {colored.map((row) => (
-                    <Cell key={row.key} fill={row.color} />
-                  ))}
+                  {colored.map((row, i) => {
+                    const borrow =
+                      sharedHover != null && sharedHover > 0
+                        ? colored[sharedHover].color
+                        : null;
+                    const fill =
+                      sharedHover === i
+                        ? CHART_GOLD
+                        : i === 0 && borrow != null
+                          ? borrow
+                          : row.color;
+                    return (
+                      <Cell
+                        key={row.key}
+                        fill={fill}
+                        opacity={
+                          sharedHover == null ||
+                          sharedHover === i ||
+                          (i === 0 && borrow != null)
+                            ? 1
+                            : 0.4
+                        }
+                        className={
+                          i === 0 && (sharedHover == null || sharedHover === 0)
+                            ? "chart-gold-pulse"
+                            : undefined
+                        }
+                        style={{ transition: "opacity 0.25s ease, fill 0.25s ease" }}
+                      />
+                    );
+                  })}
                   <LabelList
                     dataKey="groupShare"
                     position="right"
                     formatter={(value: number) => `${value.toFixed(1)}%`}
                     fill="var(--color-text-primary)"
-                    fontSize={13}
-                    fontFamily="var(--font-ibm-plex-sans)"
+                    fontSize={12}
+                    fontFamily="var(--font-mono), ui-monospace, monospace"
                   />
                 </Bar>
               </BarChart>
