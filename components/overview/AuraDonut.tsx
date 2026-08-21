@@ -474,11 +474,7 @@ export function AuraDonut({
                     stroke="var(--color-bulk-base)"
                     strokeWidth={1}
                     opacity={
-                      hoverIndex == null ||
-                      hoverIndex === i ||
-                      (isPrimary && borrowColor != null)
-                        ? 1
-                        : 0.5
+                      hoverIndex == null || hoverIndex === i ? 1 : 0.5
                     }
                     className={undefined}
                     style={{ transition: "fill 0.5s cubic-bezier(0.4, 0, 0.2, 1)" }}
@@ -567,11 +563,7 @@ export function AuraDonut({
               share={showShare ? `${Math.round(row.share)}%` : undefined}
               wide={sourcesLayout || stacked}
               active={hoverIndex === i}
-              dimmed={
-                hoverIndex !== undefined &&
-                hoverIndex !== i &&
-                !(i === 0 && borrowColor != null)
-              }
+              dimmed={hoverIndex !== undefined && hoverIndex !== i}
               isFirst={i === 0}
               onMouseEnter={() => setHoverIndex(i)}
               onMouseLeave={() => {

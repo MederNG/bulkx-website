@@ -734,11 +734,7 @@ export function CategoryCharts({ data }: CategoryChartsProps) {
                       <CategoryYTick
                         {...props}
                         active={sharedHover === i}
-                        dimmed={
-                          sharedHover != null &&
-                          sharedHover !== i &&
-                          !(i === 0 && borrow != null)
-                        }
+                        dimmed={sharedHover != null && sharedHover !== i}
                         onHover={() => i >= 0 && setSharedHover(i)}
                       />
                     );
@@ -834,11 +830,7 @@ export function CategoryCharts({ data }: CategoryChartsProps) {
                         key={row.key}
                         fill={fill}
                         opacity={
-                          sharedHover == null ||
-                          sharedHover === i ||
-                          (i === 0 && borrow != null)
-                            ? 1
-                            : 0.4
+                          sharedHover == null || sharedHover === i ? 1 : 0.4
                         }
                         style={{ transition: "fill 0.25s ease" }}
                       />
