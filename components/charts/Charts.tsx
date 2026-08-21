@@ -17,6 +17,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import type { RectangleProps } from "recharts";
 import type { ChartRange } from "@/types";
 import type { ProjectedSnapshotTvl } from "@/lib/projected-snapshot-tvl";
 import {
@@ -773,11 +774,12 @@ export function CategoryCharts({ data }: CategoryChartsProps) {
                   // Top-align within each category band so the first bar's
                   // upper edge sits on margin.top (donut apex), not centred
                   // several px below it.
-                  shape={(props) => {
-                    const h = Math.min(28, Number(props.height) || 28);
+                  shape={(props: unknown) => {
+                    const p = props as RectangleProps;
+                    const h = Math.min(28, Number(p.height) || 28);
                     return (
                       <Rectangle
-                        {...props}
+                        {...p}
                         height={h}
                         // `y` is already the band's top — leave it.
                         radius={[0, 2, 2, 0]}
