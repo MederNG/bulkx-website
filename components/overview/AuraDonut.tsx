@@ -349,8 +349,12 @@ export function AuraDonut({
     <div
       ref={rowRef}
       className={cn(
-        "flex min-h-0 min-w-0 flex-1",
-        stacked ? "flex-col items-stretch gap-3 overflow-visible" : "gap-5 overflow-hidden",
+        // Isolate so card gloss doesn't reconstitute over thin sector strokes;
+        // select-none so Android doesn't treat legend taps as copy-text.
+        "flex min-h-0 min-w-0 flex-1 select-none [-webkit-touch-callout:none] [isolation:isolate]",
+        // overflow-x only — overflow-y:hidden was clipping the ring apex on
+        // short mobile panels (the flat top that looked like "textures").
+        stacked ? "flex-col items-stretch gap-3 overflow-visible" : "gap-5 overflow-x-clip overflow-y-visible",
         !stacked && (sourcesLayout ? "items-start" : "items-center")
       )}
       style={{ paddingLeft: stacked ? 0 : METRIC_TABLE_LEAD_INSET }}

@@ -3,7 +3,7 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import type { DepositTier } from "@/lib/overview-metrics";
-import { CHART_GOLD } from "@/lib/overview-metrics";
+import { CHART_GOLD, chartSlateRamp } from "@/lib/overview-metrics";
 import { PanelCard } from "@/components/overview/PanelCard";
 import { CATEGORY_NAME } from "@/components/overview/MetricTable";
 import { cn } from "@/lib/utils";
@@ -234,12 +234,19 @@ export function DepositorsDistributionPanel({ tiers }: { tiers: DepositTier[] })
 
   const hoveredRow = rows.find((r) => r.id === hovered) ?? null;
   const hoveredIndex = hoveredRow ? rows.findIndex((r) => r.id === hoveredRow.id) : -1;
-  const primaryId = rows[0]?.id;
-  /** Hovering a non-primary tier: gold leaves Snowflake and the lit tier
+  // Gold highlight always stays on the first tier. Value only flips the
+  // companion slate ramp (dull→bright), so the idle gold never jumps right.
+  const primaryIndex = 0;
+  const primaryId = rows[primaryIndex]?.id;
+  const colorAt = (i: number) => {
+    if (metric === "count") return rows[i]?.color ?? CHART_GOLD;
+    return chartSlateRamp(rows.length - 1 - i, rows.length);
+  };
+  /** Hovering a non-primary tier: gold leaves the primary and the lit tier
    * takes it — same transfer as the Overview donut. */
   const borrowColor =
-    hovered && primaryId && hovered !== primaryId
-      ? (rows.find((r) => r.id === hovered)?.color ?? null)
+    hovered && primaryId && hovered !== primaryId && hoveredIndex >= 0
+      ? colorAt(hoveredIndex)
       : null;
   const primaryIdle = borrowColor == null;
 
@@ -464,9 +471,9 @@ export function DepositorsDistributionPanel({ tiers }: { tiers: DepositTier[] })
                   const muted = isMuted(row.id);
                   const countActive = metric === "count";
                   const isHovered = hovered === row.id;
-                  const isPrimary = i === 0;
+                  const isPrimary = i === primaryIndex;
                   const baseColor =
-                    isPrimary ? (borrowColor ?? CHART_GOLD) : row.color;
+                    isPrimary ? (borrowColor ?? CHART_GOLD) : colorAt(i);
                   const dimOthers = hovered != null && !isHovered;
                   // Only the series the toggle is showing solid takes the
                   // highlight. Lighting both bars of the pair made the hover
@@ -727,7 +734,7 @@ export function DepositorsDistributionPanel({ tiers }: { tiers: DepositTier[] })
                   tableCols,
                   // Same always-on inset as MetricTableRow: highlight clears
                   // the scaled bullet and rounds instead of cutting the edge.
-                  "-mx-2.5 shrink-0 cursor-pointer rounded-md px-2.5 transition-colors",
+                  "-mx-2.5 shrink-0 cursor-pointer rounded-md px-2.5 transition-colors select-none [-webkit-touch-callout:none]",
                   i > 0 && "border-t border-[var(--color-line-soft)]",
                   lit && i > 0 && "border-transparent",
                   lit && "bg-[rgba(255,255,255,0.045)]"
@@ -738,17 +745,17 @@ export function DepositorsDistributionPanel({ tiers }: { tiers: DepositTier[] })
                   <span
                     className={cn(
                       "h-[9px] w-[9px] shrink-0 rounded-full transition-[transform,background-color,opacity]",
-                      i === 0 && primaryIdle && !lit && "chart-gold-pulse"
+                      i === primaryIndex && primaryIdle && !lit && "chart-gold-pulse"
                     )}
                     style={{
                       background: lit
                         ? CHART_GOLD
-                        : i === 0 && borrowColor
+                        : i === primaryIndex && borrowColor
                           ? borrowColor
-                          : row.color,
+                          : colorAt(i),
                       opacity: muted
                         ? 0.45
-                        : hovered != null && !lit && !(i === 0 && borrowColor)
+                        : hovered != null && !lit && !(i === primaryIndex && borrowColor)
                           ? 0.4
                           : 1,
                       transform: lit ? "scale(1.25)" : "scale(1)",

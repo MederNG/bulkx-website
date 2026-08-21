@@ -142,7 +142,7 @@ export function MetricTableHeader({
         shape.justify,
         // Same horizontal inset as the body rows so columns stay aligned when
         // a row's highlight pads past the bullets.
-        "-mx-2.5 shrink-0 border-b border-[var(--color-line)] px-2.5 pb-1.5"
+        "-mx-2.5 shrink-0 border-b border-[var(--color-line)] px-2.5 pb-1.5 select-none [-webkit-touch-callout:none]"
       )}
       style={{ gridTemplateColumns: shape.template }}
     >
@@ -228,7 +228,7 @@ export function MetricTableRow({
         // px/mx always on — only the fill toggles — so hovering doesn't shift
         // columns. The inset clears the scaled bullet and softens the cut at
         // the panel edge with rounded corners.
-        "-mx-2.5 shrink-0 cursor-pointer items-center rounded-md px-2.5 transition-colors",
+        "-mx-2.5 shrink-0 cursor-pointer items-center rounded-md px-2.5 transition-colors select-none [-webkit-touch-callout:none]",
         !isFirst && "border-t border-[var(--color-line-soft)]",
         active && !isFirst && "border-transparent",
         active && !pulse && "bg-[rgba(255,255,255,0.045)]",
