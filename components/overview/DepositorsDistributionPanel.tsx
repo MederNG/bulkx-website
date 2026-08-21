@@ -751,7 +751,10 @@ export function DepositorsDistributionPanel({ tiers }: { tiers: DepositTier[] })
           {rows.map((row, i) => {
             const muted = isMuted(row.id);
             const lit = hovered === row.id || selected === row.id;
-            const color = muted ? "#6B6660" : "#F5F3EE";
+            // Dim every non-active row — including the primary tier (gold
+            // transfer used to leave Snowflake fully lit).
+            const dimmed = muted || (hovered != null && !lit);
+            const color = dimmed ? "#6B6660" : "#F5F3EE";
             return (
               <div
                 key={row.id}
@@ -803,11 +806,7 @@ export function DepositorsDistributionPanel({ tiers }: { tiers: DepositTier[] })
                           lit
                             ? CHART_GOLD_PULSE
                             : {
-                                opacity: muted
-                                  ? 0.45
-                                  : hovered != null && !lit && !(i === primaryIndex && borrowColor)
-                                    ? 0.4
-                                    : 1,
+                                opacity: dimmed ? 0.4 : 1,
                               }
                         }
                         transition={
