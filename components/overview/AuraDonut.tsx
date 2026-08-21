@@ -1,9 +1,15 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { motion } from "framer-motion";
 import { Cell, Pie, PieChart, Sector } from "recharts";
 import type { OverviewDonutSegment } from "@/lib/overview-metrics";
 import { CHART_GOLD, chartPrimaryRamp } from "@/lib/overview-metrics";
+import {
+  CHART_GOLD_PULSE,
+  CHART_GOLD_PULSE_TRANSITION,
+  CHART_GOLD_PULSE_UNDERLAY,
+} from "@/lib/chart-gold-pulse";
 import { cn } from "@/lib/utils";
 import { useNarrowViewport } from "@/lib/use-narrow-viewport";
 import {
@@ -64,10 +70,26 @@ interface ActiveShapeProps {
 /**
  * Room-light hover: base sector stays put so the ring never punches a black
  * hole; gold only fades in/out on top — on = lights up, off = lights out.
+ *
+ * Primary selection pulses via Framer Motion opacity. CSS animations on SVG
+ * run on Safari/phones but Chromium drops them; motion keeps desktop in sync.
+ * Underlay: each slice keeps its own slate bed so gold↔slate reads clearly.
+ * The primary's idle fill is gold, so it borrows the shared slate bed instead
+ * of flashing gold→gold.
  */
-function renderActiveShape(rawProps: unknown, lit: boolean, baseFill: string) {
+function renderActiveShape(
+  rawProps: unknown,
+  lit: boolean,
+  baseFill: string,
+  pulse = false
+) {
   const props = rawProps as ActiveShapeProps;
   const { cx, cy, innerRadius, outerRadius, startAngle, endAngle } = props;
+  // Slate bed only while the primary is actively lit. On leave, snap the bed
+  // back to gold immediately — otherwise the gold overlay fades out over
+  // ~480ms and leaves the slate bed looking "stuck" gray.
+  const bed =
+    pulse && lit && baseFill === CHART_GOLD ? CHART_GOLD_PULSE_UNDERLAY : baseFill;
   return (
     <g>
       <Sector
@@ -77,24 +99,34 @@ function renderActiveShape(rawProps: unknown, lit: boolean, baseFill: string) {
         outerRadius={outerRadius}
         startAngle={startAngle}
         endAngle={endAngle}
-        fill={baseFill}
+        fill={bed}
         stroke="var(--color-bulk-base)"
         strokeWidth={1}
       />
-      <Sector
-        cx={cx}
-        cy={cy}
-        innerRadius={innerRadius}
-        outerRadius={outerRadius}
-        startAngle={startAngle}
-        endAngle={endAngle}
-        fill={CHART_GOLD}
-        stroke="none"
-        style={{
-          opacity: lit ? 1 : 0,
-          transition: "opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1)",
-        }}
-      />
+      <motion.g
+        initial={false}
+        animate={
+          pulse && lit
+            ? CHART_GOLD_PULSE
+            : { opacity: lit ? 1 : 0 }
+        }
+        transition={
+          pulse && lit
+            ? CHART_GOLD_PULSE_TRANSITION
+            : { duration: 0.48, ease: [0.4, 0, 0.2, 1] }
+        }
+      >
+        <Sector
+          cx={cx}
+          cy={cy}
+          innerRadius={innerRadius}
+          outerRadius={outerRadius}
+          startAngle={startAngle}
+          endAngle={endAngle}
+          fill={CHART_GOLD}
+          stroke="none"
+        />
+      </motion.g>
     </g>
   );
 }
@@ -311,7 +343,6 @@ export function AuraDonut({
    * slice takes it — Overview donut transfer. */
   const borrowColor =
     hoverIndex != null && hoverIndex > 0 ? chartData[hoverIndex].color : null;
-  const primaryIdle = borrowColor == null;
 
   // Radii, and everything sized against them, derived from the measured
   // canvas. The cap keeps the hover glow inside the canvas; without it the
@@ -410,7 +441,8 @@ export function AuraDonut({
                 renderActiveShape(
                   props,
                   activeVisible,
-                  paintIndex != null ? chartData[paintIndex].color : CHART_GOLD
+                  paintIndex != null ? chartData[paintIndex].color : CHART_GOLD,
+                  paintIndex != null
                 )
               }
               onMouseEnter={(_, i) => setHoverIndex(i)}
@@ -441,8 +473,8 @@ export function AuraDonut({
                         ? 1
                         : 0.5
                     }
-                    className={isPrimary && primaryIdle ? "chart-gold-pulse" : undefined}
-                    style={{ transition: "opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1), fill 0.5s cubic-bezier(0.4, 0, 0.2, 1)" }}
+                    className={undefined}
+                    style={{ transition: "fill 0.5s cubic-bezier(0.4, 0, 0.2, 1)" }}
                   />
                 );
               })}
@@ -522,7 +554,7 @@ export function AuraDonut({
             <MetricTableRow
               key={row.category}
               color={legendColor}
-              pulseDot={i === 0 && primaryIdle}
+              pulseDot={hoverIndex === i}
               name={row.category}
               count={Math.round(row.points).toLocaleString("en-US")}
               share={showShare ? `${Math.round(row.share)}%` : undefined}

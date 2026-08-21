@@ -1,4 +1,13 @@
+"use client";
+
+import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
+import {
+  CHART_GOLD_PULSE,
+  CHART_GOLD_PULSE_TRANSITION,
+  CHART_GOLD_PULSE_UNDERLAY,
+} from "@/lib/chart-gold-pulse";
+import { CHART_GOLD } from "@/lib/overview-metrics";
 
 /** Category / tier names — Familjen 13 medium. Shared by the donut legend
  * and the Category Share Y-axis so the two panels read as one list. */
@@ -246,17 +255,43 @@ export function MetricTableRow({
           at as many different x positions. Anchoring the group left puts every
           dot on one vertical line and every name at one starting x. */}
       <span className={cn("flex min-w-0 items-center gap-2", CATEGORY_NAME)} style={{ color: textColor }}>
-        <span
-          className={cn(
-            "h-[9px] w-[9px] shrink-0 rounded-full transition-[transform,background-color]",
-            pulseDot && "chart-gold-pulse"
-          )}
-          style={{
-            background: color,
-            opacity: dimmed && !pulseDot ? 0.4 : 1,
-            transform: active ? "scale(1.25)" : "scale(1)",
-          }}
-        />
+        {pulseDot && color === CHART_GOLD ? (
+          <span className="relative h-[9px] w-[9px] shrink-0">
+            <span
+              className="absolute inset-0 rounded-full"
+              style={{ background: CHART_GOLD_PULSE_UNDERLAY }}
+            />
+            <motion.span
+              className="absolute inset-0 rounded-full"
+              initial={false}
+              animate={CHART_GOLD_PULSE}
+              transition={CHART_GOLD_PULSE_TRANSITION}
+              style={{
+                background: CHART_GOLD,
+                transform: active ? "scale(1.25)" : "scale(1)",
+              }}
+            />
+          </span>
+        ) : (
+          <motion.span
+            className="h-[9px] w-[9px] shrink-0 rounded-full"
+            initial={false}
+            animate={
+              pulseDot
+                ? CHART_GOLD_PULSE
+                : { opacity: dimmed ? 0.4 : 1 }
+            }
+            transition={
+              pulseDot
+                ? CHART_GOLD_PULSE_TRANSITION
+                : { duration: 0.2 }
+            }
+            style={{
+              background: color,
+              transform: active ? "scale(1.25)" : "scale(1)",
+            }}
+          />
+        )}
         <span className="truncate">{name}</span>
       </span>
       {/* Its own cell rather than trailing the name inside one: sharing a cell

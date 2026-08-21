@@ -4,6 +4,11 @@ import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import type { DepositTier } from "@/lib/overview-metrics";
 import { CHART_GOLD, chartSlateRamp } from "@/lib/overview-metrics";
+import {
+  CHART_GOLD_PULSE,
+  CHART_GOLD_PULSE_TRANSITION,
+  CHART_GOLD_PULSE_UNDERLAY,
+} from "@/lib/chart-gold-pulse";
 import { PanelCard } from "@/components/overview/PanelCard";
 import { CATEGORY_NAME } from "@/components/overview/MetricTable";
 import { cn } from "@/lib/utils";
@@ -248,7 +253,6 @@ export function DepositorsDistributionPanel({ tiers }: { tiers: DepositTier[] })
     hovered && primaryId && hovered !== primaryId && hoveredIndex >= 0
       ? colorAt(hoveredIndex)
       : null;
-  const primaryIdle = borrowColor == null;
 
   // Plot hover follows the cursor. Table hover parks over that tier's bar —
   // the pointer is in the other card, so the last plot position would leave
@@ -498,64 +502,93 @@ export function DepositorsDistributionPanel({ tiers }: { tiers: DepositTier[] })
                       }}
                     >
                       {/* Depositors — solid while Count is active, an
-                          outline of the same colour otherwise. */}
-                      <div
-                        className={cn(
-                          "rounded-t-[2px] border-[0.5px] transition-[height,background-color,border-color,outline-color,filter] duration-300",
-                          isPrimary &&
-                            primaryIdle &&
-                            countActive &&
-                            !countLit &&
-                            "chart-gold-pulse"
-                        )}
-                        style={{
-                          width: barW,
-                          height: `${row.countHeight}%`,
-                          background: countActive
-                            ? countLit
-                              ? CHART_GOLD
-                              : baseColor
-                            : countLit
-                              ? `color-mix(in srgb, ${CHART_GOLD} 40%, transparent)`
+                          outline of the same colour otherwise. Primary beds
+                          on slate while pulsing so gold↔gray reads, not gold↔gold. */}
+                      {countActive && countLit ? (
+                        <div
+                          className="relative rounded-t-[2px]"
+                          style={{ width: barW, height: `${row.countHeight}%` }}
+                        >
+                          <div
+                            className="absolute inset-0 rounded-t-[2px]"
+                            style={{
+                              background:
+                                isPrimary || row.color === CHART_GOLD
+                                  ? CHART_GOLD_PULSE_UNDERLAY
+                                  : row.color,
+                            }}
+                          />
+                          <motion.div
+                            className="absolute inset-0 rounded-t-[2px] border-[0.5px] border-transparent"
+                            initial={false}
+                            animate={CHART_GOLD_PULSE}
+                            transition={CHART_GOLD_PULSE_TRANSITION}
+                            style={{
+                              background: CHART_GOLD,
+                              outline: "1px solid #FFFEEF",
+                              filter: "drop-shadow(0 0 4px rgba(255,181,71,0.28))",
+                            }}
+                          />
+                        </div>
+                      ) : (
+                        <div
+                          className="rounded-t-[2px] border-[0.5px] transition-[height,background-color,border-color,outline-color] duration-300"
+                          style={{
+                            width: barW,
+                            height: `${row.countHeight}%`,
+                            background: countActive
+                              ? baseColor
                               : `color-mix(in srgb, ${baseColor} 35%, transparent)`,
-                          borderColor: countActive
-                            ? "transparent"
-                            : `color-mix(in srgb, ${baseColor} 65%, transparent)`,
-                          outline: `1px solid ${countLit ? "#FFFEEF" : "transparent"}`,
-                          filter: countLit
-                            ? "drop-shadow(0 0 4px rgba(255,181,71,0.28))"
-                            : undefined,
-                        }}
-                      />
+                            borderColor: countActive
+                              ? "transparent"
+                              : `color-mix(in srgb, ${baseColor} 65%, transparent)`,
+                            outline: "1px solid transparent",
+                          }}
+                        />
+                      )}
                       {/* Deposits — the mirror: solid while Value is active. */}
-                      <div
-                        className={cn(
-                          "rounded-t-[2px] border-[0.5px] transition-[height,background-color,border-color,outline-color,filter] duration-300",
-                          isPrimary &&
-                            primaryIdle &&
-                            !countActive &&
-                            !valueLit &&
-                            "chart-gold-pulse"
-                        )}
-                        style={{
-                          width: barW,
-                          height: `${row.valueHeight}%`,
-                          background: !countActive
-                            ? valueLit
-                              ? CHART_GOLD
-                              : baseColor
-                            : valueLit
-                              ? `color-mix(in srgb, ${CHART_GOLD} 40%, transparent)`
+                      {!countActive && valueLit ? (
+                        <div
+                          className="relative rounded-t-[2px]"
+                          style={{ width: barW, height: `${row.valueHeight}%` }}
+                        >
+                          <div
+                            className="absolute inset-0 rounded-t-[2px]"
+                            style={{
+                              background:
+                                isPrimary || row.color === CHART_GOLD
+                                  ? CHART_GOLD_PULSE_UNDERLAY
+                                  : row.color,
+                            }}
+                          />
+                          <motion.div
+                            className="absolute inset-0 rounded-t-[2px] border-[0.5px] border-transparent"
+                            initial={false}
+                            animate={CHART_GOLD_PULSE}
+                            transition={CHART_GOLD_PULSE_TRANSITION}
+                            style={{
+                              background: CHART_GOLD,
+                              outline: "1px solid #FFFEEF",
+                              filter: "drop-shadow(0 0 4px rgba(255,181,71,0.28))",
+                            }}
+                          />
+                        </div>
+                      ) : (
+                        <div
+                          className="rounded-t-[2px] border-[0.5px] transition-[height,background-color,border-color,outline-color] duration-300"
+                          style={{
+                            width: barW,
+                            height: `${row.valueHeight}%`,
+                            background: !countActive
+                              ? baseColor
                               : `color-mix(in srgb, ${baseColor} 35%, transparent)`,
-                          borderColor: !countActive
-                            ? "transparent"
-                            : `color-mix(in srgb, ${baseColor} 65%, transparent)`,
-                          outline: `1px solid ${valueLit ? "#FFFEEF" : "transparent"}`,
-                          filter: valueLit
-                            ? "drop-shadow(0 0 4px rgba(255,181,71,0.28))"
-                            : undefined,
-                        }}
-                      />
+                            borderColor: !countActive
+                              ? "transparent"
+                              : `color-mix(in srgb, ${baseColor} 65%, transparent)`,
+                            outline: "1px solid transparent",
+                          }}
+                        />
+                      )}
                     </div>
                   );
                 })}
@@ -742,25 +775,51 @@ export function DepositorsDistributionPanel({ tiers }: { tiers: DepositTier[] })
                 style={{ height: ROW_H }}
               >
                 <span className={cn("flex min-w-0 items-center gap-2", CATEGORY_NAME)} style={{ color }}>
-                  <span
-                    className={cn(
-                      "h-[9px] w-[9px] shrink-0 rounded-full transition-[transform,background-color,opacity]",
-                      i === primaryIndex && primaryIdle && !lit && "chart-gold-pulse"
-                    )}
-                    style={{
-                      background: lit
-                        ? CHART_GOLD
-                        : i === primaryIndex && borrowColor
-                          ? borrowColor
-                          : colorAt(i),
-                      opacity: muted
-                        ? 0.45
-                        : hovered != null && !lit && !(i === primaryIndex && borrowColor)
-                          ? 0.4
-                          : 1,
-                      transform: lit ? "scale(1.25)" : "scale(1)",
-                    }}
-                  />
+                  {lit && (i === primaryIndex || row.color === CHART_GOLD) ? (
+                    <span className="relative h-[9px] w-[9px] shrink-0">
+                      <span
+                        className="absolute inset-0 rounded-full"
+                        style={{ background: CHART_GOLD_PULSE_UNDERLAY }}
+                      />
+                      <motion.span
+                        className="absolute inset-0 rounded-full"
+                        initial={false}
+                        animate={CHART_GOLD_PULSE}
+                        transition={CHART_GOLD_PULSE_TRANSITION}
+                        style={{
+                          background: CHART_GOLD,
+                          transform: "scale(1.25)",
+                        }}
+                      />
+                    </span>
+                  ) : (
+                    <motion.span
+                      className="h-[9px] w-[9px] shrink-0 rounded-full"
+                      initial={false}
+                      animate={
+                        lit
+                          ? CHART_GOLD_PULSE
+                          : {
+                              opacity: muted
+                                ? 0.45
+                                : hovered != null && !lit && !(i === primaryIndex && borrowColor)
+                                  ? 0.4
+                                  : 1,
+                            }
+                      }
+                      transition={
+                        lit ? CHART_GOLD_PULSE_TRANSITION : { duration: 0.2 }
+                      }
+                      style={{
+                        background: lit
+                          ? CHART_GOLD
+                          : i === primaryIndex && borrowColor
+                            ? borrowColor
+                            : colorAt(i),
+                        transform: lit ? "scale(1.25)" : "scale(1)",
+                      }}
+                    />
+                  )}
                   <span className="truncate">{row.name}</span>
                 </span>
                 {!narrow && (
