@@ -807,7 +807,8 @@ export function CategoryCharts({ data }: CategoryChartsProps) {
                       <g>
                         <Rectangle {...geom} fill={bed} />
                         <motion.g
-                          initial={false}
+                          key={`bar-pulse-${idx}`}
+                          initial={{ opacity: 1 }}
                           animate={CHART_GOLD_PULSE}
                           transition={CHART_GOLD_PULSE_TRANSITION}
                         >

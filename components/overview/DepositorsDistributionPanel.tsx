@@ -519,8 +519,9 @@ export function DepositorsDistributionPanel({ tiers }: { tiers: DepositTier[] })
                             }}
                           />
                           <motion.div
+                            key={`count-pulse-${row.id}`}
                             className="absolute inset-0 rounded-t-[2px] border-[0.5px] border-transparent"
-                            initial={false}
+                            initial={{ opacity: 1 }}
                             animate={CHART_GOLD_PULSE}
                             transition={CHART_GOLD_PULSE_TRANSITION}
                             style={{
@@ -562,8 +563,9 @@ export function DepositorsDistributionPanel({ tiers }: { tiers: DepositTier[] })
                             }}
                           />
                           <motion.div
+                            key={`value-pulse-${row.id}`}
                             className="absolute inset-0 rounded-t-[2px] border-[0.5px] border-transparent"
-                            initial={false}
+                            initial={{ opacity: 1 }}
                             animate={CHART_GOLD_PULSE}
                             transition={CHART_GOLD_PULSE_TRANSITION}
                             style={{
@@ -782,8 +784,9 @@ export function DepositorsDistributionPanel({ tiers }: { tiers: DepositTier[] })
                         style={{ background: CHART_GOLD_PULSE_UNDERLAY }}
                       />
                       <motion.span
+                        key={`tier-pulse-${row.id}`}
                         className="absolute inset-0 rounded-full"
-                        initial={false}
+                        initial={{ opacity: 1 }}
                         animate={CHART_GOLD_PULSE}
                         transition={CHART_GOLD_PULSE_TRANSITION}
                         style={{
@@ -793,32 +796,32 @@ export function DepositorsDistributionPanel({ tiers }: { tiers: DepositTier[] })
                       />
                     </span>
                   ) : (
-                    <motion.span
-                      className="h-[9px] w-[9px] shrink-0 rounded-full"
-                      initial={false}
-                      animate={
-                        lit
-                          ? CHART_GOLD_PULSE
-                          : {
-                              opacity: muted
-                                ? 0.45
-                                : hovered != null && !lit && !(i === primaryIndex && borrowColor)
-                                  ? 0.4
-                                  : 1,
-                            }
-                      }
-                      transition={
-                        lit ? CHART_GOLD_PULSE_TRANSITION : { duration: 0.2 }
-                      }
-                      style={{
-                        background: lit
-                          ? CHART_GOLD
-                          : i === primaryIndex && borrowColor
-                            ? borrowColor
-                            : colorAt(i),
-                        transform: lit ? "scale(1.25)" : "scale(1)",
-                      }}
-                    />
+                      <motion.span
+                        className="h-[9px] w-[9px] shrink-0 rounded-full"
+                        initial={{ opacity: 1 }}
+                        animate={
+                          lit
+                            ? CHART_GOLD_PULSE
+                            : {
+                                opacity: muted
+                                  ? 0.45
+                                  : hovered != null && !lit && !(i === primaryIndex && borrowColor)
+                                    ? 0.4
+                                    : 1,
+                              }
+                        }
+                        transition={
+                          lit ? CHART_GOLD_PULSE_TRANSITION : { duration: 0.2 }
+                        }
+                        style={{
+                          background: lit
+                            ? CHART_GOLD
+                            : i === primaryIndex && borrowColor
+                              ? borrowColor
+                              : colorAt(i),
+                          transform: lit ? "scale(1.25)" : "scale(1)",
+                        }}
+                      />
                   )}
                   <span className="truncate">{row.name}</span>
                 </span>

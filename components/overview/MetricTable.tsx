@@ -262,8 +262,9 @@ export function MetricTableRow({
               style={{ background: CHART_GOLD_PULSE_UNDERLAY }}
             />
             <motion.span
+              key="legend-gold-pulse"
               className="absolute inset-0 rounded-full"
-              initial={false}
+              initial={{ opacity: 1 }}
               animate={CHART_GOLD_PULSE}
               transition={CHART_GOLD_PULSE_TRANSITION}
               style={{
@@ -275,7 +276,7 @@ export function MetricTableRow({
         ) : (
           <motion.span
             className="h-[9px] w-[9px] shrink-0 rounded-full"
-            initial={false}
+            initial={{ opacity: pulseDot ? 1 : dimmed ? 0.4 : 1 }}
             animate={
               pulseDot
                 ? CHART_GOLD_PULSE
