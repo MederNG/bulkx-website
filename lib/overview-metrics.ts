@@ -107,11 +107,14 @@ export const CHART_SLATE = [
   "#5E819E",
   "#4A6B84",
   "#3D5A73",
-  "#263B4E",
+  "#4F6F88",
 ] as const;
 
 /** Ordered bright→dull slate for sequential charts (Aura histogram buckets).
  * Unlike chartDuochrome this never injects gold mid-series. */
+/** Ordered bright→dull slate for sequential charts. Stops before near-black
+ * so the last marks stay readable on bulk-base (the old tail `#263B4E` /
+ * `#1C2E3E` vanished against the card). */
 const SLATE_RAMP = [
   "#C5D6E6",
   "#A8C0D4",
@@ -120,9 +123,6 @@ const SLATE_RAMP = [
   "#5E819E",
   "#4A6B84",
   "#3D5A73",
-  "#314B61",
-  "#263B4E",
-  "#1C2E3E",
 ] as const;
 
 export function chartSlateRamp(index: number, count: number): string {

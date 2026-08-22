@@ -539,10 +539,10 @@ export function DepositorsDistributionPanel({ tiers }: { tiers: DepositTier[] })
                             height: `${row.countHeight}%`,
                             background: countActive
                               ? baseColor
-                              : `color-mix(in srgb, ${baseColor} 35%, transparent)`,
+                              : `color-mix(in srgb, ${baseColor} 55%, transparent)`,
                             borderColor: countActive
                               ? "transparent"
-                              : `color-mix(in srgb, ${baseColor} 65%, transparent)`,
+                              : `color-mix(in srgb, ${baseColor} 85%, transparent)`,
                             outline: "1px solid transparent",
                           }}
                         />
@@ -583,10 +583,10 @@ export function DepositorsDistributionPanel({ tiers }: { tiers: DepositTier[] })
                             height: `${row.valueHeight}%`,
                             background: !countActive
                               ? baseColor
-                              : `color-mix(in srgb, ${baseColor} 35%, transparent)`,
+                              : `color-mix(in srgb, ${baseColor} 55%, transparent)`,
                             borderColor: !countActive
                               ? "transparent"
-                              : `color-mix(in srgb, ${baseColor} 65%, transparent)`,
+                              : `color-mix(in srgb, ${baseColor} 85%, transparent)`,
                             outline: "1px solid transparent",
                           }}
                         />
