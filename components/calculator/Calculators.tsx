@@ -39,13 +39,19 @@ const FDV_FIELD_INFO = {
     "Token Price × Allocation (%) — airdrop market cap (Token Price = FDV ÷ 1B). Edit to set a target; FDV, Aura Value, and Your Value update.",
 } as const;
 
-/** Cents, in full, with separators. formatUsd compacts anything past a
- * thousand — fine for a table cell, wrong for the single figure this page is
- * built around, where "$6.5K" hides the very digits being modelled. */
+/** Cents, in full, with separators — except a trailing `.00`, which adds
+ * nothing to "$1,250". formatUsd compacts anything past a thousand — fine
+ * for a table cell, wrong for the single figure this page is built around,
+ * where "$6.5K" hides the very digits being modelled. */
 function formatUsdExact(value: number): string {
+  const cents = Math.round(value * 100);
+  const whole = cents % 100 === 0;
   return (
     "$" +
-    value.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+    (cents / 100).toLocaleString("en-US", {
+      minimumFractionDigits: whole ? 0 : 2,
+      maximumFractionDigits: 2,
+    })
   );
 }
 
