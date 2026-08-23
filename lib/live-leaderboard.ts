@@ -87,10 +87,9 @@ export async function getLeaderboardForApp(
     return cache.data;
   }
 
-  // waitMs: 0 is for page SSR / tab switches. Starting a no-store upstream
-  // pull here — even if we don't await it — opts the whole route into
-  // dynamic rendering, so every nav waits on the server. Cron and
-  // /api/live-financials still refresh with a real wait.
+  // waitMs: 0 is for page SSR, tab switches, and live-financials. Starting
+  // a no-store upstream pull here — even if we don't await it — opts the
+  // route into dynamic rendering and burns Fluid CPU on a 26-page fetch.
   if (options.waitMs === 0) {
     return cache?.data ?? disk;
   }

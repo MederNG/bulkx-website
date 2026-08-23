@@ -11,7 +11,7 @@ import {
 } from "react";
 import type { LiveFinancialPayload } from "@/lib/live-financial-payload";
 
-const POLL_MS = 60_000;
+const POLL_MS = 90_000;
 const MIN_REFRESH_GAP_MS = 15_000;
 
 const LiveFinancialContext = createContext<LiveFinancialPayload | null>(null);
@@ -42,7 +42,7 @@ export function LiveFinancialProvider({
 
     const run = (async () => {
       try {
-        const response = await fetch("/api/live-financials", { cache: "no-store" });
+        const response = await fetch("/api/live-financials");
         if (!response.ok) return;
         const next: LiveFinancialPayload = await response.json();
         lastRefreshAtRef.current = Date.now();
