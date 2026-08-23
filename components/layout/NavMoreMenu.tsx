@@ -9,7 +9,7 @@ import { AnchorLink } from "@/components/layout/AnchorLink";
 const NAV_ITEMS = [
   { href: "#lookup", label: "Lookup" },
   { href: "#analytics", label: "TVL Analytics" },
-  { href: "#aura-distribution", label: "Aura Distribution" },
+  { href: "#aura-hunter", label: "Aura Hunter" },
   { href: "#aura-source-breakdown", label: "Aura Source Breakdown" },
   { href: "#calculator", label: "Tools" },
   { href: "#leaderboards", label: "Leaderboards" },
