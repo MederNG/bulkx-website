@@ -18,7 +18,7 @@ import {
   YAxis,
 } from "recharts";
 import type { RectangleProps } from "recharts";
-import type { ChartRange } from "@/types";
+import type { ChartRange, WalletData } from "@/types";
 import type { ProjectedSnapshotTvl } from "@/lib/projected-snapshot-tvl";
 import {
   formatSignedUsd,
@@ -31,7 +31,6 @@ import { cn, formatNumber } from "@/lib/utils";
 import { useNarrowViewport } from "@/lib/use-narrow-viewport";
 import { InfoTooltip } from "@/components/ui/InfoTooltip";
 import { Select } from "@/components/ui/Select";
-import { PageHeading } from "@/components/layout/PageHeading";
 import { PanelCard, PanelLabel } from "@/components/overview/PanelCard";
 import {
   AURA_SOURCES_DONUT_WELL,
@@ -40,6 +39,10 @@ import {
 } from "@/components/overview/AuraDonut";
 import { CATEGORY_NAME_SVG } from "@/components/overview/MetricTable";
 import { chartPrimaryRamp, chartSlateRamp, CHART_GOLD, type OverviewDonutSegment } from "@/lib/overview-metrics";
+import {
+  AuraStatsPanel,
+  PersonalSourcesPanel,
+} from "@/components/lookup/wallet-panels";
 import {
   OVERVIEW_GROUP,
   buildCategoryGroupOptions,
@@ -510,6 +513,10 @@ export function AuraHistogram({ data }: HistogramProps) {
 
 interface CategoryChartsProps {
   data: CategoryBreakdownItem[];
+  /** When set, panels morph into personal sources + Aura Stats. */
+  wallet?: WalletData | null;
+  /** Stretch to fill leftover page height (Aura analytics first viewport). */
+  className?: string;
 }
 
 interface CategoryChartRow extends CategoryBreakdownItem {
@@ -554,7 +561,7 @@ function collapseSmallCategories(data: CategoryChartRow[]) {
   };
 }
 
-export function CategoryCharts({ data }: CategoryChartsProps) {
+export function CategoryCharts({ data, wallet, className }: CategoryChartsProps) {
   const groupOptions = useMemo(() => buildCategoryGroupOptions(data), [data]);
   const [selectedGroup, setSelectedGroup] = useState(OVERVIEW_GROUP);
   const narrow = useNarrowViewport();
@@ -634,17 +641,47 @@ export function CategoryCharts({ data }: CategoryChartsProps) {
   const { ref, hasEntered } = useInViewOnce<HTMLDivElement>(0.2);
   const [sharedHover, setSharedHover] = useState<number | undefined>(undefined);
 
-  return (
-    <div className="flex flex-col gap-4">
-      <PageHeading eyebrow="Aura" title="Aura analytics" centered />
-
+  if (wallet) {
+    return (
       <div
-        ref={ref}
-        className="grid items-stretch gap-4 lg:grid-cols-2"
-        onMouseLeave={() => setSharedHover(undefined)}
+        className={cn(
+          "grid min-h-[292px] items-stretch gap-4 lg:grid-cols-2",
+          className
+        )}
       >
-        <PanelCard glossy glossDelay={-8} className={narrow ? undefined : "min-h-[400px]"}>
-          <div className="mb-3 flex min-h-8 items-center justify-between gap-3">
+        <PanelCard
+          glossy
+          glossDelay={-8}
+          className={narrow ? undefined : "h-full min-h-[292px]"}
+        >
+          <PersonalSourcesPanel data={wallet} />
+        </PanelCard>
+        <PanelCard
+          glossy
+          glossDelay={-11}
+          className={narrow ? undefined : "h-full min-h-[292px]"}
+        >
+          <AuraStatsPanel data={wallet} />
+        </PanelCard>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      ref={ref}
+      className={cn(
+        "grid min-h-[292px] items-stretch gap-4 lg:grid-cols-2",
+        className
+      )}
+      onMouseLeave={() => setSharedHover(undefined)}
+    >
+        <PanelCard
+          glossy
+          glossDelay={-8}
+          className={narrow ? undefined : "h-full min-h-[292px]"}
+        >
+          <div className="mb-2 flex min-h-8 shrink-0 items-center justify-between gap-3">
             <div className="flex min-w-0 items-center gap-1.5">
               <PanelLabel>Source Breakdown</PanelLabel>
               {othersInfo && <InfoTooltip text={othersInfo} panelClassName="w-72" floating />}
@@ -658,11 +695,11 @@ export function CategoryCharts({ data }: CategoryChartsProps) {
             />
           </div>
           {segments.length > 0 && (
-            <div className="flex min-h-0 flex-1 items-start">
-              <div
-                className="flex w-full min-w-0"
-                style={narrow ? undefined : { height: AURA_SOURCES_DONUT_WELL }}
-              >
+            <div
+              className="flex min-h-0 flex-1 items-start"
+              style={narrow ? undefined : { minHeight: AURA_SOURCES_DONUT_WELL }}
+            >
+              <div className="flex h-full min-h-0 w-full min-w-0">
                 <AuraDonut
                   key={selectedGroup}
                   segments={segments}
@@ -676,19 +713,26 @@ export function CategoryCharts({ data }: CategoryChartsProps) {
           )}
         </PanelCard>
 
-        <PanelCard glossy glossDelay={-11} className={narrow ? undefined : "min-h-[400px]"}>
-          <div className="mb-3 flex min-h-8 items-center">
+        <PanelCard
+          glossy
+          glossDelay={-11}
+          className={narrow ? undefined : "h-full min-h-[292px]"}
+        >
+          <div className="mb-2 flex min-h-8 shrink-0 items-center">
             <div className="flex items-center gap-1.5">
               <PanelLabel>Category Share</PanelLabel>
               {othersInfo && <InfoTooltip text={othersInfo} panelClassName="w-72" floating />}
             </div>
           </div>
           <div
-            className="category-share-chart w-full"
+            className="category-share-chart relative min-h-0 w-full flex-1"
             style={{
-              height: narrow ? Math.max(220, colored.length * 44) : AURA_SOURCES_DONUT_WELL,
+              minHeight: narrow
+                ? Math.max(180, colored.length * 36)
+                : AURA_SOURCES_DONUT_WELL,
             }}
           >
+            <div className="absolute inset-0">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart
                 key={`${hasEntered ? "cat-animate" : "cat-idle"}-${selectedGroup}`}
@@ -702,9 +746,8 @@ export function CategoryCharts({ data }: CategoryChartsProps) {
                   right: narrow ? 36 : 48,
                   bottom: 8,
                 }}
-                // Gap 0 so category bands start at margin.top; bars are
-                // top-aligned inside each band via the custom shape below.
-                barCategoryGap={0}
+                // Modest gap between category bands so bars don't stack flush.
+                barCategoryGap="18%"
               >
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis
@@ -773,13 +816,19 @@ export function CategoryCharts({ data }: CategoryChartsProps) {
                   // several px below it.
                   shape={(props: unknown) => {
                     const p = props as RectangleProps & { index?: number; className?: string };
-                    const h = Math.min(28, Number(p.height) || 28);
+                    // Grow with the band when the panel stretches, but keep a
+                    // gap between bars (never fill the whole band).
+                    const band = Number(p.height) || 28;
+                    const h = Math.min(band * 0.72, Math.max(22, Math.min(36, band)));
                     const idx = typeof p.index === "number" ? p.index : -1;
                     const pulsing = idx >= 0 && sharedHover === idx;
+                    // Centre the bar in its category band.
+                    const y = (Number(p.y) || 0) + (band - h) / 2;
                     if (!pulsing) {
                       return (
                         <Rectangle
                           {...p}
+                          y={y}
                           height={h}
                           radius={[0, 2, 2, 0]}
                         />
@@ -794,7 +843,7 @@ export function CategoryCharts({ data }: CategoryChartsProps) {
                         : idle;
                     const geom = {
                       x: p.x,
-                      y: p.y,
+                      y,
                       width: p.width,
                       height: h,
                       radius: [0, 2, 2, 0] as [number, number, number, number],
@@ -847,9 +896,9 @@ export function CategoryCharts({ data }: CategoryChartsProps) {
                 </Bar>
               </BarChart>
             </ResponsiveContainer>
+            </div>
           </div>
         </PanelCard>
       </div>
-    </div>
   );
 }

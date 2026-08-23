@@ -393,19 +393,22 @@ export function LeaderboardTable({
         <div className="term-seg">
           <button
             type="button"
-            className={cn("term-seg-btn", page <= 1 || loading ? "is-off opacity-40" : "is-off")}
+            className={cn(
+              "term-seg-btn min-w-[3.5rem] flex-[1_1_0]",
+              page <= 1 || loading ? "is-off opacity-40" : "is-off"
+            )}
             disabled={page <= 1 || loading}
             onClick={() => setPage((p) => p - 1)}
           >
             <span className="relative z-10">Prev</span>
           </button>
-          <span className="font-data flex items-center px-2 text-[12px] text-text-muted">
+          <span className="term-seg-label" aria-live="polite">
             {page}/{totalPages}
           </span>
           <button
             type="button"
             className={cn(
-              "term-seg-btn",
+              "term-seg-btn min-w-[3.5rem] flex-[1_1_0]",
               page >= totalPages || loading ? "is-off opacity-40" : "is-off"
             )}
             disabled={page >= totalPages || loading}
@@ -450,7 +453,7 @@ function SortableHeader({
   direction: LeaderboardSortDir | null;
   onClick: () => void;
 }) {
-  const th = "font-label px-4 py-3";
+  const th = "px-4 py-3 text-[13px] font-medium";
 
   if (!sortable) {
     return (

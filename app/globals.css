@@ -445,10 +445,11 @@ body {
   }
 }
 
-/* Segmented toggles (Current/Projected, 7D/30D/ALL, Count/Value). */
+/* Segmented toggles (Current/Projected, 7D/30D/ALL, Count/Value, pager). */
 .term-seg {
   display: flex;
   flex-shrink: 0;
+  align-items: center;
   gap: 2px;
   padding: 3px;
   border-radius: 10px;
@@ -458,7 +459,10 @@ body {
 
 .term-seg-btn {
   position: relative;
+  display: inline-flex;
   flex: 1 1 0;
+  align-items: center;
+  justify-content: center;
   border-radius: 7px;
   padding: 5px 10px;
   font-family: var(--font-sans), system-ui, sans-serif;
@@ -486,11 +490,94 @@ body {
   color: var(--color-text-primary);
 }
 
+/* Non-interactive middle of a pager — same box metrics as .term-seg-btn. */
+.term-seg-label {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  min-width: 2.75rem;
+  padding: 5px 10px;
+  font-family: var(--font-sans), system-ui, sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text-muted);
+  user-select: none;
+}
+
 .term-seg-pill {
   position: absolute;
   inset: 0;
   border-radius: 7px;
   background: var(--color-accent);
+}
+
+/* Studio ON AIR lamp — red LED + halo, only while LIVE is pressed. */
+.live-air {
+  position: relative;
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  flex-shrink: 0;
+}
+
+.live-air-core,
+.live-air-halo {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+}
+
+.live-air-core {
+  background: rgba(255, 255, 255, 0.32);
+}
+
+.live-air.is-live .live-air-core {
+  background: #ff2d2d;
+  box-shadow: 0 0 5px 1px rgba(255, 45, 45, 0.9);
+  animation: live-air-blink 1.15s ease-in-out infinite;
+}
+
+.live-air-halo {
+  opacity: 0;
+  background: #ff2d2d;
+}
+
+.live-air.is-live .live-air-halo {
+  animation: live-air-halo 1.15s ease-out infinite;
+}
+
+@keyframes live-air-blink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.18;
+  }
+}
+
+@keyframes live-air-halo {
+  0% {
+    transform: scale(1);
+    opacity: 0.55;
+  }
+  100% {
+    transform: scale(2.6);
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* Halo scales; drop that. The blink is opacity-only — keep it, because
+     Windows "Animation effects: off" maps onto this query and would freeze
+     the lamp on desktop. */
+  .live-air.is-live .live-air-halo {
+    animation: none;
+  }
 }
 
 /* Deposit-size callout: reads as emerging from the headline number above it —
@@ -945,8 +1032,120 @@ input[type="number"] {
   transition: opacity 0.15s;
 }
 
+.btn-primary:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+/* Aura Hunter: room for the clear control. Must beat `.input-field`'s
+   padding shorthand, which otherwise wipes Tailwind `pr-*` and lets a
+   long address run under the X — especially on a narrow viewport. */
+.input-field.hunter-query {
+  min-width: 0;
+  padding-right: 2.6rem;
+}
+
+.hunter-clear {
+  position: absolute;
+  top: 50%;
+  right: 6px;
+  z-index: 2;
+  display: flex;
+  width: 28px;
+  height: 28px;
+  transform: translateY(-50%);
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: var(--color-bulk-base);
+  color: var(--color-ask-red);
+  cursor: pointer;
+  line-height: 0;
+}
+
+.hunter-clear:hover {
+  opacity: 0.8;
+}
+
+/* Spinning gold hairline on the search square — same conic ring as the
+   Hodlers badge. Brightness pulse on a gold fill is invisible, so the
+   beat lives on the edge instead. Not gated on reduced-motion: Windows
+   "Animation effects: off" maps there and would freeze the ring. */
+@keyframes hunter-search-spin {
+  to {
+    transform: translate(-50%, -50%) rotate(360deg);
+  }
+}
+
+.hunter-search {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  /* Square matching `.input-field` (pad + 14px type + borders).
+     `aspect-ratio` + stretch lost to flex `width: auto` and collapsed
+     to the 16px icon, which hid the spinning ring. */
+  flex: 0 0 2.6875rem;
+  width: 2.6875rem;
+  height: 2.6875rem;
+  min-width: 2.6875rem;
+  padding: 0;
+  border-radius: 10px;
+}
+
+.hunter-search::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 160px;
+  height: 160px;
+  transform: translate(-50%, -50%) rotate(0deg);
+  background: conic-gradient(
+    from 0deg,
+    transparent 0deg,
+    transparent 210deg,
+    rgba(255, 246, 224, 0.15) 270deg,
+    #fff6e0 325deg,
+    #ffffff 348deg,
+    transparent 360deg
+  );
+  animation: hunter-search-spin 1.2s linear infinite;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.hunter-search::after {
+  content: "";
+  position: absolute;
+  inset: 1.5px;
+  border-radius: inherit;
+  background: var(--color-accent);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.hunter-search > * {
+  position: relative;
+  z-index: 2;
+}
+
+.hunter-search:disabled::before {
+  animation: none;
+  opacity: 0;
+}
+
 .btn-primary:hover {
   opacity: 0.9;
+}
+
+.btn-primary:disabled:hover {
+  opacity: 0.45;
+}
+
+.hunter-search:hover:not(:disabled) {
+  opacity: 1;
 }
 
 .btn-ghost {
@@ -1001,6 +1200,15 @@ input[type="number"] {
 .fdv-chart .recharts-text {
   fill: var(--color-text-primary) !important;
   font-size: 12px !important;
+}
+
+/* Hide/Show changes the plot box. Recharts writes inline px on the wrapper
+   and SVG — without this the old height gets clipped instead of stretching. */
+.fdv-chart,
+.fdv-chart .recharts-wrapper,
+.fdv-chart .recharts-surface {
+  width: 100% !important;
+  height: 100% !important;
 }
 
 /* Category Share and Aura Distribution sit next to 13px donut-legend

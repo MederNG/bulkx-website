@@ -1,7 +1,6 @@
 import { KpiTerminalCounter, type NumberFormat } from "@/components/cards/KpiTerminalCounter";
 import { CopyableWallet } from "@/components/ui/CopyableWallet";
 import { PanelCard, PanelLabel } from "@/components/overview/PanelCard";
-import { CATEGORY_NAME } from "@/components/overview/MetricTable";
 import { cn } from "@/lib/utils";
 import type { AlphaInsight } from "@/types";
 
@@ -67,55 +66,5 @@ export function NorthStarMetrics({
         </PanelCard>
       ))}
     </div>
-  );
-}
-
-export function DistributionStats({
-  median,
-  average,
-  top10,
-  top5,
-  top1,
-}: {
-  median: number;
-  average: number;
-  top10: number;
-  top5: number;
-  top1: number;
-}) {
-  const stats = [
-    { label: "Median Aura", value: median.toLocaleString() },
-    { label: "Average Aura", value: Math.round(average).toLocaleString() },
-    { label: "Top 10% Threshold", value: top10.toLocaleString() },
-    { label: "Top 5% Threshold", value: top5.toLocaleString() },
-    { label: "Top 1% Threshold", value: top1.toLocaleString() },
-  ];
-
-  return (
-    <PanelCard glossy glossDelay={-3} className="h-full">
-      <PanelLabel>Distribution Metrics</PanelLabel>
-      <div className="mt-3 flex min-h-0 flex-1 flex-col justify-between">
-        {stats.map((s, i) => (
-          <div
-            key={s.label}
-            className={cn(
-              "group -mx-2.5 flex min-h-[30px] flex-1 cursor-default items-center justify-between rounded-md px-2.5 leading-none transition-colors",
-              i > 0 && "border-t border-[var(--color-line-soft)]",
-              "hover:border-transparent hover:bg-[rgba(255,255,255,0.045)]"
-            )}
-          >
-            <span
-              className={cn(
-                CATEGORY_NAME,
-                "text-text-secondary transition-colors group-hover:text-text-primary"
-              )}
-            >
-              {s.label}
-            </span>
-            <span className="font-data text-text-primary">{s.value}</span>
-          </div>
-        ))}
-      </div>
-    </PanelCard>
   );
 }

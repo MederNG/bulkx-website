@@ -76,19 +76,14 @@ export function PageHeading({
           <h1 className="relative m-0 text-center text-[clamp(32px,3.2vw,44px)] font-semibold uppercase leading-tight tracking-[0.01em] text-text-primary">
             {title}
           </h1>
-          {/* Always reserve the tab strip, even on pages that have none.
-              Tools and Leaderboards put their switches here; Aura sources
-              and Trade left the slot out, so those cards sat shorter and
-              clipped the watermark differently. 30px is 13px type at body
-              leading plus the tabs' pb-2.5.
-
-              -mb-8 cancels the card's own bottom padding (py-8 / sm:py-8 —
-              both, because PanelCard's default sm:py-4 would otherwise win
-              on desktop and pull the 2px underline outside overflow-hidden)
-              so the tabs sit ON its bottom edge. */}
-          <div className="relative mt-7 -mb-8 flex min-h-[30px] items-end justify-center">
-            {children}
-          </div>
+          {/* Tab strip only when the page actually has switches (Tools /
+              Leaderboards). An empty reserve left Aura / Trade with a dead
+              band under the title and made those headers look inflated. */}
+          {children ? (
+            <div className="relative mt-7 -mb-8 flex min-h-[30px] items-end justify-center">
+              {children}
+            </div>
+          ) : null}
         </PanelCard>
         {description && (
           <p className="mx-auto max-w-[640px] text-sm leading-relaxed text-text-muted">

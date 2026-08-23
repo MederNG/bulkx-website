@@ -8,7 +8,7 @@ import { AnchorLink } from "@/components/layout/AnchorLink";
 
 const ANALYTICS_ITEMS = [
   { href: "#analytics", label: "TVL Analytics" },
-  { href: "#aura-distribution", label: "Aura Distribution" },
+  { href: "#aura-hunter", label: "Aura Hunter" },
   { href: "#aura-source-breakdown", label: "Aura Source Breakdown" },
 ] as const;
 

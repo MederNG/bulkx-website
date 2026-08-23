@@ -37,10 +37,9 @@ const RING_OUTER_RATIO = 0.45;
 const RING_INNER_RATIO = 0.398;
 /** Room so sector strokes never clip the canvas edge. */
 const GLOW_HEADROOM = 6;
-/** Square well the Aura analytics page gives the ring, so every group
- * (Overview / Retro / Week N) draws at the same size. Exported so the
- * Category Share chart can share that well and sit on the same top edge. */
-export const AURA_SOURCES_DONUT_WELL = 320;
+/** Square well floor for the Aura analytics ring / Category Share chart.
+ * Cards stretch above this to fill leftover viewport height. */
+export const AURA_SOURCES_DONUT_WELL = 280;
 
 /** Distance from the well's top to the ring's apex — the legend and the
  * bar chart both pad by this so they meet the donut rather than the box. */

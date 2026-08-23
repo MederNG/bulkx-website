@@ -63,7 +63,7 @@ const CELL = "font-data";
  * table has, the extra goes into breathing room between every column
  * equally, not into stretching whichever column happened to be flexible. */
 const TABLE_COLS =
-  "grid grid-cols-[minmax(0,180px)_minmax(0,80px)_minmax(0,74px)_minmax(0,44px)_minmax(0,56px)_minmax(0,44px)] items-center [column-gap:clamp(16px,2.5vw,36px)]";
+  "grid grid-cols-[minmax(0,180px)_minmax(0,100px)_minmax(0,74px)_minmax(0,44px)_minmax(0,56px)_minmax(0,44px)] items-center [column-gap:clamp(16px,2.5vw,36px)]";
 const TABLE_COLS_NARROW =
   "grid grid-cols-[minmax(0,1fr)_minmax(0,72px)_minmax(0,52px)] items-center gap-x-3";
 

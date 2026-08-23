@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { FDV_SCENARIOS, cn, formatNumber, formatUsd } from "@/lib/utils";
 import { useNarrowViewport } from "@/lib/use-narrow-viewport";
@@ -22,7 +22,6 @@ import {
   AreaChart,
   ReferenceDot,
   ReferenceLine,
-  ResponsiveContainer,
   Tooltip,
   XAxis,
   YAxis,
@@ -155,12 +154,14 @@ function niceUsdStep(rough: number): number {
   return step * magnitude;
 }
 
-/** Four-or-so round dollar levels from $0 to just above the curve's peak. */
+/** Round dollar levels from $0 to the curve's own peak — the top tick is
+ *  the $2B scenario, so the line reaches the top of the plot. */
 function usdAxisTicks(max: number): { hi: number; ticks: number[] } {
-  const step = niceUsdStep(Math.max(max, 1) / 4);
-  const hi = Math.max(step, Math.ceil(max / step) * step);
+  const hi = Math.max(max, 1);
+  const step = niceUsdStep(hi / 4);
   const ticks: number[] = [];
-  for (let v = 0; v <= hi + step / 2; v += step) ticks.push(v);
+  for (let v = 0; v < hi - step * 0.35; v += step) ticks.push(v);
+  ticks.push(hi);
   return { hi, ticks };
 }
 
@@ -261,7 +262,7 @@ const TOOL_TABS = [
 ] as const;
 
 type ToolTab = (typeof TOOL_TABS)[number]["id"];
-type SupplyPreset = "live" | "assumed" | "custom";
+type SupplyPreset = "live" | "custom";
 
 export function CalculatorSection({ totalAuraSupply = 0 }: { totalAuraSupply?: number }) {
   const { depositPredict, totalAura } = useLiveFinancials();
@@ -277,7 +278,7 @@ export function CalculatorSection({ totalAuraSupply = 0 }: { totalAuraSupply?: n
   const [allocation, setAllocation] = useState(30);
   // 60M, not the live earned-so-far figure: this card models a future drop,
   // and the campaign total is still a fraction of the assumed pool.
-  const [supplyPreset, setSupplyPreset] = useState<SupplyPreset>("assumed");
+  const [supplyPreset, setSupplyPreset] = useState<SupplyPreset>("custom");
   const [auraSupply, setAuraSupply] = useState(APR_TOTAL_AURA_SUPPLY);
 
   useEffect(() => {
@@ -357,11 +358,14 @@ export function CalculatorSection({ totalAuraSupply = 0 }: { totalAuraSupply?: n
             setSupplyPreset("custom");
             setAuraSupply(v);
           }}
-          liveSupply={liveSupply}
           supplyPreset={supplyPreset}
-          onSupplyPreset={(preset) => {
-            setSupplyPreset(preset);
-            setAuraSupply(preset === "live" ? liveSupply : APR_TOTAL_AURA_SUPPLY);
+          onToggleLiveSupply={() => {
+            if (supplyPreset === "live") {
+              setSupplyPreset("custom");
+              return;
+            }
+            setSupplyPreset("live");
+            setAuraSupply(liveSupply);
           }}
           result={result}
         />
@@ -370,6 +374,107 @@ export function CalculatorSection({ totalAuraSupply = 0 }: { totalAuraSupply?: n
       )}
     </div>
   );
+}
+
+const MARKET_SLIDE_MS = 560;
+const MARKET_FADE_MS = 380;
+const MARKET_SLIDE_EASE = "cubic-bezier(0.16, 1, 0.3, 1)";
+/** Collapsed strip: 8px gap under the header + h-11 bar. */
+const MARKET_PEEK_H = 52;
+
+function useContentHeight() {
+  const ref = useRef<HTMLDivElement>(null);
+  const [height, setHeight] = useState(0);
+
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const update = () => {
+      const next = el.offsetHeight;
+      setHeight((prev) => (Math.abs(prev - next) < 1 ? prev : next));
+    };
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  return { ref, height };
+}
+
+/** Draw the plot once at its first real box (and again only if width
+ *  changes). Hide/Show only changes height — if Recharts rebuilds for that,
+ *  the curve snaps at the end of the slide. Height is CSS on the SVG. */
+function useStablePlot() {
+  const ref = useRef<HTMLDivElement>(null);
+  const [draw, setDraw] = useState({ w: 0, h: 0 });
+
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const commit = (w: number, h: number, force: boolean) => {
+      if (w <= 0 || h <= 0) return;
+      setDraw((prev) => {
+        if (!prev.w || !prev.h || force) return { w, h };
+        if (Math.abs(prev.w - w) < 1) return prev;
+        return { w, h: prev.h };
+      });
+    };
+    commit(el.clientWidth, el.clientHeight, true);
+    const ro = new ResizeObserver((entries) => {
+      const cr = entries[0]?.contentRect;
+      if (!cr) return;
+      commit(cr.width, cr.height, false);
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  useLayoutEffect(() => {
+    const root = ref.current;
+    if (!root) return;
+    const apply = () => {
+      root.querySelector("svg")?.setAttribute("preserveAspectRatio", "none");
+    };
+    apply();
+    const mo = new MutationObserver(apply);
+    mo.observe(root, { childList: true, subtree: true });
+    return () => mo.disconnect();
+  }, [draw]);
+
+  return { ref, draw };
+}
+
+const AURA_PRESETS = [100, 500, 2_500, 5_000, 10_000, 100_000] as const;
+
+/** Inputs card type scale — one figure size across every amount field. */
+const FIGURE_FIELD =
+  "font-figure text-[18px] leading-none tracking-[-0.03em]";
+const DATA_META = "font-data text-[11px] leading-none";
+/** Shared Million/Billion/LIVE chrome — one typeface, one size, text centered. */
+const TOGGLE_TRACK =
+  "relative shrink-0 rounded-full bg-[rgba(255,255,255,0.045)] p-[3px] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.06)]";
+const TOGGLE_BTN =
+  "relative z-10 inline-flex h-[22px] items-center justify-center rounded-full px-2.5 text-center font-sans text-[11px] font-semibold leading-none tracking-[0.02em] transition-colors duration-300";
+
+function formatCompactUsdLabel(value: number): string {
+  if (value >= 1_000_000_000) {
+    const n = value / 1_000_000_000;
+    return `$${Number.isInteger(n) ? n : +n.toFixed(1)}B`;
+  }
+  if (value >= 1_000_000) {
+    const n = value / 1_000_000;
+    return `$${Number.isInteger(n) ? n : +n.toFixed(1)}M`;
+  }
+  return formatUsd(value);
+}
+
+function formatCompactSupplyLabel(value: number): string {
+  if (value >= 1_000_000) {
+    const n = value / 1_000_000;
+    return `${Number.isInteger(n) ? n : +n.toFixed(1)}M`;
+  }
+  return formatNumber(value);
 }
 
 function EstimatorWorkbench({
@@ -381,9 +486,8 @@ function EstimatorWorkbench({
   setAllocation,
   auraSupply,
   setAuraSupply,
-  liveSupply,
   supplyPreset,
-  onSupplyPreset,
+  onToggleLiveSupply,
   result,
 }: {
   userAura: number;
@@ -394,11 +498,12 @@ function EstimatorWorkbench({
   setAllocation: (v: number) => void;
   auraSupply: number;
   setAuraSupply: (v: number) => void;
-  liveSupply: number;
   supplyPreset: SupplyPreset;
-  onSupplyPreset: (preset: Exclude<SupplyPreset, "custom">) => void;
+  onToggleLiveSupply: () => void;
   result: { poolValue: number; auraValue: number; userValue: number };
 }) {
+  const [showMarket, setShowMarket] = useState(true);
+  const marketFields = useContentHeight();
   const applyFdvFromDerived = (nextFdv: number) => {
     setFdv(Number.isFinite(nextFdv) && nextFdv >= 0 ? nextFdv : 0);
   };
@@ -406,6 +511,7 @@ function EstimatorWorkbench({
     if (allocation <= 0) return;
     applyFdvFromDerived(marketCap / (allocation / 100));
   };
+
   return (
     <>
       {/* 1fr / 2fr: the inputs column is a stack of single fields and needs
@@ -414,68 +520,174 @@ function EstimatorWorkbench({
       {/* No items-start: the two stretch to the taller of them, so the
           inputs card ends level with the chart beside it rather than stopping
           short and leaving a step in the row. */}
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
-        <PanelCard glossy glossDelay={-16}>
-          {/* Label then fields, with no band wrapper around them: the
-              wrapper carried its own top padding, which sat this label a row
-              below the chart card's beside it even though both cards start at
-              the same y. */}
+      <div className="flex flex-col gap-4 xl:flex-row xl:items-stretch">
+        <PanelCard className="min-w-0 xl:basis-0 xl:flex-1" glossy glossDelay={-16}>
           <PanelLabel>Your inputs</PanelLabel>
-          <div className="mt-3">
-            {/* Your Aura with Allocation, FDV with Airdrop Market Cap — the
-                two pairs that belong together. Total Aura Supply is the
-                scenario's own assumption about the future pool, so it takes
-                the full row rather than sharing one. */}
-            <div className="grid gap-x-4 gap-y-3 sm:grid-cols-2 sm:items-start">
-              <Field
-                label="Your Aura"
-                info={FDV_FIELD_INFO.yourAura}
-                value={userAura}
-                onChange={setUserAura}
-              />
-              <Field
-                label="Allocation"
-                info={FDV_FIELD_INFO.allocation}
-                value={allocation}
-                onChange={setAllocation}
-                max={100}
-                suffix={<span className="text-[13px] text-text-secondary">%</span>}
-              />
-              <FdvField fdv={fdv} onFdvChange={setFdv} info={FDV_FIELD_INFO.fdv} />
-              <EditableMoneyBox
-                label="Airdrop Market Cap"
-                info={FDV_FIELD_INFO.poolValue}
-                value={result.poolValue}
-                onChange={setMarketCap}
-              />
-              <div className="min-w-0 sm:col-span-2">
-                <div className="mb-1">
-                  <FieldLabel label="Total Aura Supply" info={FDV_FIELD_INFO.totalSupply} />
-                </div>
-                <CompoundInput
-                  trailing={
-                    <SupplyPresetToggle preset={supplyPreset} onPreset={onSupplyPreset} />
-                  }
+          <div className="mt-4 flex flex-col gap-5">
+            {/* Your Aura — hero amount + quick chips */}
+            <div className="rounded-[12px] border border-[rgba(255,181,71,0.22)] bg-[rgba(255,181,71,0.03)] px-3.5 py-3">
+              <FieldLabel label="Your Aura" info={FDV_FIELD_INFO.yourAura} accent />
+              <div className="mt-2 flex h-11 items-center rounded-[10px] border border-accent/50 bg-[var(--color-bulk-base)] px-3.5">
+                <NumericInput
+                  value={userAura}
+                  onChange={setUserAura}
+                  className={cn(
+                    "min-w-0 flex-1 bg-transparent text-text-primary outline-none",
+                    FIGURE_FIELD
+                  )}
+                />
+              </div>
+              <div className="mt-2 grid w-full grid-cols-3 gap-1.5 sm:grid-cols-6">
+                {AURA_PRESETS.map((preset) => {
+                  const on = userAura === preset;
+                  return (
+                    <button
+                      key={preset}
+                      type="button"
+                      onClick={() => setUserAura(preset)}
+                      aria-pressed={on}
+                      className={cn(
+                        "h-7 min-w-0 rounded-[8px] border px-1 text-center text-[11px] font-medium tabular-nums transition-colors",
+                        on
+                          ? "border-[rgba(255,255,255,0.16)] bg-[rgba(255,255,255,0.08)] text-text-primary"
+                          : "border-[var(--color-line-strong)] bg-[var(--color-bulk-base)] text-text-muted hover:border-[rgba(255,255,255,0.14)] hover:text-text-secondary"
+                      )}
+                    >
+                      {formatCommaNumber(preset)}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Allocation — bar slider with live % */}
+            <div>
+              <div className="mb-2 flex h-[15px] items-center justify-between gap-3">
+                <FieldLabel label="Allocation" info={FDV_FIELD_INFO.allocation} />
+                <span className="font-figure text-[13px] leading-none text-text-primary">
+                  {Math.round(allocation)}%
+                </span>
+              </div>
+              <AllocationSlider value={allocation} onChange={setAllocation} />
+            </div>
+
+            {/* Market assumptions — collapsible FDV + airdrop cap */}
+            <div>
+              <div className="flex h-[15px] items-center justify-between gap-3">
+                <p className="m-0 text-[13px] font-semibold leading-none text-text-primary">
+                  Market assumptions
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setShowMarket((v) => !v)}
+                  aria-expanded={showMarket}
+                  className="shrink-0 text-[11px] font-medium leading-none text-accent transition-colors hover:text-accent-hover"
                 >
-                  <NumericInput
-                    value={auraSupply}
-                    onChange={setAuraSupply}
-                    step={100_000}
-                    className="min-w-0 flex-1 bg-transparent px-[0.875rem] py-[0.625rem] text-sm tabular-nums outline-none"
-                  />
-                </CompoundInput>
+                  {showMarket ? "Hide" : "Show"}
+                </button>
+              </div>
+              <div
+                className="relative overflow-hidden"
+                style={{
+                  height:
+                    marketFields.height === 0
+                      ? showMarket
+                        ? undefined
+                        : MARKET_PEEK_H
+                      : showMarket
+                        ? marketFields.height
+                        : MARKET_PEEK_H,
+                  transition: `height ${MARKET_SLIDE_MS}ms ${MARKET_SLIDE_EASE}`,
+                }}
+              >
+                <button
+                  type="button"
+                  tabIndex={showMarket ? -1 : 0}
+                  onClick={() => setShowMarket(true)}
+                  aria-hidden={showMarket}
+                  className="absolute inset-x-0 top-2 z-10 flex h-11 w-full min-w-0 items-stretch overflow-hidden rounded-[10px] border border-[var(--color-line-strong)] bg-[var(--color-bulk-base)] text-left"
+                  style={{
+                    opacity: showMarket ? 0 : 1,
+                    pointerEvents: showMarket ? "none" : "auto",
+                    transition: `opacity ${MARKET_FADE_MS}ms ${MARKET_SLIDE_EASE}`,
+                  }}
+                >
+                  {(
+                    [
+                      { label: "FDV", value: formatCompactUsdLabel(fdv) },
+                      { label: "Cap", value: formatCompactUsdLabel(result.poolValue) },
+                      { label: "Supply", value: formatCompactSupplyLabel(auraSupply) },
+                    ] as const
+                  ).map((item, i) => (
+                    <span
+                      key={item.label}
+                      className={cn(
+                        "flex min-w-0 flex-1 flex-col justify-center gap-1 px-3",
+                        i > 0 && "border-l border-[var(--color-line-strong)]"
+                      )}
+                    >
+                      <span className="font-label leading-none text-text-muted">{item.label}</span>
+                      <span className="truncate font-figure text-[15px] leading-none tracking-[-0.03em] text-text-primary">
+                        {item.value}
+                      </span>
+                    </span>
+                  ))}
+                </button>
+                <div
+                  ref={marketFields.ref}
+                  inert={!showMarket || undefined}
+                  aria-hidden={!showMarket}
+                  className="flex flex-col gap-3 pt-3"
+                  style={{
+                    opacity: showMarket ? 1 : 0,
+                    pointerEvents: showMarket ? "auto" : "none",
+                    transition: `opacity ${MARKET_FADE_MS}ms ${MARKET_SLIDE_EASE}`,
+                  }}
+                >
+                  <div className="grid grid-cols-1 items-start gap-x-4 gap-y-3 sm:grid-cols-2">
+                    <FdvField fdv={fdv} onFdvChange={setFdv} info={FDV_FIELD_INFO.fdv} />
+                    <EditableMoneyBox
+                      label="Airdrop Market Cap"
+                      info={FDV_FIELD_INFO.poolValue}
+                      value={result.poolValue}
+                      onChange={setMarketCap}
+                    />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="mb-2 flex h-[15px] items-center">
+                      <FieldLabel label="Total AURA supply" info={FDV_FIELD_INFO.totalSupply} />
+                    </div>
+                    <div className="flex h-11 items-center gap-3 rounded-[10px] border border-[var(--color-line-strong)] bg-[var(--color-bulk-base)] pl-3.5 pr-1.5">
+                      <NumericInput
+                        value={auraSupply}
+                        onChange={setAuraSupply}
+                        step={100_000}
+                        className={cn(
+                          "min-w-0 flex-1 bg-transparent text-right outline-none",
+                          FIGURE_FIELD
+                        )}
+                      />
+                      <LiveSupplyButton
+                        on={supplyPreset === "live"}
+                        onToggle={onToggleLiveSupply}
+                      />
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
         </PanelCard>
 
-        <FdvValueChart
-          userAura={userAura}
-          fdv={fdv}
-          allocation={allocation}
-          auraSupply={auraSupply}
-          result={result}
-        />
+        <div className="flex min-h-[280px] min-w-0 flex-col xl:min-h-0 xl:flex-[2] xl:basis-0 xl:overflow-hidden">
+          <FdvValueChart
+            userAura={userAura}
+            fdv={fdv}
+            allocation={allocation}
+            auraSupply={auraSupply}
+            result={result}
+          />
+        </div>
       </div>
 
       {/* Full width, below both columns rather than stacked under the chart.
@@ -492,6 +704,186 @@ function EstimatorWorkbench({
         currentValue={result.userValue}
       />
     </>
+  );
+}
+
+/** Vertical-tick track + pill thumb. Ticks are integer device-pixel rects —
+ *  a CSS repeating mask aliases into broken strokes and uneven gaps. */
+function AllocationSlider({
+  value,
+  onChange,
+}: {
+  value: number;
+  onChange: (v: number) => void;
+}) {
+  const trackRef = useRef<HTMLDivElement>(null);
+  const valueRef = useRef(value);
+  valueRef.current = value;
+  const uid = useId().replace(/:/g, "");
+  const [dragging, setDragging] = useState(false);
+  const [trackW, setTrackW] = useState(0);
+  const clamped = Math.min(100, Math.max(0, value));
+  const padX = 10;
+  const innerW = Math.max(0, trackW - padX * 2);
+
+  useLayoutEffect(() => {
+    const el = trackRef.current;
+    if (!el) return;
+    let raf = 0;
+    const update = () => {
+      const next = el.clientWidth;
+      setTrackW((prev) => (prev === next ? prev : next));
+    };
+    update();
+    const ro = new ResizeObserver(() => {
+      if (raf) return;
+      raf = requestAnimationFrame(() => {
+        raf = 0;
+        update();
+      });
+    });
+    ro.observe(el);
+    return () => {
+      ro.disconnect();
+      if (raf) cancelAnimationFrame(raf);
+    };
+  }, []);
+
+  const dpr = typeof window === "undefined" ? 1 : window.devicePixelRatio || 1;
+  const ticks = useMemo(() => {
+    const devW = Math.max(0, Math.round(innerW * dpr));
+    const tick = Math.max(1, Math.round(dpr));
+    const gap = Math.max(2, Math.round(3 * dpr));
+    const n = Math.max(1, Math.floor((devW + gap) / (tick + gap)));
+    const used = n * tick + (n - 1) * gap;
+    const origin = Math.floor((devW - used) / 2);
+    const xs: number[] = [];
+    for (let i = 0; i < n; i++) xs.push(origin + i * (tick + gap));
+    return { devW, tick, xs };
+  }, [innerW, dpr]);
+
+  const commit = (next: number) => {
+    const snapped = Math.min(100, Math.max(0, Math.round(next * 10) / 10));
+    if (snapped === valueRef.current) return;
+    onChange(snapped);
+  };
+
+  const setFromClientX = (clientX: number) => {
+    const el = trackRef.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    const inner = rect.width - padX * 2;
+    if (inner <= 0) return;
+    const ratio = Math.min(1, Math.max(0, (clientX - rect.left - padX) / inner));
+    commit(ratio * 100);
+  };
+
+  const maskId = `${uid}-ticks`;
+  const fillId = `${uid}-fill`;
+  const clipId = `${uid}-clip`;
+  const svgH = Math.max(8, Math.round(14 * dpr));
+  const fillW = ticks.devW * (clamped / 100);
+
+  return (
+    <div
+      ref={trackRef}
+      role="slider"
+      aria-label="Allocation"
+      aria-valuemin={0}
+      aria-valuemax={100}
+      aria-valuenow={Math.round(clamped)}
+      aria-valuetext={`${Math.round(clamped)}%`}
+      tabIndex={0}
+      className="relative h-8 min-w-0 cursor-pointer touch-none overflow-hidden rounded-full border border-[var(--color-line-strong)] bg-[rgba(255,255,255,0.035)] outline-none select-none focus-visible:ring-1 focus-visible:ring-accent/50"
+      onPointerDown={(e) => {
+        e.currentTarget.setPointerCapture(e.pointerId);
+        setDragging(true);
+        setFromClientX(e.clientX);
+      }}
+      onPointerMove={(e) => {
+        if (!e.currentTarget.hasPointerCapture(e.pointerId)) return;
+        setFromClientX(e.clientX);
+      }}
+      onPointerUp={() => setDragging(false)}
+      onPointerCancel={() => setDragging(false)}
+      onKeyDown={(e) => {
+        if (e.key === "ArrowLeft" || e.key === "ArrowDown") {
+          e.preventDefault();
+          commit(Math.round(clamped) - 1);
+        } else if (e.key === "ArrowRight" || e.key === "ArrowUp") {
+          e.preventDefault();
+          commit(Math.round(clamped) + 1);
+        } else if (e.key === "Home") {
+          e.preventDefault();
+          commit(0);
+        } else if (e.key === "End") {
+          e.preventDefault();
+          commit(100);
+        }
+      }}
+    >
+      <div className="pointer-events-none absolute inset-[7px_10px] min-w-0 overflow-hidden">
+        {ticks.devW > 0 && (
+          <svg
+            aria-hidden="true"
+            viewBox={`0 0 ${ticks.devW} ${svgH}`}
+            preserveAspectRatio="none"
+            className="block h-full w-full"
+            style={{ minWidth: 0, overflow: "hidden" }}
+            shapeRendering="crispEdges"
+          >
+            <defs>
+              <linearGradient id={fillId} x1="0" y1="0" x2="1" y2="0">
+                <stop offset="0%" stopColor="#6a4018" />
+                <stop offset="38%" stopColor="#c47e2e" />
+                <stop offset="72%" stopColor="#ffb547" />
+                <stop offset="100%" stopColor="#ffe7c2" />
+              </linearGradient>
+              <mask id={maskId} maskUnits="userSpaceOnUse">
+                {ticks.xs.map((x) => (
+                  <rect
+                    key={x}
+                    x={x}
+                    y={0}
+                    width={ticks.tick}
+                    height={svgH}
+                    fill="#fff"
+                  />
+                ))}
+              </mask>
+              <clipPath id={clipId} clipPathUnits="userSpaceOnUse">
+                <rect x="0" y="0" width={fillW} height={svgH} />
+              </clipPath>
+            </defs>
+            <rect
+              x="0"
+              y="0"
+              width={ticks.devW}
+              height={svgH}
+              fill="rgba(255,255,255,0.16)"
+              mask={`url(#${maskId})`}
+            />
+            <rect
+              x="0"
+              y="0"
+              width={ticks.devW}
+              height={svgH}
+              fill={`url(#${fillId})`}
+              mask={`url(#${maskId})`}
+              clipPath={`url(#${clipId})`}
+            />
+          </svg>
+        )}
+      </div>
+      <span
+        aria-hidden="true"
+        className="pointer-events-none absolute top-1/2 h-[18px] w-[5px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-white shadow-[0_0_0_1px_rgba(0,0,0,0.4),0_1px_6px_rgba(0,0,0,0.45)]"
+        style={{
+          left: `calc(${padX}px + (100% - ${padX * 2}px) * ${clamped / 100})`,
+          transition: dragging ? undefined : "left 180ms cubic-bezier(0.22, 1, 0.36, 1)",
+        }}
+      />
+    </div>
   );
 }
 
@@ -587,9 +979,11 @@ function FdvValueChart({
     [userAura, allocation, auraSupply]
   );
 
+  const plot = useStablePlot();
+
   return (
-    <PanelCard glossy glossDelay={-11}>
-      <div className="flex flex-wrap items-start justify-between gap-x-6 gap-y-3">
+    <PanelCard className="h-full min-h-0" glossy glossDelay={-11}>
+      <div className="flex shrink-0 flex-wrap items-start justify-between gap-x-6 gap-y-3">
         <div className="min-w-0">
           <PanelLabel>Your Airdrop Value</PanelLabel>
           <p className="m-0 mt-2 truncate font-figure text-[clamp(24px,3vw,34px)] leading-none text-accent">
@@ -615,9 +1009,15 @@ function FdvValueChart({
         </div>
       </div>
 
-      <div className="fdv-chart mt-4 h-[214px] w-full">
-        <ResponsiveContainer width="100%" height="100%">
+      <div
+        ref={plot.ref}
+        className="relative mt-4 min-h-[214px] w-full min-w-0 flex-1 overflow-hidden xl:min-h-0"
+      >
+        {plot.draw.w > 0 && plot.draw.h > 0 && (
+          <div className="fdv-chart absolute inset-0">
           <AreaChart
+            width={plot.draw.w}
+            height={plot.draw.h}
             data={data}
             margin={{ top: 8, right: 0, bottom: 24, left: 0 }}
             onMouseMove={(state) => {
@@ -718,7 +1118,8 @@ function FdvValueChart({
               />
             )}
           </AreaChart>
-        </ResponsiveContainer>
+          </div>
+        )}
       </div>
     </PanelCard>
   );
@@ -1161,37 +1562,47 @@ function FieldLabel({
   label,
   info,
   hint,
+  accent,
 }: {
   label: string;
   info?: string;
   hint?: string;
+  accent?: boolean;
 }) {
   return (
-    <span className="flex min-w-0 items-center gap-1.5">
-      <span className="font-label text-text-muted">{label}</span>
-      {hint ? <span className="truncate text-[11px] text-text-muted">{hint}</span> : null}
+    <span className="flex min-w-0 items-center gap-1">
+      <span className={cn("font-label leading-none", accent ? "text-accent" : "text-text-muted")}>
+        {label}
+      </span>
+      {hint ? <span className={cn(DATA_META, "truncate text-text-muted")}>{hint}</span> : null}
       {info ? <InfoTooltip text={info} floating panelClassName="w-64" /> : null}
     </span>
   );
 }
 
-/** Same sliding-pill shell as Overview's Count/Value — scaled to sit inside
- * an input, or next to a field label. Distinct layoutIds so two of these on
- * one card don't animate toward each other. */
-function PillToggle<T extends string>({
+/** Million / Billion switch — equal cells, label dead-centered in each. */
+function UnitToggle({
   value,
-  options,
   onChange,
-  layoutId,
 }: {
-  value: T | null;
-  options: readonly { id: T; label: string; title?: string }[];
-  onChange: (id: T) => void;
-  layoutId: string;
+  value: FdvUnit;
+  onChange: (unit: FdvUnit) => void;
 }) {
   return (
-    <div className="term-seg shrink-0">
-      {options.map((option) => {
+    <div className={cn(TOGGLE_TRACK, "grid grid-cols-2 gap-[2px]")}>
+      <span
+        aria-hidden="true"
+        className="pointer-events-none absolute top-[3px] bottom-[3px] left-[3px] z-0 rounded-full bg-accent"
+        style={{
+          width: "calc((100% - 8px) / 2)",
+          transform: value === "B" ? "translateX(calc(100% + 2px))" : "translateX(0)",
+          transition: "transform 320ms cubic-bezier(0.22, 1, 0.36, 1)",
+        }}
+      />
+      {([
+        { id: "M" as const, label: "Million" },
+        { id: "B" as const, label: "Billion" },
+      ]).map((option) => {
         const on = option.id === value;
         return (
           <button
@@ -1199,16 +1610,12 @@ function PillToggle<T extends string>({
             type="button"
             onClick={() => onChange(option.id)}
             aria-pressed={on}
-            title={option.title}
-            className={cn("term-seg-btn !px-1.5 !py-0.5 !text-[11px]", on ? "is-on" : "is-off")}
-          >
-            {on && (
-              <motion.span
-                layoutId={layoutId}
-                className="term-seg-pill"
-                transition={{ type: "spring", stiffness: 480, damping: 32 }}
-              />
+            className={cn(
+              TOGGLE_BTN,
+              "min-w-0",
+              on ? "text-bulk-base" : "text-text-muted hover:text-text-secondary"
             )}
+          >
             <span className="relative z-10">{option.label}</span>
           </button>
         );
@@ -1217,24 +1624,36 @@ function PillToggle<T extends string>({
   );
 }
 
-function SupplyPresetToggle({
-  preset,
-  onPreset,
+function LiveSupplyButton({
+  on,
+  onToggle,
 }: {
-  preset: SupplyPreset;
-  onPreset: (preset: Exclude<SupplyPreset, "custom">) => void;
+  on: boolean;
+  onToggle: () => void;
 }) {
-  const assumedLabel = `${APR_TOTAL_AURA_SUPPLY / 1_000_000}M`;
   return (
-    <PillToggle
-      value={preset === "custom" ? null : preset}
-      options={[
-        { id: "live" as const, label: "Live", title: "Use earned-so-far campaign total" },
-        { id: "assumed" as const, label: assumedLabel, title: `Assumed pool of ${assumedLabel}` },
-      ]}
-      onChange={onPreset}
-      layoutId="supply-preset-toggle"
-    />
+    <div className={cn(TOGGLE_TRACK, "inline-flex")}>
+      <button
+        type="button"
+        aria-pressed={on}
+        title={on ? "Following live campaign total — click to freeze" : "Use earned-so-far campaign total"}
+        onClick={onToggle}
+        className={cn(
+          TOGGLE_BTN,
+          "min-w-[3.75rem] gap-1.5",
+          on ? "text-bulk-base" : "text-text-muted hover:text-text-secondary"
+        )}
+      >
+        {on && (
+          <span className="absolute inset-0 rounded-full bg-accent" />
+        )}
+        <span className={cn("live-air relative z-10", on && "is-live")} aria-hidden="true">
+          <span className="live-air-halo" />
+          <span className="live-air-core" />
+        </span>
+        <span className="relative z-10">LIVE</span>
+      </button>
+    </div>
   );
 }
 
@@ -1248,9 +1667,9 @@ function CompoundInput({
   trailing: React.ReactNode;
 }) {
   return (
-    <div className="flex items-center rounded-[10px] border border-[var(--color-line-strong)] bg-[var(--color-bulk-base)] transition-[border-color] duration-150 focus-within:border-accent">
+    <div className="flex h-11 items-center rounded-[10px] border border-[var(--color-line-strong)] bg-[var(--color-bulk-base)] pl-3.5 pr-1.5 transition-[border-color] duration-150 focus-within:border-accent">
       {children}
-      <div className="shrink-0 pr-1.5">{trailing}</div>
+      <div className="shrink-0">{trailing}</div>
     </div>
   );
 }
@@ -1305,10 +1724,6 @@ function Field({
 }
 
 type FdvUnit = "M" | "B";
-
-function fdvUnitCaption(unit: FdvUnit): string {
-  return unit === "B" ? "billions USD" : "millions USD";
-}
 
 const FDV_UNIT_MULTIPLIER: Record<FdvUnit, number> = {
   M: 1_000_000,
@@ -1392,31 +1807,27 @@ function FdvField({
 
   useEffect(() => {
     if (isFocused) return;
-    const nextUnit = resolveFdvUnit(fdv);
-    setUnit(nextUnit);
-    setDraft(formatFdvUnitDisplay(fdv / FDV_UNIT_MULTIPLIER[nextUnit]));
-  }, [fdv, isFocused]);
+    setDraft(formatFdvUnitDisplay(fdv / FDV_UNIT_MULTIPLIER[unit]));
+  }, [fdv, isFocused, unit]);
 
-  const applyAbsoluteFdv = (absolute: number, syncDraft = true) => {
+  const applyAbsoluteFdv = (absolute: number, syncDraft = true, keepUnit: FdvUnit = unit) => {
     const safe = Math.max(0, absolute);
-    const nextUnit = resolveFdvUnit(safe);
-    const unitValue = roundToHundredths(safe / FDV_UNIT_MULTIPLIER[nextUnit]);
-    const snapped = unitValue * FDV_UNIT_MULTIPLIER[nextUnit];
-    setUnit(nextUnit);
+    const unitValue = roundToHundredths(safe / FDV_UNIT_MULTIPLIER[keepUnit]);
+    const snapped = unitValue * FDV_UNIT_MULTIPLIER[keepUnit];
     if (syncDraft) setDraft(formatFdvUnitDisplay(unitValue));
     onFdvChange(snapped);
-    return { nextUnit, unitValue, snapped };
+    return { unitValue, snapped };
   };
 
   const commitDraft = (nextDraft: string, nextUnit: FdvUnit = unit) => {
     const trimmed = nextDraft.trim();
     if (trimmed === "" || trimmed === ".") {
-      applyAbsoluteFdv(0);
+      applyAbsoluteFdv(0, true, nextUnit);
       return;
     }
     const parsed = parseCommaNumber(trimmed);
     if (parsed == null) return;
-    applyAbsoluteFdv(roundToHundredths(parsed) * FDV_UNIT_MULTIPLIER[nextUnit]);
+    applyAbsoluteFdv(roundToHundredths(parsed) * FDV_UNIT_MULTIPLIER[nextUnit], true, nextUnit);
   };
 
   const selectUnit = (nextUnit: FdvUnit) => {
@@ -1430,21 +1841,13 @@ function FdvField({
   };
 
   return (
-    <div className="relative min-w-0">
-      <div className="mb-1">
-        <FieldLabel label="FDV" info={info} hint={fdvUnitCaption(unit)} />
+    <div className="min-w-0">
+      <div className="mb-2 flex h-[15px] items-center">
+        <FieldLabel label="FDV" info={info} />
       </div>
       <CompoundInput
         trailing={
-          <PillToggle
-            value={unit}
-            options={[
-              { id: "M" as const, label: "M", title: "Millions" },
-              { id: "B" as const, label: "B", title: "Billions" },
-            ]}
-            onChange={selectUnit}
-            layoutId="fdv-unit-toggle"
-          />
+          <UnitToggle value={unit} onChange={selectUnit} />
         }
       >
         <input
@@ -1473,27 +1876,17 @@ function FdvField({
 
             const parsed = parseCommaNumber(formatted);
             if (parsed != null) {
-              const { nextUnit, unitValue } = applyAbsoluteFdv(
+              applyAbsoluteFdv(
                 roundToHundredths(parsed) * FDV_UNIT_MULTIPLIER[unit],
                 false
               );
-              if (nextUnit !== unit) {
-                const display = formatFdvUnitDisplay(unitValue);
-                setDraft(display);
-                requestAnimationFrame(() => {
-                  const el = inputRef.current;
-                  if (!el) return;
-                  el.setSelectionRange(display.length, display.length);
-                });
-                return;
-              }
             }
 
             requestAnimationFrame(() => {
               if (inputRef.current) restoreCommaCursor(inputRef.current, formatted, digitsBeforeCursor);
             });
           }}
-          className="min-w-0 flex-1 bg-transparent px-[0.875rem] py-[0.625rem] text-sm tabular-nums outline-none"
+          className={cn("min-w-0 flex-1 bg-transparent outline-none", FIGURE_FIELD)}
         />
       </CompoundInput>
     </div>
@@ -1600,10 +1993,8 @@ function EditableMoneyBox({
 
   useEffect(() => {
     if (isFocused) return;
-    const nextUnit = pickUsdUnit(value);
-    setUnit(nextUnit);
-    setDraft(formatFdvDisplay(value / FDV_UNIT_MULTIPLIER[nextUnit]));
-  }, [value, isFocused]);
+    setDraft(formatFdvDisplay(value / FDV_UNIT_MULTIPLIER[unit]));
+  }, [value, isFocused, unit]);
 
   const applyValue = (next: number) => {
     if (!Number.isFinite(next) || next < 0) return;
@@ -1632,21 +2023,13 @@ function EditableMoneyBox({
   };
 
   return (
-    <div className="relative min-w-0">
-      <div className="mb-1">
-        <FieldLabel label={label} info={info} hint={fdvUnitCaption(unit)} />
+    <div className="min-w-0">
+      <div className="mb-2 flex h-[15px] items-center">
+        <FieldLabel label={label} info={info} />
       </div>
       <CompoundInput
         trailing={
-          <PillToggle
-            value={unit}
-            options={[
-              { id: "M" as const, label: "M", title: "Millions" },
-              { id: "B" as const, label: "B", title: "Billions" },
-            ]}
-            onChange={selectUnit}
-            layoutId="marketcap-unit-toggle"
-          />
+          <UnitToggle value={unit} onChange={selectUnit} />
         }
       >
         <input
@@ -1684,7 +2067,8 @@ function EditableMoneyBox({
             });
           }}
           className={cn(
-            "min-w-0 flex-1 bg-transparent px-[0.875rem] py-[0.625rem] text-sm tabular-nums outline-none",
+            "min-w-0 flex-1 bg-transparent outline-none",
+            FIGURE_FIELD,
             accent && "text-accent"
           )}
         />
