@@ -1,14 +1,19 @@
 import { NextResponse } from "next/server";
-import { buildLiveFinancialPayload } from "@/lib/live-financial-payload";
+import {
+  buildLiveFinancialPayload,
+  LIVE_PAYLOAD_TTL_MS,
+} from "@/lib/live-financial-payload";
 
-export const dynamic = "force-dynamic";
-export const revalidate = 0;
+/** CDN + Next data cache: one rebuild per TTL, not one per open tab. */
+export const revalidate = 45;
+
+const CACHE_CONTROL = `public, s-maxage=${Math.round(LIVE_PAYLOAD_TTL_MS / 1000)}, stale-while-revalidate=90`;
 
 export async function GET() {
   try {
-    const payload = await buildLiveFinancialPayload({ fresh: true, waitMs: 1_200 });
+    const payload = await buildLiveFinancialPayload();
     return NextResponse.json(payload, {
-      headers: { "Cache-Control": "no-store, max-age=0" },
+      headers: { "Cache-Control": CACHE_CONTROL },
     });
   } catch {
     return NextResponse.json({ error: "Live financials unavailable" }, { status: 503 });

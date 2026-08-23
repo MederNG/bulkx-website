@@ -1,6 +1,5 @@
 import type { DepositAuraPredictContext } from "@/lib/deposit-aura-predict";
 import { getLeaderboard, getLeaderboardMtimeMs } from "@/lib/fetcher";
-import { getLeaderboardForApp } from "@/lib/live-leaderboard";
 import { getLiveTotals } from "@/lib/live-totals";
 import { computeProjectedSnapshotTvl, type ProjectedSnapshotTvl } from "@/lib/projected-snapshot-tvl";
 import { getSnapshotsMtimeMs } from "@/lib/snapshots";
@@ -11,6 +10,10 @@ import {
   computeTvlKpiSecondaryMetrics,
   type TvlKpiSecondaryMetrics,
 } from "@/lib/tvl-kpi-secondary";
+
+/** Shared by the live-financials route and in-process callers so every open
+ * tab does not rebuild the 52k-row payload. */
+export const LIVE_PAYLOAD_TTL_MS = 45_000;
 
 export interface LiveFinancialPayload {
   currentTvl: number;
@@ -91,15 +94,49 @@ export function buildLiveFinancialPayloadFromDisk(): LiveFinancialPayload {
   return data;
 }
 
-export async function buildLiveFinancialPayload(options?: {
-  fresh?: boolean;
-  /** Max wait for upstream leaderboard before disk fallback. Default 1500ms. */
-  waitMs?: number;
-}): Promise<LiveFinancialPayload> {
-  const waitMs = options?.waitMs ?? 1_500;
-  const [totals, entries] = await Promise.all([
-    getLiveTotals(options),
-    getLeaderboardForApp({ waitMs }),
-  ]);
-  return assembleLiveFinancialPayload(totals, entries, options);
+let livePayloadCache: { at: number; data: LiveFinancialPayload } | null = null;
+
+/**
+ * Live KPI payload for the client poll. Totals come from the cheap
+ * page_size=1 upstream (already cached 5 min). Leaderboard Aura / predict
+ * stay on the disk snapshot — starting a full 26-page pull here is what
+ * burned Fluid Active CPU. Result is reused for LIVE_PAYLOAD_TTL_MS.
+ */
+export async function buildLiveFinancialPayload(): Promise<LiveFinancialPayload> {
+  const now = Date.now();
+  if (livePayloadCache && now - livePayloadCache.at < LIVE_PAYLOAD_TTL_MS) {
+    return livePayloadCache.data;
+  }
+
+  const totals = await getLiveTotals();
+  const base = buildLiveFinancialPayloadFromDisk();
+
+  if (!totals) {
+    livePayloadCache = { at: now, data: base };
+    return base;
+  }
+
+  const snapshots = getChartSnapshots("ALL");
+  const referenceTimeMs = now;
+  const data: LiveFinancialPayload = {
+    ...base,
+    currentTvl: totals.tvl,
+    totalDeposited: totals.totalDeposited,
+    totalWithdrawn: totals.totalWithdrawn,
+    depositWallets: totals.totalWallets,
+    totalWallets: totals.leaderboardWallets ?? base.totalWallets,
+    updatedAt: totals.updatedAt,
+    referenceTimeMs,
+    projection: computeProjectedSnapshotTvl(snapshots, totals.tvl, referenceTimeMs),
+    secondaryMetrics: computeTvlKpiSecondaryMetrics(
+      snapshots,
+      totals.tvl,
+      totals.totalDeposited,
+      totals.totalWithdrawn,
+      referenceTimeMs,
+    ),
+  };
+
+  livePayloadCache = { at: now, data };
+  return data;
 }
