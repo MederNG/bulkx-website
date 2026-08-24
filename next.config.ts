@@ -4,6 +4,12 @@ const nextConfig: NextConfig = {
   images: {
     unoptimized: true,
   },
+  async redirects() {
+    return [
+      { source: "/aura/sources", destination: "/aura", permanent: true },
+      { source: "/aura/distribution", destination: "/aura", permanent: true },
+    ];
+  },
   // Keep the last page around so Overview ↔ Aura ↔ Tools feel instant.
   experimental: {
     staleTimes: {
