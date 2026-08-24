@@ -17,7 +17,7 @@ interface NavItem {
  * layer of navigation over pages that each hold one screen of content. */
 const NAV: NavItem[] = [
   { href: "/", label: "Overview" },
-  { href: "/aura/sources", label: "Aura" },
+  { href: "/aura", label: "Aura" },
   { href: "/tools", label: "Tools" },
   { href: "/leaderboards", label: "Leaderboards" },
   { href: "/trade", label: "Trade" },
