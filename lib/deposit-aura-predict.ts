@@ -499,6 +499,52 @@ export function computeDepositAuraPredictContext(
   };
 }
 
+/**
+ * Advance campaign-week clock fields to `nowMs` without walking the
+ * leaderboard. Pools and measured denominators stay on the last snapshot;
+ * only the week number, countdown, and live-week TVL/hours update.
+ */
+export function refreshDepositPredictClock(
+  predict: DepositAuraPredictContext,
+  nowMs: number,
+  currentTvl: number,
+): DepositAuraPredictContext {
+  const nextSnapshotTimestamp = getNextSnapshotTimestamp(nowMs);
+  const previousSnapshotTimestamp = getPreviousSnapshotTimestamp(nextSnapshotTimestamp);
+  const hoursUntilSnapshot = Math.max(0, (nextSnapshotTimestamp - nowMs) / MS_PER_HOUR);
+  const hoursInWeek = (nextSnapshotTimestamp - previousSnapshotTimestamp) / MS_PER_HOUR;
+  const campaignWeek = getCurrentCampaignWeek(nowMs);
+  const lastCompletedWeek = campaignWeek > 1 ? campaignWeek - 1 : null;
+
+  const eligibleNow = predict.calibration.eligibleCumUsdHours;
+  const eligibleCumUsdHoursAtSnapshot =
+    eligibleNow != null
+      ? eligibleNow + currentTvl * hoursUntilSnapshot
+      : currentTvl * COHORT_USD_HOURS_FACTOR * hoursInWeek;
+
+  return {
+    ...predict,
+    campaignWeek,
+    hoursUntilSnapshot,
+    hoursInWeek,
+    currentTvl,
+    nextSnapshotTimestamp,
+    snapshotLabel: formatSnapshotUtc(nextSnapshotTimestamp),
+    currentWeekWindow: formatCampaignWeekWindow(campaignWeek),
+    cohortUsdHoursAtSnapshot: eligibleCumUsdHoursAtSnapshot,
+    eligibleCumUsdHoursAtSnapshot,
+    weekTvl: { ...predict.weekTvl, [campaignWeek]: currentTvl },
+    weekEligibleCumUsdHours: {
+      ...predict.weekEligibleCumUsdHours,
+      [campaignWeek]: eligibleCumUsdHoursAtSnapshot,
+    },
+    calibration: {
+      ...predict.calibration,
+      lastCompletedWeek,
+    },
+  };
+}
+
 type PredictContext = Pick<
   DepositAuraPredictContext,
   | "depositPool"

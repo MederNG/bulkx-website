@@ -1,4 +1,7 @@
-import type { DepositAuraPredictContext } from "@/lib/deposit-aura-predict";
+import {
+  refreshDepositPredictClock,
+  type DepositAuraPredictContext,
+} from "@/lib/deposit-aura-predict";
 import { getLeaderboard, getLeaderboardMtimeMs } from "@/lib/fetcher";
 import { getLiveTotals } from "@/lib/live-totals";
 import { computeProjectedSnapshotTvl, type ProjectedSnapshotTvl } from "@/lib/projected-snapshot-tvl";
@@ -88,10 +91,16 @@ let diskPayloadCache: { key: string; data: LiveFinancialPayload } | null = null;
 
 export function buildLiveFinancialPayloadFromDisk(): LiveFinancialPayload {
   const key = `${getLeaderboardMtimeMs()}:${getTotalsMtimeMs()}:${getSnapshotsMtimeMs()}`;
-  if (diskPayloadCache?.key === key) return diskPayloadCache.data;
-  const data = assembleLiveFinancialPayload(readTotals(), getLeaderboard());
-  diskPayloadCache = { key, data };
-  return data;
+  if (diskPayloadCache?.key !== key) {
+    diskPayloadCache = { key, data: assembleLiveFinancialPayload(readTotals(), getLeaderboard()) };
+  }
+  const base = diskPayloadCache.data;
+  const now = Date.now();
+  return {
+    ...base,
+    referenceTimeMs: now,
+    depositPredict: refreshDepositPredictClock(base.depositPredict, now, base.currentTvl),
+  };
 }
 
 let livePayloadCache: { at: number; data: LiveFinancialPayload } | null = null;
@@ -135,6 +144,7 @@ export async function buildLiveFinancialPayload(): Promise<LiveFinancialPayload>
       totals.totalWithdrawn,
       referenceTimeMs,
     ),
+    depositPredict: refreshDepositPredictClock(base.depositPredict, referenceTimeMs, totals.tvl),
   };
 
   livePayloadCache = { at: now, data };
