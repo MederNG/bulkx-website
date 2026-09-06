@@ -15,6 +15,7 @@ export interface ParsedAuraCategory {
 }
 
 const REFERRAL_WEEK_RE = /^referral_week(\d+)$/;
+const PREDEPOSIT_WEEK_RE = /^predeposit_week(\d+)$/;
 // Any weekN-prefixed sub-category (protocol bonuses, one-off corrections, etc.)
 // belongs to that week's group, not "Other".
 const WEEK_SUFFIX_RE = /^week(\d+)_.+$/;
@@ -29,6 +30,11 @@ export function parseAuraCategoryKey(key: string): ParsedAuraCategory {
   const referralMatch = key.match(REFERRAL_WEEK_RE);
   if (referralMatch) {
     return { group: "week", week: Number(referralMatch[1]) };
+  }
+
+  const predepositMatch = key.match(PREDEPOSIT_WEEK_RE);
+  if (predepositMatch) {
+    return { group: "week", week: Number(predepositMatch[1]) };
   }
 
   const suffixMatch = key.match(WEEK_SUFFIX_RE);
@@ -57,7 +63,7 @@ const FIXED_SOURCE_ORDER = ["retro", "pre-deposits", "referrals"];
 
 function sourceBucketKey(key: string): string {
   if (key.startsWith("retro_")) return "retro";
-  if (/^week\d+$/i.test(key)) return "pre-deposits";
+  if (/^week\d+$/i.test(key) || /^predeposit_week\d+$/i.test(key)) return "pre-deposits";
   if (/^referral_week\d+$/i.test(key)) return "referrals";
 
   const suffixMatch = key.match(/^week\d+_(.+)$/i);

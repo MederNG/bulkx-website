@@ -35,8 +35,8 @@ export function categoryLabel(key: string): string {
   // what's left.
   if (key.startsWith("retro_")) return categoryLabel(key.slice("retro_".length));
 
-  // Bare "weekN" is the deposit-holding bucket itself.
-  if (/^week\d+$/i.test(key)) return "Pre-Deposits";
+  // Bare "weekN" / "predeposit_weekN" is the deposit-holding bucket itself.
+  if (/^week\d+$/i.test(key) || /^predeposit_week\d+$/i.test(key)) return "Pre-Deposits";
 
   // "referral_weekN" — same idea, the week number is redundant.
   if (/^referral_week\d+$/i.test(key)) return "Referrals";
