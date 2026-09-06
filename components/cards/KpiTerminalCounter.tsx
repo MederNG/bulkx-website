@@ -54,6 +54,8 @@ export function KpiTerminalCounter({
   const [counting, setCounting] = useState(false);
   const rafRef = useRef<number | null>(null);
   const hostRef = useRef<HTMLSpanElement | null>(null);
+  const displayedRef = useRef(value);
+  const enteredRef = useRef(false);
   const [hasEnteredViewport, setHasEnteredViewport] = useState(false);
 
   useEffect(() => {
@@ -81,27 +83,35 @@ export function KpiTerminalCounter({
 
   useEffect(() => {
     if (!hasEnteredViewport) {
+      displayedRef.current = value;
       setDisplayed(value);
       setCounting(false);
       return;
     }
 
+    const isUpdate = enteredRef.current;
+    const from = isUpdate ? displayedRef.current : 0;
+    enteredRef.current = true;
+    const to = value;
+    const span = isUpdate ? Math.min(durationMs, 480) : durationMs;
     let cancelled = false;
     setCounting(true);
-    setDisplayed(0);
 
     const start = performance.now();
 
     const tick = (now: number) => {
       if (cancelled) return;
-      const t = Math.min(1, (now - start) / durationMs);
+      const t = Math.min(1, (now - start) / span);
       const eased = 1 - (1 - t) ** 3;
-      setDisplayed(Math.round(value * eased));
+      const next = from + (to - from) * eased;
+      displayedRef.current = next;
+      setDisplayed(next);
       if (t < 1) {
         rafRef.current = requestAnimationFrame(tick);
         return;
       }
-      setDisplayed(value);
+      displayedRef.current = to;
+      setDisplayed(to);
       setCounting(false);
     };
 
