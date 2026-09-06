@@ -16,8 +16,8 @@ export interface WalletAuraBreakdown {
   totalAura: AuraSourceBreakdown;
 }
 
-const DEPOSIT_RE = /^week(\d+)$/;
-const REFERRAL_RE = /^referral_week(\d+)$/;
+const DEPOSIT_RE = /^(?:predeposit_)?week(\d+)$/;
+const REFERRAL_RE = /^(?:predeposit_)?referral_week(\d+)$/;
 const WEEK_PROTOCOL_RE = /^week(\d+)_protocol_.+$/;
 
 export function classifyAuraSource(key: string): AuraSource {

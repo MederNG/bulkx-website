@@ -38,8 +38,8 @@ export function categoryLabel(key: string): string {
   // Bare "weekN" / "predeposit_weekN" is the deposit-holding bucket itself.
   if (/^week\d+$/i.test(key) || /^predeposit_week\d+$/i.test(key)) return "Pre-Deposits";
 
-  // "referral_weekN" — same idea, the week number is redundant.
-  if (/^referral_week\d+$/i.test(key)) return "Referrals";
+  // "referral_weekN" / "predeposit_referral_weekN" — week number is redundant.
+  if (/^(?:predeposit_)?referral_week\d+$/i.test(key)) return "Referrals";
 
   const weekPrefixMatch = key.match(/^week\d+_(.+)$/i);
   if (weekPrefixMatch) return categoryLabel(weekPrefixMatch[1]);

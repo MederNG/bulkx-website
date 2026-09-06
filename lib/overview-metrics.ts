@@ -382,13 +382,12 @@ export function buildOverviewPanels(input: {
   // the ring stays readable instead of fraying into 1% slivers.
   const MIN_DONUT_SHARE = 2.5;
   const allSources = aggregateBySource(categoryBreakdown).filter((s) => s.share > 0);
-  const named = allSources.filter((s) => s.share >= MIN_DONUT_SHARE);
-  const tailShare = allSources
-    .filter((s) => s.share < MIN_DONUT_SHARE)
-    .reduce((sum, s) => sum + s.share, 0);
-  const tailPoints = allSources
-    .filter((s) => s.share < MIN_DONUT_SHARE)
-    .reduce((sum, s) => sum + s.points, 0);
+  // Leftover "other" joins the small-source tail so the ring never shows
+  // both "Other" and "Others".
+  const named = allSources.filter((s) => s.key !== "other" && s.share >= MIN_DONUT_SHARE);
+  const tail = allSources.filter((s) => s.key === "other" || s.share < MIN_DONUT_SHARE);
+  const tailShare = tail.reduce((sum, s) => sum + s.share, 0);
+  const tailPoints = tail.reduce((sum, s) => sum + s.points, 0);
 
   // Largest share first, so colours are assigned the same way everywhere —
   // the biggest source always takes the accent gold.
