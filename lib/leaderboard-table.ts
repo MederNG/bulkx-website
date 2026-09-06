@@ -1,10 +1,8 @@
 import type { LeaderboardEntry } from "@/types";
-import { computeDepositAura, computeEfficiency } from "@/lib/percentiles";
-import { hasReferralActivity } from "@/lib/referrals";
 
 export const LEADERBOARD_TOP_LIMIT = 100;
 
-export type LeaderboardTab = "aura" | "deposit" | "efficiency" | "referral";
+export type LeaderboardTab = "aura" | "volume" | "pnl";
 export type LeaderboardSortDir = "asc" | "desc";
 
 export const LEADERBOARD_TAB_DEFAULT_SORT: Record<
@@ -12,25 +10,21 @@ export const LEADERBOARD_TAB_DEFAULT_SORT: Record<
   { key: string; dir: LeaderboardSortDir }
 > = {
   aura: { key: "aura", dir: "desc" },
-  deposit: { key: "deposit", dir: "desc" },
-  efficiency: { key: "efficiency", dir: "desc" },
-  referral: { key: "referrals_qualified", dir: "desc" },
+  volume: { key: "volume", dir: "desc" },
+  pnl: { key: "pnl", dir: "desc" },
 };
 
 export function getLeaderboardPool(
   entries: LeaderboardEntry[],
   tab: LeaderboardTab
 ): LeaderboardEntry[] {
-  switch (tab) {
-    case "efficiency":
-      return entries.filter(
-        (entry) => entry.deposited_amount > 0 && computeDepositAura(entry) > 0
-      );
-    case "referral":
-      return entries.filter(hasReferralActivity);
-    default:
-      return entries;
+  if (tab === "volume") {
+    return entries.filter((entry) => (entry.volume_usd ?? 0) > 0);
   }
+  if (tab === "pnl") {
+    return entries.filter((entry) => entry.pnl_usd != null && entry.pnl_usd !== 0);
+  }
+  return entries;
 }
 
 export function getLeaderboardSortValue(
@@ -46,19 +40,13 @@ export function getLeaderboardSortValue(
     case "wallet":
       return entry.wallet;
     case "aura":
-      return tab === "efficiency" ? computeDepositAura(entry) : entry.aura;
+      return entry.aura;
     case "deposit":
-      return entry.current_amount;
-    case "deposited":
-      return entry.deposited_amount;
-    case "efficiency":
-      return computeEfficiency(entry);
-    case "referees_total_deposited":
-      return entry.referees_total_deposited ?? 0;
-    case "referrals_sent":
-      return entry.referrals_sent;
-    case "referrals_qualified":
-      return entry.referrals_qualified;
+      return entry.balance_usd ?? entry.current_amount;
+    case "volume":
+      return entry.volume_usd ?? 0;
+    case "pnl":
+      return entry.pnl_usd ?? 0;
     default:
       return getLeaderboardSortValue(
         entry,

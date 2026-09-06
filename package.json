@@ -10,6 +10,7 @@
     "fetch": "tsx scripts/fetch-aura.ts",
     "fetch:totals": "tsx scripts/fetch-totals.ts",
     "record:levels": "tsx scripts/record-exchange-levels.ts",
+    "record:volume": "tsx scripts/record-volume-leaderboard.ts",
     "generate:favicons": "node scripts/generate-favicons.mjs",
     "generate:fud": "node scripts/make-fud-transparent.mjs",
     "generate:cursor": "node scripts/generate-cursor-fallbacks.mjs",

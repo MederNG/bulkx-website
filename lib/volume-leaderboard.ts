@@ -1,0 +1,115 @@
+import fs from "fs";
+import path from "path";
+import type { LeaderboardEntry } from "@/types";
+import { fetchAccountSnapshot } from "@/lib/bulk-exchange";
+
+const VOLUME_FILE = path.join(process.cwd(), "data", "volume-leaderboard.json");
+
+export type VolumeRow = {
+  wallet: string;
+  volumeUsd: number;
+  balanceUsd?: number;
+  pnlUsd?: number;
+  updatedAt: string;
+};
+
+export type VolumeLeaderboardFile = {
+  updatedAt: string;
+  cursor: number;
+  windowDays: number;
+  rows: VolumeRow[];
+};
+
+const EMPTY: VolumeLeaderboardFile = {
+  updatedAt: new Date(0).toISOString(),
+  cursor: 0,
+  windowDays: 14,
+  rows: [],
+};
+
+function hasExchangeActivity(row: VolumeRow): boolean {
+  return (
+    row.volumeUsd > 0 ||
+    (row.balanceUsd ?? 0) > 0 ||
+    (row.pnlUsd ?? 0) !== 0
+  );
+}
+
+export function readVolumeLeaderboardFile(): VolumeLeaderboardFile {
+  try {
+    const parsed = JSON.parse(fs.readFileSync(VOLUME_FILE, "utf-8")) as Partial<VolumeLeaderboardFile>;
+    return {
+      updatedAt: typeof parsed.updatedAt === "string" ? parsed.updatedAt : EMPTY.updatedAt,
+      cursor: Number(parsed.cursor) || 0,
+      windowDays: Number(parsed.windowDays) || 14,
+      rows: Array.isArray(parsed.rows) ? parsed.rows : [],
+    };
+  } catch {
+    return { ...EMPTY, rows: [] };
+  }
+}
+
+export function writeVolumeLeaderboardFile(
+  next: Omit<VolumeLeaderboardFile, "updatedAt">,
+): VolumeLeaderboardFile {
+  const payload: VolumeLeaderboardFile = {
+    updatedAt: new Date().toISOString(),
+    cursor: next.cursor,
+    windowDays: next.windowDays,
+    rows: next.rows.filter(hasExchangeActivity).sort((a, b) => b.volumeUsd - a.volumeUsd),
+  };
+  fs.mkdirSync(path.dirname(VOLUME_FILE), { recursive: true });
+  fs.writeFileSync(VOLUME_FILE, `${JSON.stringify(payload, null, 2)}\n`);
+  return payload;
+}
+
+export function attachExchangeStats(entries: LeaderboardEntry[]): LeaderboardEntry[] {
+  const byWallet = new Map(readVolumeLeaderboardFile().rows.map((row) => [row.wallet, row]));
+  return entries.map((entry) => {
+    const row = byWallet.get(entry.wallet);
+    if (!row) return entry;
+    return {
+      ...entry,
+      volume_usd: row.volumeUsd,
+      balance_usd: row.balanceUsd,
+      pnl_usd: row.pnlUsd,
+    };
+  });
+}
+
+/** @deprecated use attachExchangeStats */
+export function attachVolume(entries: LeaderboardEntry[]): LeaderboardEntry[] {
+  return attachExchangeStats(entries);
+}
+
+export async function sampleWalletVolumes(
+  wallets: string[],
+  concurrency = 8,
+): Promise<VolumeRow[]> {
+  const now = new Date().toISOString();
+  const rows: VolumeRow[] = [];
+
+  for (let offset = 0; offset < wallets.length; offset += concurrency) {
+    const batch = wallets.slice(offset, offset + concurrency);
+    const snapshots = await Promise.all(
+      batch.map(async (wallet) => ({
+        wallet,
+        snapshot: await fetchAccountSnapshot(wallet),
+      })),
+    );
+    for (const { wallet, snapshot } of snapshots) {
+      if (!snapshot) continue;
+      const row: VolumeRow = {
+        wallet,
+        volumeUsd: snapshot.volumeUsd,
+        balanceUsd: snapshot.balanceUsd,
+        pnlUsd: snapshot.pnlUsd,
+        updatedAt: now,
+      };
+      if (!hasExchangeActivity(row)) continue;
+      rows.push(row);
+    }
+  }
+
+  return rows;
+}

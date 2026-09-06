@@ -10,7 +10,6 @@ import {
   type LeaderboardTab,
 } from "@/lib/leaderboard-table";
 import { formatNumber, formatUsd, truncateWallet } from "@/lib/utils";
-import { computeDepositAura, computeEfficiency } from "@/lib/percentiles";
 import { cn } from "@/lib/utils";
 import { CopyableWallet } from "@/components/ui/CopyableWallet";
 import { PageHeading } from "@/components/layout/PageHeading";
@@ -47,80 +46,43 @@ function getColumns(tab: LeaderboardTab): ColumnDef[] {
     label: "Aura",
     align: "right",
     render: (entry) => (
-      <span className="font-data text-accent">
-        {formatNumber(tab === "efficiency" ? computeDepositAura(entry) : entry.aura)}
-      </span>
+      <span className="font-data text-accent">{formatNumber(entry.aura)}</span>
     ),
   };
 
-  const deposit: ColumnDef = {
-    key: "deposit",
-    label: "Deposit",
+  const volume: ColumnDef = {
+    key: "volume",
+    label: "Volume",
     align: "right",
     render: (entry) => (
-      <span className="font-data">{formatUsd(entry.current_amount)}</span>
+      <span className="font-data text-accent">{formatUsd(entry.volume_usd ?? 0)}</span>
     ),
   };
 
-  const depositedBasis: ColumnDef = {
-    key: "deposited",
-    label: "Deposit",
+  const pnl: ColumnDef = {
+    key: "pnl",
+    label: "PnL",
     align: "right",
-    render: (entry) => (
-      <span className="font-data">{formatUsd(entry.deposited_amount)}</span>
-    ),
+    render: (entry) => {
+      const value = entry.pnl_usd ?? 0;
+      return (
+        <span
+          className={cn(
+            "font-data",
+            value > 0 && "text-[var(--color-bid-green)]",
+            value < 0 && "text-[var(--color-neg-strong)]",
+          )}
+        >
+          {value > 0 ? "+" : value < 0 ? "−" : ""}
+          {formatUsd(Math.abs(value))}
+        </span>
+      );
+    },
   };
 
-  const referredAmount: ColumnDef = {
-    key: "referees_total_deposited",
-    label: "Referred Amount",
-    align: "right",
-    render: (entry) => (
-      <span className="font-data">
-        {formatUsd(entry.referees_total_deposited ?? 0)}
-      </span>
-    ),
-  };
-
-  const efficiency: ColumnDef = {
-    key: "efficiency",
-    label: "Efficiency",
-    align: "right",
-    render: (entry) => (
-      <span className="font-data text-bid-green">
-        {computeEfficiency(entry).toFixed(3)}
-      </span>
-    ),
-  };
-
-  const sent: ColumnDef = {
-    key: "referrals_sent",
-    label: "Sent",
-    align: "right",
-    render: (entry) => (
-      <span className="font-data">{entry.referrals_sent}</span>
-    ),
-  };
-
-  const qualified: ColumnDef = {
-    key: "referrals_qualified",
-    label: "Qualified",
-    align: "right",
-    render: (entry) => (
-      <span className="font-data">{entry.referrals_qualified}</span>
-    ),
-  };
-
-  switch (tab) {
-    case "deposit":
-      return [rank, wallet, aura, deposit];
-    case "efficiency":
-      return [rank, wallet, aura, depositedBasis, efficiency];
-    case "referral":
-      return [rank, wallet, aura, referredAmount, sent, qualified];
-    default:
-      return [rank, wallet, aura, deposit];
-  }
+  if (tab === "volume") return [rank, wallet, volume, aura];
+  if (tab === "pnl") return [rank, wallet, pnl, aura];
+  return [rank, wallet, aura];
 }
 
 function defaultSortDirForKey(tab: LeaderboardTab, key: string): LeaderboardSortDir {
@@ -202,7 +164,7 @@ export function LeaderboardTable({
   }, [tab, sortKey, sortDir]);
 
   useEffect(() => {
-    const others: LeaderboardTab[] = ["deposit", "efficiency", "referral"];
+    const others: LeaderboardTab[] = ["volume", "pnl"];
     const timer = window.setTimeout(() => {
       for (const other of others) {
         const defaults = LEADERBOARD_TAB_DEFAULT_SORT[other];
@@ -253,9 +215,8 @@ export function LeaderboardTable({
 
   const tabs: { id: LeaderboardTab; label: string }[] = [
     { id: "aura", label: "Aura Rank" },
-    { id: "deposit", label: "Deposit Rank" },
-    { id: "efficiency", label: "Efficiency" },
-    { id: "referral", label: "Referral" },
+    { id: "volume", label: "Volume Rank" },
+    { id: "pnl", label: "PnL Rank" },
   ];
 
   return (
@@ -342,7 +303,11 @@ export function LeaderboardTable({
                   colSpan={columns.length}
                   className="px-4 py-8 text-center text-text-muted"
                 >
-                  No wallets found
+                  {tab === "volume"
+                    ? "No recorded trading volume yet"
+                    : tab === "pnl"
+                      ? "No recorded PnL yet"
+                      : "No wallets found"}
                 </td>
               </tr>
             ) : (
@@ -387,8 +352,12 @@ export function LeaderboardTable({
       <div className="flex items-center justify-between border-t border-[var(--color-line)] px-4 py-3">
         <p className="font-data text-[12px] text-text-muted">
           {search.trim()
-            ? `Showing ${pageData.length} of ${filtered.length} matches (top ${LEADERBOARD_TOP_LIMIT} in category)`
-            : `Top ${LEADERBOARD_TOP_LIMIT} · showing ${pageData.length} of ${filtered.length}`}
+            ? `Showing ${pageData.length} of ${filtered.length} matches`
+            : tab === "volume"
+              ? `14-day volume · ${filtered.length} wallets`
+              : tab === "pnl"
+                ? `PnL · ${filtered.length} wallets`
+              : `Top ${LEADERBOARD_TOP_LIMIT} · showing ${pageData.length} of ${filtered.length}`}
         </p>
         <div className="term-seg">
           <button

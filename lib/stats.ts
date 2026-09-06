@@ -253,7 +253,7 @@ export function getWalletData(address: string): WalletData | null {
 }
 
 export function getSortedLeaderboard(
-  tab: "aura" | "deposit" | "efficiency" | "referral",
+  tab: "aura" | "volume" | "pnl",
   sortKey?: string,
   sortDir?: "asc" | "desc",
   limit?: number

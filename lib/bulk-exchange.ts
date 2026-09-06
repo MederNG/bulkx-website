@@ -92,3 +92,85 @@ export async function fetchKlines(
 export function marketBase(symbol: string): string {
   return symbol.replace(/-USD$/i, "").toUpperCase();
 }
+
+export interface AccountFeeTier {
+  rollingVolume: number;
+  windowDays: number;
+}
+
+export interface AccountSnapshot {
+  volumeUsd: number;
+  windowDays: number;
+  balanceUsd: number;
+  pnlUsd: number;
+}
+
+function asRecord(value: unknown): Record<string, unknown> | null {
+  return value && typeof value === "object" ? (value as Record<string, unknown>) : null;
+}
+
+function unwrapAccount(payload: unknown): Record<string, unknown> | null {
+  const first = Array.isArray(payload) ? payload[0] : payload;
+  const root = asRecord(first);
+  if (!root) return null;
+  return asRecord(root.fullAccount) ?? asRecord(root.feeTier) ?? root;
+}
+
+function readFeeTier(payload: unknown): AccountFeeTier | null {
+  const quote = unwrapAccount(payload);
+  if (!quote) return null;
+  const rollingVolume = Number(quote.rollingVolume);
+  if (!Number.isFinite(rollingVolume) || rollingVolume < 0) return null;
+  return {
+    rollingVolume,
+    windowDays: Number(quote.windowDays) || 14,
+  };
+}
+
+function readAccountSnapshot(payload: unknown): AccountSnapshot | null {
+  const account = unwrapAccount(payload);
+  if (!account) return null;
+  const margin = asRecord(account.margin) ?? {};
+  const feeTiers = Array.isArray(account.feeTiers) ? account.feeTiers : [];
+  const global =
+    feeTiers
+      .map((row) => asRecord(row))
+      .find((row) => row && (row.symbol === "global" || row.symbol == null)) ??
+    asRecord(feeTiers[0]);
+  const volumeUsd = Number(global?.rollingVolume);
+  const balanceUsd = Number(margin.totalMargin ?? margin.totalBalance);
+  const realized = Number(margin.realizedPnl) || 0;
+  const unrealized = Number(margin.unrealizedPnl) || 0;
+  if (![volumeUsd, balanceUsd].some((n) => Number.isFinite(n))) return null;
+  return {
+    volumeUsd: Number.isFinite(volumeUsd) && volumeUsd > 0 ? volumeUsd : 0,
+    windowDays: Number(global?.windowDays) || 14,
+    balanceUsd: Number.isFinite(balanceUsd) ? balanceUsd : 0,
+    pnlUsd: realized + unrealized,
+  };
+}
+
+async function postAccount(wallet: string, type: "feeTier" | "fullAccount"): Promise<unknown> {
+  const res = await fetch(`${EXCHANGE_API_BASE}/account`, {
+    method: "POST",
+    headers: {
+      Accept: "application/json",
+      "Content-Type": "application/json",
+      "User-Agent": "AURA-Intelligence/1.0",
+    },
+    body: JSON.stringify({ type, user: wallet }),
+    cache: "no-store",
+  });
+  if (!res.ok) return null;
+  return res.json();
+}
+
+/** Unsigned account fee-tier quote — 14d rolling volume for the Volume board. */
+export async function fetchAccountFeeTier(wallet: string): Promise<AccountFeeTier | null> {
+  return readFeeTier(await postAccount(wallet, "feeTier"));
+}
+
+/** Margin, PnL, and 14d volume from an unsigned fullAccount snapshot. */
+export async function fetchAccountSnapshot(wallet: string): Promise<AccountSnapshot | null> {
+  return readAccountSnapshot(await postAccount(wallet, "fullAccount"));
+}

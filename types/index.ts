@@ -18,6 +18,12 @@ export interface LeaderboardEntry {
   total_held_time_hours?: number;
   referral_number?: number;
   updated_at?: string;
+  /** 14-day rolling trading volume from the exchange fee-tier quote. */
+  volume_usd?: number;
+  /** Live exchange account equity (fullAccount margin.totalBalance). */
+  balance_usd?: number;
+  /** Realized + unrealized PnL from the exchange account snapshot. */
+  pnl_usd?: number;
 }
 
 export interface AlphaInsight {
@@ -137,6 +143,6 @@ export interface FdvResult {
   userValue: number;
 }
 
-export type LeaderboardTab = "aura" | "deposit" | "efficiency" | "referral";
+export type LeaderboardTab = "aura" | "volume" | "pnl";
 
 export type ChartRange = "24H" | "7D" | "30D" | "ALL";

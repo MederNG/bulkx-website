@@ -1,6 +1,7 @@
 import type { LeaderboardEntry } from "@/types";
 import { NextRequest, NextResponse } from "next/server";
 import { getLeaderboardWithLiveFinancials } from "@/lib/live-leaderboard-financials";
+import { attachExchangeStats } from "@/lib/volume-leaderboard";
 import {
   LEADERBOARD_TAB_DEFAULT_SORT,
   LEADERBOARD_TOP_LIMIT,
@@ -11,7 +12,7 @@ import {
 
 export const revalidate = 300;
 
-const VALID_TABS: LeaderboardTab[] = ["aura", "deposit", "efficiency", "referral"];
+const VALID_TABS: LeaderboardTab[] = ["aura", "volume", "pnl"];
 
 const TOP_CACHE_MS = 30_000;
 const topCache = new Map<string, { at: number; items: LeaderboardEntry[] }>();
@@ -47,7 +48,7 @@ export async function GET(request: NextRequest) {
     });
   }
 
-  const entries = await getLeaderboardWithLiveFinancials();
+  const entries = attachExchangeStats(await getLeaderboardWithLiveFinancials());
   const items = getLeaderboardTop(entries, selectedTab, sortKey, sortDir, limit);
   topCache.set(cacheKey, { at: Date.now(), items });
 
