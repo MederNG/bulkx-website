@@ -66,19 +66,21 @@ export function HeaderCampaignStatus() {
   const left = remainingMs != null ? formatLeftCompact(remainingMs) : "—";
 
   return (
-    <div className="hidden items-center gap-[18px] lg:flex">
-      <span className="flex items-baseline gap-[7px]">
+    <div className="flex items-center gap-2.5 lg:gap-[18px]">
+      <span className="hidden items-baseline gap-[7px] lg:flex">
         <span className="font-label text-text-muted">TPS</span>
         <span className="font-data text-[12px] text-text-secondary">{formatTps(exchange.tps)}</span>
       </span>
-      <span className="h-[18px] w-px bg-[var(--color-line-strong)]" aria-hidden />
+      <span className="hidden h-[18px] w-px bg-[var(--color-line-strong)] lg:block" aria-hidden />
       <span
-        className="flex items-center gap-[9px]"
+        className="flex shrink-0 items-center gap-1.5 lg:gap-[9px]"
         title={`Week ${week} · ${left}`}
       >
         <span className="font-label text-text-muted">W{week}</span>
         <WeekTicks today={today} />
-        <span className="font-data whitespace-nowrap text-[11px] text-text-muted">{left}</span>
+        <span className="font-data hidden whitespace-nowrap text-[11px] text-text-muted min-[400px]:inline">
+          {left}
+        </span>
       </span>
     </div>
   );

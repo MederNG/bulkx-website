@@ -127,6 +127,7 @@ export function VolumeStatCard() {
     : 0;
   const delta = mode === "24h" ? exchange.volume24hUsd - prev24h : exchange.volume24hUsd;
   const range = seriesRange(series);
+  const trades = mode === "24h" && exchange.trades24h > 0 ? exchange.trades24h : exchange.tradesTotal;
 
   return (
     <StatSparkCard
@@ -169,7 +170,7 @@ export function VolumeStatCard() {
         { label: "High", value: range ? usdBoard(range.high) : "—" },
         {
           label: "Trades",
-          value: exchange.trades24h > 0 ? exchange.trades24h.toLocaleString("en-US") : "—",
+          value: trades > 0 ? trades.toLocaleString("en-US") : "—",
         },
       ]}
     />

@@ -130,7 +130,6 @@ let volumeCache: {
   at: number;
   volume24hUsd: number;
   volumeTotalUsd: number;
-  trades24h: number;
 } | null = null;
 
 async function marketSymbols(): Promise<string[]> {
@@ -154,11 +153,14 @@ function sumCandlesUsd(candles: ExchangeCandle[], from?: number): number {
  *
  * 24h = 1m candles. Total = 1h since trading mainnet opened plus that
  * same 24h 1m window, so all-time is never below the live 24h print.
+ *
+ * Do not sum candle `n` for trades: it stays thousands per minute even
+ * when `v` is 0 (orders/ticks). Unique fills come from BulkStats
+ * `/api/analytics/stats` `trades.count`.
  */
 export async function sumCandleVolumes(): Promise<{
   volume24hUsd: number;
   volumeTotalUsd: number;
-  trades24h: number;
 }> {
   const now = Date.now();
   if (volumeCache && now - volumeCache.at < VOLUME_TTL_MS) {
@@ -173,15 +175,6 @@ export async function sumCandleVolumes(): Promise<{
   ]);
 
   const volume24hUsd = minuteSeries.reduce((sum, candles) => sum + sumCandlesUsd(candles, start24h), 0);
-  const trades24h = minuteSeries.reduce((sum, candles) => {
-    let n = 0;
-    for (const candle of candles) {
-      const t = Number(candle.t) || 0;
-      if (t < start24h) continue;
-      n += Number(candle.n) || 0;
-    }
-    return sum + n;
-  }, 0);
   const olderUsd = hourSeries.reduce((sum, candles) => {
     let usd = 0;
     for (const candle of candles) {
@@ -190,7 +183,7 @@ export async function sumCandleVolumes(): Promise<{
     return sum + usd;
   }, 0);
 
-  const data = { at: now, volume24hUsd, volumeTotalUsd: olderUsd + volume24hUsd, trades24h };
+  const data = { at: now, volume24hUsd, volumeTotalUsd: olderUsd + volume24hUsd };
   volumeCache = data;
   return data;
 }

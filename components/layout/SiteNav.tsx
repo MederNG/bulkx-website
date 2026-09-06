@@ -62,7 +62,7 @@ export function SiteNav() {
 
   return (
     <header className="sticky top-0 z-50 border-b border-[var(--color-line)] bg-[rgba(11,11,12,0.92)] backdrop-blur-[10px]">
-      <div className="shell flex min-h-[60px] flex-wrap items-center justify-between gap-x-[26px] gap-y-3 py-[11px]">
+      <div className="shell flex min-h-[60px] items-center justify-between gap-x-3 py-[11px] sm:gap-x-[26px]">
         <div className="flex min-w-0 items-center gap-[26px]">
           <Link href="/" className="flex min-w-0 items-center gap-[11px] text-text-primary">
             <Image
@@ -101,7 +101,7 @@ export function SiteNav() {
           </nav>
         </div>
 
-        <div className="flex min-w-0 items-center justify-end gap-[18px]">
+        <div className="flex min-w-0 items-center justify-end gap-2.5 sm:gap-[18px]">
           <HeaderCampaignStatus />
           {/* Flattened nav for narrow screens, where the inline bar is hidden. */}
           <div ref={menuRef} className="relative lg:hidden">
