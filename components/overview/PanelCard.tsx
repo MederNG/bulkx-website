@@ -8,8 +8,8 @@ export function PanelLabel({ children }: { children: React.ReactNode }) {
 }
 
 /**
- * Premium black Overview panels — same base as the page. Edge via a soft
- * top catch-light only; sides stay almost invisible.
+ * Overview panels — lifted #121214 cards with a hairline, matching the
+ * dashboard layout mockup.
  */
 export function PanelCard({
   className,
@@ -27,7 +27,7 @@ export function PanelCard({
   return (
     <div
       className={cn(
-        "flex min-h-0 min-w-0 flex-col rounded-[12px] border-0 bg-[var(--color-bulk-base)] px-3 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.07)] sm:px-5 sm:py-4",
+        "flex min-h-0 min-w-0 flex-col rounded-[10px] border border-[var(--color-line)] bg-[var(--color-bg-primary)] px-3 py-3 sm:px-5 sm:py-4",
         glossy && "relative overflow-hidden",
         className
       )}

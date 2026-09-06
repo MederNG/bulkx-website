@@ -79,7 +79,24 @@ export interface DashboardMetrics {
    * lifetime deposits. Summing `deposited_amount` instead put $88.8M against
    * a TVL of $22.5M: the withdrawn $65M counted as though it were still
    * there. */
-  depositSizeDistribution: { bucket: string; count: number; held: number }[];
+  depositSizeDistribution: {
+    bucket: string;
+    count: number;
+    held: number;
+    aura: number;
+    auraMin: number;
+    auraMax: number;
+  }[];
+  /** Depositor count and Aura totals per exclusive Aura band. */
+  auraRangeDistribution: {
+    bucket: string;
+    id: string;
+    count: number;
+    held: number;
+    aura: number;
+    auraMin: number;
+    auraMax: number;
+  }[];
   /**
    * "OG Hodlers": earned Aura in week 1 (categories.week1 > 0 — the campaign's
    * `first_seen` field is never populated, so this is the only real signal

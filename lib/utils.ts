@@ -57,6 +57,17 @@ export function categoryLabel(key: string): string {
     .replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
+/** Exclusive Aura bands for the Overview depositor chart. A wallet sits in
+ * exactly one — `<10` is [0, 10), `100000+` is [100000, ∞). */
+export const DEPOSITOR_AURA_RANGES = [
+  { id: "under10", label: "<10 AURA", min: 0, max: 10 },
+  { id: "10-100", label: "10-100 AURA", min: 10, max: 100 },
+  { id: "100-1000", label: "100-1k AURA", min: 100, max: 1000 },
+  { id: "1000-10000", label: "1k-10k AURA", min: 1000, max: 10000 },
+  { id: "10000-100000", label: "10k-100k AURA", min: 10000, max: 100000 },
+  { id: "100000+", label: "100k+ AURA", min: 100000, max: Infinity },
+] as const;
+
 export const AURA_BUCKETS = [
   { label: "0", min: 0, max: 0 },
   { label: "1-10", min: 1, max: 10 },

@@ -4,7 +4,9 @@ import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 import { SiteNav } from "@/components/layout/SiteNav";
 import { LiveFinancialProvider } from "@/components/live/LiveFinancialProvider";
+import { LiveExchangeProvider } from "@/components/live/LiveExchangeProvider";
 import { LIVE_FINANCIAL_SEED } from "@/lib/live-financial-seed";
+import { buildLiveExchangePayload } from "@/lib/live-exchange-payload";
 import { ScrollToTop } from "@/components/layout/ScrollToTop";
 import { HashScrollOnLoad } from "@/components/layout/HashScrollOnLoad";
 
@@ -62,24 +64,27 @@ export const viewport: Viewport = {
   themeColor: "#0b0b0c",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  // Seed is computed once per process, not on every RSC navigation. Walking
-  // the leaderboard here used to stall every tab switch. Live numbers still
-  // arrive from /api/live-financials after paint.
+  // Financial seed is once per process so tab switches don't rescan the
+  // leaderboard. Exchange payload is 15s-cached API data — needed here so
+  // the header TPS and Overview KPIs share one provider without a $0 flash.
   const live = LIVE_FINANCIAL_SEED;
+  const exchange = await buildLiveExchangePayload();
 
   return (
     <html lang="en" className={`${familjenGrotesk.variable} ${overpassMono.variable}`}>
       <body className="antialiased">
         <LiveFinancialProvider initial={live}>
-          <HashScrollOnLoad />
-          <SiteNav />
-          <main>{children}</main>
-          <ScrollToTop />
+          <LiveExchangeProvider initial={exchange}>
+            <HashScrollOnLoad />
+            <SiteNav />
+            <main>{children}</main>
+            <ScrollToTop />
+          </LiveExchangeProvider>
         </LiveFinancialProvider>
         <Analytics />
       </body>

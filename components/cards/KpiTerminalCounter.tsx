@@ -3,7 +3,14 @@
 import { useEffect, useRef, useState } from "react";
 import { cn, formatNumber } from "@/lib/utils";
 
-export type NumberFormat = "number" | "usd" | "usd-full" | "plain" | "percent" | "decimal3";
+export type NumberFormat =
+  | "number"
+  | "usd"
+  | "usd-full"
+  | "usd-board"
+  | "plain"
+  | "percent"
+  | "decimal3";
 
 function formatValue(n: number, format: NumberFormat): string {
   switch (format) {
@@ -12,6 +19,12 @@ function formatValue(n: number, format: NumberFormat): string {
     case "usd":
       return `$${formatNumber(n)}`;
     case "usd-full":
+      return `$${Math.round(n).toLocaleString("en-US")}`;
+    case "usd-board":
+      if (!(n > 0)) return "$0";
+      if (n >= 1e9) return `$${(n / 1e9).toFixed(2)}B`;
+      if (n >= 1e6) return `$${(n / 1e6).toFixed(2)}M`;
+      if (n >= 1e3) return `$${Math.round(n / 1e3).toLocaleString("en-US")}K`;
       return `$${Math.round(n).toLocaleString("en-US")}`;
     case "percent":
       return `${n.toFixed(1)}%`;

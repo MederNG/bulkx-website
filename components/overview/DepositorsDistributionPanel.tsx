@@ -11,8 +11,14 @@ import {
 } from "@/lib/chart-gold-pulse";
 import { PanelCard } from "@/components/overview/PanelCard";
 import { CATEGORY_NAME } from "@/components/overview/MetricTable";
-import { cn } from "@/lib/utils";
+import { cn, formatNumber } from "@/lib/utils";
 import { useNarrowViewport } from "@/lib/use-narrow-viewport";
+import {
+  OVERVIEW_BAR_GAP,
+  OVERVIEW_BAR_GAP_NARROW,
+  OVERVIEW_BAR_W,
+  OVERVIEW_BAR_W_NARROW,
+} from "@/lib/overview-bars";
 
 /** Which series the toggle has picked out. Both bars are always drawn — the
  * two have opposite shapes (Bulker is 55% of the depositors and 2.7% of the
@@ -31,15 +37,13 @@ function splitLabel(label: string): { name: string; range: string } {
   return match ? { name: match[1], range: match[2] } : { name: label, range: "" };
 }
 
-function usdCompact(value: number): string {
-  if (value >= 1e9) return `$${(value / 1e9).toFixed(2)}B`;
-  if (value >= 1e6) return `$${(value / 1e6).toFixed(2)}M`;
-  if (value >= 1e3) return `$${Math.round(value / 1e3).toLocaleString("en-US")}K`;
-  return `$${Math.round(value).toLocaleString("en-US")}`;
+function auraCompact(value: number): string {
+  if (!(value > 0)) return "0";
+  return formatNumber(value);
 }
 
-function usdExact(value: number): string {
-  return `$${Math.round(value).toLocaleString("en-US")}`;
+function auraExact(value: number): string {
+  return Math.round(value).toLocaleString("en-US");
 }
 
 /** Type scale — Familjen labels/names, Overpass Mono data cells. */
@@ -63,7 +67,7 @@ const CELL = "font-data";
  * table has, the extra goes into breathing room between every column
  * equally, not into stretching whichever column happened to be flexible. */
 const TABLE_COLS =
-  "grid grid-cols-[minmax(0,180px)_minmax(0,100px)_minmax(0,74px)_minmax(0,44px)_minmax(0,56px)_minmax(0,44px)] items-center [column-gap:clamp(16px,2.5vw,36px)]";
+  "grid grid-cols-[minmax(0,180px)_minmax(0,74px)_minmax(0,44px)_minmax(0,64px)_minmax(0,84px)_minmax(0,56px)] items-center [column-gap:clamp(16px,2.5vw,36px)]";
 const TABLE_COLS_NARROW =
   "grid grid-cols-[minmax(0,1fr)_minmax(0,72px)_minmax(0,52px)] items-center gap-x-3";
 
@@ -92,8 +96,8 @@ const HEAD_H = 30;
 /** Both bars sit in every tier's slot at once, side by side with a hairline
  * between them, so the pair reads as one object — the two readings of a
  * single tier — rather than two unrelated bars that happen to be adjacent. */
-const BAR_W = 20;
-const BAR_GAP = 8;
+const BAR_W = OVERVIEW_BAR_W;
+const BAR_GAP = OVERVIEW_BAR_GAP;
 /** Only for a tier that really is empty — anything with wallets in it gets a
  * height off the scale below, which never rounds to nothing. */
 const MIN_BAR_PCT = 1.2;
@@ -150,8 +154,8 @@ export function DepositorsDistributionPanel({ tiers }: { tiers: DepositTier[] })
   const [hovered, setHovered] = useState<string | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
   const narrow = useNarrowViewport();
-  const barW = narrow ? 10 : BAR_W;
-  const barGap = narrow ? 4 : BAR_GAP;
+  const barW = narrow ? OVERVIEW_BAR_W_NARROW : BAR_W;
+  const barGap = narrow ? OVERVIEW_BAR_GAP_NARROW : BAR_GAP;
   const yAxisW = narrow ? 36 : Y_AXIS_W;
   const tableCols = narrow ? TABLE_COLS_NARROW : TABLE_COLS;
 
@@ -193,16 +197,16 @@ export function DepositorsDistributionPanel({ tiers }: { tiers: DepositTier[] })
     // Exposed alongside the rows themselves — the axis below has to invert
     // this same sqrt scale to label it correctly, and needs the number this
     // was computed from to do it.
-    const peak = tiers.reduce((max, t) => Math.max(max, t.pct, t.heldPct), 0) || 1;
+    const peak = tiers.reduce((max, t) => Math.max(max, t.pct, t.auraPct), 0) || 1;
 
     const rows = tiers.map((t) => {
-      const { name, range } = splitLabel(t.label);
+      const { name } = splitLabel(t.label);
       return {
         ...t,
         name,
-        range,
+        range: t.auraRange,
         countHeight: barHeight(t.pct, peak),
-        valueHeight: barHeight(t.heldPct, peak),
+        valueHeight: barHeight(t.auraPct, peak),
       };
     });
 
@@ -223,17 +227,17 @@ export function DepositorsDistributionPanel({ tiers }: { tiers: DepositTier[] })
   // wrong number at every line but the top and bottom.
   const axisLabels = useMemo(() => {
     const total = tiers.reduce(
-      (sum, t) => ({ count: sum.count + t.count, held: sum.held + t.held }),
-      { count: 0, held: 0 }
+      (sum, t) => ({ count: sum.count + t.count, aura: sum.aura + t.aura }),
+      { count: 0, aura: 0 }
     );
-    const totalForMetric = metric === "count" ? total.count : total.held;
+    const totalForMetric = metric === "count" ? total.count : total.aura;
     return [100, 80, 60, 40, 20, 0].map((fraction) => {
       const value = (peak / 100) * (fraction / 100) ** 2 * totalForMetric;
       return metric === "count"
         ? value >= 1000
           ? `${(value / 1000).toFixed(value >= 10000 ? 0 : 1)}k`
           : Math.round(value).toLocaleString("en-US")
-        : usdCompact(value);
+        : auraCompact(value);
     });
   }, [tiers, peak, metric]);
 
@@ -323,7 +327,7 @@ export function DepositorsDistributionPanel({ tiers }: { tiers: DepositTier[] })
     // table under the donut at its. The pair used to share a single card,
     // which read as one object but left this row split at its own ratio,
     // out of step with the row above it.
-    <div className="grid min-h-0 flex-1 grid-cols-1 gap-3 xl:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)] xl:gap-4">
+    <div className="grid min-h-0 flex-1 grid-cols-1 gap-5 xl:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)]">
       {/* ------------------------------------------------ chart card */}
       <PanelCard glossy glossDelay={-16}>
       {/* No title, no legend: the colour and the row order already tie a
@@ -366,7 +370,7 @@ export function DepositorsDistributionPanel({ tiers }: { tiers: DepositTier[] })
                     transition={{ type: "spring", stiffness: 480, damping: 32 }}
                   />
                 )}
-                <span className="relative z-10">{m === "count" ? "Count" : "Value"}</span>
+                <span className="relative z-10">{m === "count" ? "Count" : "Aura"}</span>
               </button>
             );
           })}
@@ -638,9 +642,9 @@ export function DepositorsDistributionPanel({ tiers }: { tiers: DepositTier[] })
                           ["Share", `${hoveredRow.pct.toFixed(1)}%`],
                         ] as const)
                       : ([
-                          ["Deposits", usdCompact(hoveredRow.held)],
-                          ["Share", `${hoveredRow.heldPct.toFixed(1)}%`],
-                          ["Avg", usdExact(hoveredRow.avgHeld)],
+                          ["Total Aura", auraCompact(hoveredRow.aura)],
+                          ["Share", `${hoveredRow.auraPct.toFixed(1)}%`],
+                          ["Avg", auraExact(hoveredRow.avgAura)],
                         ] as const)
                     ).map(([label, value]) => (
                       <Fragment key={label}>
@@ -655,20 +659,8 @@ export function DepositorsDistributionPanel({ tiers }: { tiers: DepositTier[] })
             </div>
           </div>
 
-          {/* Ranges only — the tier names already sit right beside this
-              chart in the table's own TIER column, so repeating them here a
-              second time was the same six words said twice a few inches
-              apart.
-
-              This is the sixth row the bars gave up, so it is exactly
-              ROW_H tall and vertically centred the same way a table row is,
-              which puts "<$100" … "$500K+" on the same row as "Megalodon" in
-              the TIER column beside it rather than a line below the table's
-              own bottom — plus the baseline nudge, without which the two
-              rows line up as boxes but not as text. paddingLeft matches the
-              axis gutter above, so each range still centres under its own
-              bar instead of under the wider box that now includes the axis
-              labels. */}
+          {/* Exclusive Aura bands — two lines so `10000-100000 AURA` fits
+              the column. paddingLeft matches the axis gutter above. */}
           <div
             className="flex shrink-0 items-center"
             style={{
@@ -677,30 +669,21 @@ export function DepositorsDistributionPanel({ tiers }: { tiers: DepositTier[] })
               transform: `translateY(${X_LABEL_BASELINE_NUDGE}px)`,
             }}
           >
-            {rows.map((row) => (
+            {rows.map((row) => {
+              const band = row.range.replace(/\s+AURA$/i, "");
+              return (
               <div
                 key={row.id}
                 className="min-w-0 flex-1 text-center transition-opacity"
                 style={{ opacity: isMuted(row.id) ? 0.22 : 1 }}
               >
-                {/* IBM Plex Sans at 11px — matches the Y-axis labels beside
-                    it and HeroTvlChart's real rendered axis size (see the
-                    Y-axis label comment above re: the recharts !important
-                    override), so every axis on the page reads at the same
-                    size. The table's Size column below repeats this text at
-                    the table's larger CELL size; that's a table cell, not an
-                    axis, so it's intentionally left alone. */}
-                <div className="truncate px-0.5 text-center text-[10px] leading-none tabular-nums text-text-secondary sm:text-[11px]">
-                  {narrow
-                    ? row.range
-                        .replace("$100-1K", "$1K")
-                        .replace("$1K-10K", "$10K")
-                        .replace("$10K-100K", "$100K")
-                        .replace("$100K-500K", "$500K")
-                    : row.range}
+                <div className="px-0.5 text-center text-[10px] leading-[1.15] tabular-nums text-text-secondary sm:text-[11px]">
+                  <span className="block">{band}</span>
+                  <span className="block">AURA</span>
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
         </div>
 
@@ -732,10 +715,9 @@ export function DepositorsDistributionPanel({ tiers }: { tiers: DepositTier[] })
             style={{ height: HEAD_H }}
           >
             <span className="pl-[17px] text-left">Tier</span>
-            {!narrow && <span className="text-right">Size</span>}
             {narrow && metric === "value" ? (
               <>
-                <span className="text-right">Deposits</span>
+                <span className="text-right">Total Aura</span>
                 <span className="text-right">Avg</span>
               </>
             ) : (
@@ -744,7 +726,8 @@ export function DepositorsDistributionPanel({ tiers }: { tiers: DepositTier[] })
                 <span className="text-right">Share</span>
               </>
             )}
-            {!narrow && <span className="text-right">Deposits</span>}
+            {!narrow && <span className="text-right">Aura</span>}
+            {!narrow && <span className="text-right">Total Aura</span>}
             {!narrow && <span className="text-right">Avg</span>}
           </div>
 
@@ -824,21 +807,16 @@ export function DepositorsDistributionPanel({ tiers }: { tiers: DepositTier[] })
                   )}
                   <span className="truncate">{row.name}</span>
                 </span>
-                {!narrow && (
-                  <span className={cn(CELL, "truncate text-right")} style={{ color }}>
-                    {row.range}
-                  </span>
-                )}
                 {narrow && metric === "value" ? (
                   <>
                     <span className={cn(CELL, "text-right")} style={{ color }}>
-                      {usdCompact(row.held)}
+                      {auraCompact(row.aura)}
                     </span>
                     <span
                       className={cn(CELL, "text-right")}
                       style={{ color: muted ? "#6B6660" : "#C9C4BD" }}
                     >
-                      {usdCompact(row.avgHeld)}
+                      {auraCompact(row.avgAura)}
                     </span>
                   </>
                 ) : (
@@ -853,7 +831,12 @@ export function DepositorsDistributionPanel({ tiers }: { tiers: DepositTier[] })
                 )}
                 {!narrow && (
                   <span className={cn(CELL, "text-right")} style={{ color }}>
-                    {usdCompact(row.held)}
+                    {row.range}
+                  </span>
+                )}
+                {!narrow && (
+                  <span className={cn(CELL, "text-right")} style={{ color }}>
+                    {auraCompact(row.aura)}
                   </span>
                 )}
                 {!narrow && (
@@ -861,7 +844,7 @@ export function DepositorsDistributionPanel({ tiers }: { tiers: DepositTier[] })
                     className={cn(CELL, "text-right")}
                     style={{ color: muted ? "#6B6660" : "#C9C4BD" }}
                   >
-                    {usdCompact(row.avgHeld)}
+                    {auraCompact(row.avgAura)}
                   </span>
                 )}
               </div>

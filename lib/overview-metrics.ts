@@ -5,6 +5,7 @@ import {
 } from "@/lib/projected-snapshot-tvl";
 import type { TvlKpiSecondaryMetrics } from "@/lib/tvl-kpi-secondary";
 import type { Snapshot } from "@/types";
+import { DEPOSITOR_AURA_RANGES } from "@/lib/utils";
 
 /** Headline figures are shown in full — the design never abbreviates them. */
 function usdFull(value: number): string {
@@ -54,7 +55,47 @@ export interface DepositTier {
   heldPct: number;
   /** Held USD per wallet in the tier. */
   avgHeld: number;
+  /** Aura this tier's wallets hold in total. */
+  aura: number;
+  /** Share of all Aura in these tiers, 0-100. */
+  auraPct: number;
+  /** Aura per wallet in the tier. */
+  avgAura: number;
+  /** Compact min–max Aura among wallets in the tier. */
+  auraRange: string;
   color: string;
+}
+
+type DepositSizeBucket = {
+  bucket: string;
+  count: number;
+  held: number;
+  aura: number;
+  auraMin: number;
+  auraMax: number;
+};
+
+const EMPTY_BUCKET: DepositSizeBucket = {
+  bucket: "",
+  count: 0,
+  held: 0,
+  aura: 0,
+  auraMin: 0,
+  auraMax: 0,
+};
+
+function mergeBuckets(buckets: DepositSizeBucket[]): DepositSizeBucket {
+  return buckets.reduce(
+    (acc, b) => ({
+      bucket: acc.bucket,
+      count: acc.count + b.count,
+      held: acc.held + b.held,
+      aura: acc.aura + b.aura,
+      auraMin: Math.min(acc.auraMin, Number.isFinite(b.auraMin) ? b.auraMin : Infinity),
+      auraMax: Math.max(acc.auraMax, Number.isFinite(b.auraMax) ? b.auraMax : 0),
+    }),
+    { ...EMPTY_BUCKET, auraMin: Infinity },
+  );
 }
 
 /**
@@ -304,7 +345,7 @@ export function buildOverviewPanels(input: {
   currentTvl: number;
   totalAura: number;
   depositWallets: number;
-  depositSizeDistribution: { bucket: string; count: number; held: number }[];
+  depositSizeDistribution: DepositSizeBucket[];
   ogHodlers: number;
   weeklyAuraEmissions: number;
   projection: ProjectedSnapshotTvl;
@@ -380,55 +421,25 @@ export function buildOverviewPanels(input: {
     nextSnapshotTimestamp,
   };
 
-  // depositSizeDistribution buckets, in order: <$100, $100-1K, $1K-10K,
-  // $10K-100K, $100K-500K, $500K-1M, $1M+ (see DEPOSIT_SIZE_BUCKETS in
-  // lib/stats.ts). Regrouped into six mutually exclusive size tiers, one per
-  // bucket except the top tier folding the last two together, so the ring's
-  // slices never double-count the same wallet.
-  const tierDefs: { id: string; label: string; count: number; held: number; color: string }[] = [
-    {
-      id: "snowflake",
-      label: "Snowflake (<$100)",
-      count: depositSizeDistribution[0]?.count ?? 0,
-      held: depositSizeDistribution[0]?.held ?? 0,
-      color: chartPrimaryRamp(0, 6),
-    },
-    {
-      id: "bulker",
-      label: "Bulker ($100-1K)",
-      count: depositSizeDistribution[1]?.count ?? 0,
-      held: depositSizeDistribution[1]?.held ?? 0,
-      color: chartPrimaryRamp(1, 6),
-    },
-    {
-      id: "lilYeti",
-      label: "Lil Yeti ($1K-10K)",
-      count: depositSizeDistribution[2]?.count ?? 0,
-      held: depositSizeDistribution[2]?.held ?? 0,
-      color: chartPrimaryRamp(2, 6),
-    },
-    {
-      id: "bulkingYeti",
-      label: "Bulking Yeti ($10K-100K)",
-      count: depositSizeDistribution[3]?.count ?? 0,
-      held: depositSizeDistribution[3]?.held ?? 0,
-      color: chartPrimaryRamp(3, 6),
-    },
-    {
-      id: "auramaxer",
-      label: "Auramaxer ($100K-500K)",
-      count: depositSizeDistribution[4]?.count ?? 0,
-      held: depositSizeDistribution[4]?.held ?? 0,
-      color: chartPrimaryRamp(4, 6),
-    },
-    {
-      id: "megalodon",
-      label: "Megalodon ($500K+)",
-      count: depositSizeDistribution.slice(5).reduce((sum, b) => sum + b.count, 0),
-      held: depositSizeDistribution.slice(5).reduce((sum, b) => sum + b.held, 0),
-      color: chartPrimaryRamp(5, 6),
-    },
-  ];
+  // Size tiers keep the old names. The Aura column is the exclusive numeric
+  // band for that row — not a second name and not a dollar size.
+  const at = (i: number) => depositSizeDistribution[i] ?? EMPTY_BUCKET;
+  const megalodon = mergeBuckets(depositSizeDistribution.slice(5));
+  const sizeTiers = [
+    { id: "snowflake", label: "Snowflake (<$100)", bucket: at(0) },
+    { id: "bulker", label: "Bulker ($100-1K)", bucket: at(1) },
+    { id: "lilYeti", label: "Lil Yeti ($1K-10K)", bucket: at(2) },
+    { id: "bulkingYeti", label: "Bulking Yeti ($10K-100K)", bucket: at(3) },
+    { id: "auramaxer", label: "Auramaxer ($100K-500K)", bucket: at(4) },
+    { id: "megalodon", label: "Megalodon ($500K+)", bucket: megalodon },
+  ] as const;
+  const tierDefs = sizeTiers.map((t, i) => ({
+    id: t.id,
+    label: t.label,
+    ...t.bucket,
+    rangeLabel: DEPOSITOR_AURA_RANGES[i].label.replace(/\s+AURA$/i, ""),
+    color: chartPrimaryRamp(i, sizeTiers.length),
+  }));
 
   // Both shares are taken against the tiers' own totals rather than against
   // the wallet count the rest of the page quotes: `depositWallets` comes from
@@ -442,13 +453,18 @@ export function buildOverviewPanels(input: {
   // live and the leaderboard is a snapshot taken at its own moment.
   const tierCountTotal = tierDefs.reduce((sum, t) => sum + t.count, 0);
   const tierHeldTotal = tierDefs.reduce((sum, t) => sum + t.held, 0);
+  const tierAuraTotal = tierDefs.reduce((sum, t) => sum + t.aura, 0);
   const tierBase = tierCountTotal > 0 ? tierCountTotal : 1;
   const heldBase = tierHeldTotal > 0 ? tierHeldTotal : 1;
+  const auraBase = tierAuraTotal > 0 ? tierAuraTotal : 1;
   const tiers: DepositTier[] = tierDefs.map((t) => ({
     ...t,
     pct: (t.count / tierBase) * 100,
     heldPct: (t.held / heldBase) * 100,
     avgHeld: t.count > 0 ? t.held / t.count : 0,
+    auraPct: (t.aura / auraBase) * 100,
+    avgAura: t.count > 0 ? t.aura / t.count : 0,
+    auraRange: t.rangeLabel,
   }));
 
   const depositorsAnalysis = {

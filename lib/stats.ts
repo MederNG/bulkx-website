@@ -14,7 +14,7 @@ import { filterSnapshotsByRange, readSnapshots } from "@/lib/snapshots";
 import { readTotals } from "@/lib/totals";
 import { getLeaderboardTop } from "@/lib/leaderboard-table";
 import { hasReferralActivity } from "@/lib/referrals";
-import { AURA_BUCKETS, categoryLabel } from "@/lib/utils";
+import { AURA_BUCKETS, DEPOSITOR_AURA_RANGES, categoryLabel } from "@/lib/utils";
 import { computeDepositAuraPredictContext } from "@/lib/deposit-aura-predict";
 import { buildWalletData } from "@/lib/wallet-data";
 import type {
@@ -84,6 +84,38 @@ async function computeDashboardMetricsUncached(): Promise<DashboardMetrics> {
         (sum, e) => sum + Math.max(0, e.deposited_amount - e.withdrawn_amount),
         0
       ),
+      aura: inBucket.reduce((sum, e) => sum + (Number(e.aura) || 0), 0),
+      // Typical Aura in the cohort, not raw min/max — a few empty or
+      // outlier wallets otherwise pin every band to "0–…".
+      auraMin: percentileValue(
+        [...inBucket.map((e) => e.aura)].sort((a, b) => a - b),
+        10
+      ),
+      auraMax: percentileValue(
+        [...inBucket.map((e) => e.aura)].sort((a, b) => a - b),
+        90
+      ),
+    };
+  });
+
+  const auraRangeDistribution = DEPOSITOR_AURA_RANGES.map((bucket) => {
+    const inBucket = entries.filter((e) => {
+      if (!(e.deposited_amount > 0)) return false;
+      const aura = Number(e.aura) || 0;
+      if (bucket.max === Infinity) return aura >= bucket.min;
+      return aura >= bucket.min && aura < bucket.max;
+    });
+    return {
+      bucket: bucket.label,
+      id: bucket.id,
+      count: inBucket.length,
+      held: inBucket.reduce(
+        (sum, e) => sum + Math.max(0, e.deposited_amount - e.withdrawn_amount),
+        0
+      ),
+      aura: inBucket.reduce((sum, e) => sum + (Number(e.aura) || 0), 0),
+      auraMin: bucket.min,
+      auraMax: bucket.max === Infinity ? bucket.min : bucket.max,
     };
   });
 
@@ -136,6 +168,7 @@ async function computeDashboardMetricsUncached(): Promise<DashboardMetrics> {
     totalAura,
     qualifiedReferrals,
     depositSizeDistribution,
+    auraRangeDistribution,
     ogHodlers,
     medianAura: percentileValue(sortedAuraAsc, 50),
     averageAura: entries.length ? totalAura / entries.length : 0,
@@ -159,7 +192,7 @@ async function computeDashboardMetricsUncached(): Promise<DashboardMetrics> {
 
 export const computeDashboardMetrics = unstable_cache(
   computeDashboardMetricsUncached,
-  ["dashboard-metrics"],
+  ["dashboard-metrics-v3"],
   { revalidate: 60 },
 );
 

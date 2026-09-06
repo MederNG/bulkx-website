@@ -1,11 +1,10 @@
 import { buildLiveFinancialPayloadFromDisk } from "@/lib/live-financial-payload";
 import { buildOverviewPanels } from "@/lib/overview-metrics";
-import { computeDashboardMetrics, getChartSnapshots } from "@/lib/stats";
-import { TvlPanel } from "@/components/overview/TvlPanel";
+import { computeDashboardMetrics } from "@/lib/stats";
+import { VolumePanel } from "@/components/overview/VolumePanel";
 import { AuraSourcesPanel } from "@/components/overview/AuraSourcesPanel";
 import { KpiStrip } from "@/components/overview/KpiStrip";
 import { DepositorsDistributionPanel } from "@/components/overview/DepositorsDistributionPanel";
-import { TvlViewProvider } from "@/components/overview/TvlViewContext";
 
 export const dynamic = "force-static";
 export const revalidate = 60;
@@ -13,7 +12,6 @@ export const revalidate = 60;
 export default async function OverviewPage() {
   const metrics = await computeDashboardMetrics();
   const live = buildLiveFinancialPayloadFromDisk();
-  const snapshots = getChartSnapshots("ALL");
 
   const panels = buildOverviewPanels({
     currentTvl: live.currentTvl,
@@ -45,7 +43,7 @@ export default async function OverviewPage() {
     // — the distribution panel lost its last tier and its footnote that way at
     // 720px. As a minimum it does the same job wherever there is room and lets
     // the page scroll where there isn't.
-    <div className="shell flex flex-col pb-4 pt-4 xl:min-h-[calc(100vh-70px)]">
+    <div className="shell flex flex-col pb-8 pt-[26px] xl:min-h-[calc(100vh-70px)]">
       {/* A strip of headline numbers on top, then two chart rows. Both rows
           share one column template — unlike the previous layout, whose rows
           were split differently and so never lined up with each other. Each
@@ -61,12 +59,8 @@ export default async function OverviewPage() {
       {/* Wraps both the KPI strip and the chart row so the Current/Projected
           toggle inside the chart can drive the headline figure in the card
           above it. */}
-      <TvlViewProvider>
-      <div className="flex min-h-0 flex-1 flex-col gap-3 lg:gap-4">
-        {/* Auto height, not flex-1: these cards are text, so they should
-            take what they need and hand the rest of the screen to the two
-            chart rows below. */}
-        <KpiStrip ogHodlers={panels.depositorsAnalysis.ogHodlers} />
+      <div className="flex min-h-0 flex-1 flex-col gap-5">
+        <KpiStrip />
 
         {/* 1.25 against the depositors row's 1, not an equal share. Both
             rows were flex-1, which split the screen down the middle — and half
@@ -81,9 +75,9 @@ export default async function OverviewPage() {
             width formula allowed. A floor here means the one-screen fit gives
             way instead: the page scrolls a short window rather than
             shrinking the donut down to fit it. */}
-        <div className="grid min-h-0 grid-cols-1 gap-3 xl:flex-[1.25] xl:min-h-[280px] xl:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)] xl:gap-4">
+        <div className="grid min-h-0 grid-cols-1 gap-5 xl:min-h-[320px] xl:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)]">
           <div className="min-h-0">
-            <TvlPanel snapshots={snapshots} />
+            <VolumePanel />
           </div>
           <div className="min-h-0 xl:flex">
             <AuraSourcesPanel
@@ -111,7 +105,6 @@ export default async function OverviewPage() {
           <DepositorsDistributionPanel tiers={panels.depositorsAnalysis.tiers} />
         </div>
       </div>
-      </TvlViewProvider>
     </div>
   );
 }

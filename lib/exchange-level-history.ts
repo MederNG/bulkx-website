@@ -1,0 +1,25 @@
+export type LevelPoint = { t: number; value: number };
+
+/** Same 1h step as the volume 24h spark (klines are hourly). */
+export const LEVEL_SAMPLE_MS = 3_600_000;
+export const LEVEL_KEEP_MS = 86_400_000;
+export const LEVEL_MAX_POINTS = 24;
+
+export function bucketLevelTime(t: number): number {
+  return Math.floor(t / LEVEL_SAMPLE_MS) * LEVEL_SAMPLE_MS;
+}
+
+export function mergeLevelPoints(...lists: LevelPoint[][]): LevelPoint[] {
+  const byTime = new Map<number, number>();
+  const cutoff = Date.now() - LEVEL_KEEP_MS;
+  for (const list of lists) {
+    for (const row of list) {
+      if (!Number.isFinite(row.value) || row.t < cutoff) continue;
+      byTime.set(bucketLevelTime(row.t), row.value);
+    }
+  }
+  const rows = [...byTime.entries()]
+    .map(([t, value]) => ({ t, value }))
+    .sort((a, b) => a.t - b.t);
+  return rows.length > LEVEL_MAX_POINTS ? rows.slice(-LEVEL_MAX_POINTS) : rows;
+}

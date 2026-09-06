@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { ChevronDown } from "lucide-react";
+import { HeaderCampaignStatus } from "@/components/layout/HeaderCampaignStatus";
 import { cn } from "@/lib/utils";
 
 interface NavItem {
@@ -61,49 +62,47 @@ export function SiteNav() {
 
   return (
     <header className="sticky top-0 z-50 border-b border-[var(--color-line)] bg-[rgba(11,11,12,0.92)] backdrop-blur-[10px]">
-      <div className="shell flex min-h-[60px] flex-wrap items-center justify-between gap-x-6 gap-y-4 py-[11px]">
-        {/* flex-1 on BOTH flanks, with the nav sized to its own content
-            between them: the two sides then take an equal share of whatever
-            is left, which is what centres the menu on the header itself.
-            justify-center alone did not — the nav was the flexible item, so
-            it centred its links inside the space remaining AFTER the logo,
-            leaving the whole menu sitting half a logo's width right of the
-            page's centre. */}
-        <Link href="/" className="flex min-w-0 flex-1 items-center gap-[11px] text-text-primary">
-          <Image
-            src="/logos/bulkx-logo-light.svg"
-            alt="BULK"
-            width={83}
-            height={32}
-            priority
-            className="hidden sm:block"
-          />
-          <span className="font-sans text-[17px] font-semibold tracking-[-0.02em] text-text-secondary">
-            INTELLIGENCE
-          </span>
-        </Link>
+      <div className="shell flex min-h-[60px] flex-wrap items-center justify-between gap-x-[26px] gap-y-3 py-[11px]">
+        <div className="flex min-w-0 items-center gap-[26px]">
+          <Link href="/" className="flex min-w-0 items-center gap-[11px] text-text-primary">
+            <Image
+              src="/logos/bulkx-logo-light.svg"
+              alt="BULK"
+              width={83}
+              height={32}
+              priority
+              className="hidden sm:block"
+            />
+            <span className="font-sans text-[17px] font-semibold tracking-[-0.02em] text-text-secondary">
+              INTELLIGENCE
+            </span>
+          </Link>
 
-        <nav className="hidden min-w-0 shrink-0 flex-wrap items-center justify-center gap-[26px] lg:flex">
-          {NAV.map((item) => {
-            const active = isActive(pathname, item);
-            return (
-              <div key={item.href}>
-                <Link
-                  href={item.href}
-                  className={cn(
-                    "site-nav-link font-sans relative py-[6px] text-[12px] font-semibold uppercase tracking-[0.14em] transition-colors",
-                    active ? "text-accent" : "text-text-muted hover:text-text-primary"
-                  )}
-                  data-active={active || undefined}
-                >
-                  {item.label}
-                </Link>
-              </div>
-            );
-          })}
-        </nav>
+          <span className="hidden h-[22px] w-px shrink-0 bg-[var(--color-line-strong)] lg:block" aria-hidden />
 
-        <div className="flex min-w-0 flex-1 items-center justify-end gap-3">
+          <nav className="hidden min-w-0 flex-wrap items-center gap-[26px] lg:flex">
+            {NAV.map((item) => {
+              const active = isActive(pathname, item);
+              return (
+                <div key={item.href}>
+                  <Link
+                    href={item.href}
+                    className={cn(
+                      "site-nav-link font-sans relative py-[6px] text-[12px] font-semibold uppercase tracking-[0.14em] transition-colors",
+                      active ? "text-accent" : "text-text-muted hover:text-text-primary"
+                    )}
+                    data-active={active || undefined}
+                  >
+                    {item.label}
+                  </Link>
+                </div>
+              );
+            })}
+          </nav>
+        </div>
+
+        <div className="flex min-w-0 items-center justify-end gap-[18px]">
+          <HeaderCampaignStatus />
           {/* Flattened nav for narrow screens, where the inline bar is hidden. */}
           <div ref={menuRef} className="relative lg:hidden">
             <button
