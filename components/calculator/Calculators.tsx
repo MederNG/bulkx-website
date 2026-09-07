@@ -1038,13 +1038,27 @@ function FdvValueChart({
             <defs>
               <linearGradient id="fdv-curve-fill" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="0%" stopColor="var(--t-accent)" stopOpacity={0.28} />
-                <stop offset="100%" stopColor="var(--t-accent)" stopOpacity={0} />
+                <stop offset="100%" stopColor="var(--t-accent)" stopOpacity={0.02} />
               </linearGradient>
+              {/* Mosaic over the wash, same treatment as the Overview charts:
+                  a dot lattice turned 45 degrees so it reads as a diamond
+                  mesh. Sparse enough that the scenario dots stay legible. */}
+              <pattern
+                id="fdv-curve-mesh"
+                width="5"
+                height="5"
+                patternUnits="userSpaceOnUse"
+                patternTransform="rotate(45)"
+              >
+                <circle cx="1.25" cy="1.25" r="0.6" fill="var(--t-accent)" fillOpacity={0.34} />
+              </pattern>
+              {/* The line is the plane's contrast colour now, not the accent.
+                  The horizontal stops keep it fading out at both ends. */}
               <linearGradient id="fdv-curve-stroke" x1="0" y1="0" x2="1" y2="0">
-                <stop offset="0%" stopColor="var(--t-accent)" stopOpacity={0} />
-                <stop offset="7%" stopColor="var(--t-accent)" stopOpacity={1} />
-                <stop offset="93%" stopColor="var(--t-accent)" stopOpacity={1} />
-                <stop offset="100%" stopColor="var(--t-accent)" stopOpacity={0} />
+                <stop offset="0%" stopColor="var(--t-spark-line)" stopOpacity={0} />
+                <stop offset="7%" stopColor="var(--t-spark-line)" stopOpacity={1} />
+                <stop offset="93%" stopColor="var(--t-spark-line)" stopOpacity={1} />
+                <stop offset="100%" stopColor="var(--t-spark-line)" stopOpacity={0} />
               </linearGradient>
             </defs>
             {yTicks.map((y) => (
@@ -1088,12 +1102,23 @@ function FdvValueChart({
               cursor={{ stroke: "var(--color-line-strong)", strokeWidth: 1 }}
               content={() => null}
             />
+            {/* Wash first, mesh on top of it — one Area cannot carry both
+                fills, and the pattern alone leaves gaps that read as holes. */}
+            <Area
+              type="monotone"
+              dataKey="value"
+              stroke="none"
+              fill="url(#fdv-curve-fill)"
+              isAnimationActive={false}
+              dot={false}
+              activeDot={false}
+            />
             <Area
               type="monotone"
               dataKey="value"
               stroke="url(#fdv-curve-stroke)"
               strokeWidth={2}
-              fill="url(#fdv-curve-fill)"
+              fill="url(#fdv-curve-mesh)"
               isAnimationActive={false}
               dot={false}
               activeDot={{
