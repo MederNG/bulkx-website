@@ -1,5 +1,6 @@
 import { unstable_cache } from "next/cache";
 import { getLeaderboard } from "@/lib/fetcher";
+import { readDashboardMetricsFile } from "@/lib/dashboard-metrics-store";
 import { getLeaderboardForApp } from "@/lib/live-leaderboard";
 import {
   computeEfficiency,
@@ -36,7 +37,7 @@ const DEPOSIT_SIZE_BUCKETS = [
   { label: "$1M+", min: 1_000_000, max: Infinity },
 ];
 
-async function computeDashboardMetricsUncached(): Promise<DashboardMetrics> {
+export async function computeDashboardMetricsUncached(): Promise<DashboardMetrics> {
   const entries = await getLeaderboardForApp({ waitMs: 0 });
   const snapshots = readSnapshots();
   const totals = readTotals();
@@ -191,9 +192,22 @@ async function computeDashboardMetricsUncached(): Promise<DashboardMetrics> {
   };
 }
 
+/**
+ * Serves the figures the cron precomputed. Falls back to computing them in
+ * process only when the file is missing or unreadable — a fresh clone before
+ * the first cron run, say — so a missing artefact degrades to the old
+ * behaviour rather than to a blank dashboard.
+ */
+async function loadDashboardMetrics(): Promise<DashboardMetrics> {
+  const precomputed = readDashboardMetricsFile();
+  if (precomputed) return precomputed.metrics;
+  console.warn("[metrics] no precomputed file; computing in process");
+  return computeDashboardMetricsUncached();
+}
+
 export const computeDashboardMetrics = unstable_cache(
-  computeDashboardMetricsUncached,
-  ["dashboard-metrics-v4"],
+  loadDashboardMetrics,
+  ["dashboard-metrics-v5"],
   // Hourly. This is the expensive one — ~450ms of CPU to parse the 34MB
   // leaderboard and run twenty passes plus eight sorts over 56k entries.
   // Its inputs are a weekly aura refresh and a daily totals refresh, so a

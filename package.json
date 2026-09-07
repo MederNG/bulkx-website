@@ -9,6 +9,7 @@
     "lint": "eslint .",
     "fetch": "tsx scripts/fetch-aura.ts",
     "fetch:totals": "tsx scripts/fetch-totals.ts",
+    "build:metrics": "tsx scripts/build-dashboard-metrics.ts",
     "record:levels": "tsx scripts/record-exchange-levels.ts",
     "record:volume": "tsx scripts/record-volume-leaderboard.ts",
     "generate:favicons": "node scripts/generate-favicons.mjs",
