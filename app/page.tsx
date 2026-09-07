@@ -20,8 +20,6 @@ export default async function OverviewPage() {
     depositSizeDistribution: metrics.depositSizeDistribution,
     ogHodlers: metrics.ogHodlers,
     weeklyAuraEmissions: live.depositPredict.depositPool,
-    projection: live.projection,
-    secondaryMetrics: live.secondaryMetrics,
     categoryBreakdown: metrics.categoryBreakdown,
     currentWeek: live.depositPredict.campaignWeek,
     nextSnapshotTimestamp: live.depositPredict.nextSnapshotTimestamp,

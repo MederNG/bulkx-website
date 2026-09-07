@@ -189,20 +189,3 @@ export function formatRemainingDuration(ms: number): string {
   const minutes = totalMinutes % 60;
   return `${days}d ${hours}h ${minutes}m`;
 }
-
-function compactUsdAbs(abs: number): string {
-  const unit =
-    abs >= 1_000_000_000
-      ? { n: abs / 1_000_000_000, suffix: "B" }
-      : abs >= 1_000_000
-        ? { n: abs / 1_000_000, suffix: "M" }
-        : abs >= 1_000
-          ? { n: abs / 1_000, suffix: "K" }
-          : null;
-  if (!unit) return `$${Math.round(abs).toLocaleString("en-US")}`;
-  return `$${unit.n.toFixed(1).replace(/\.0$/, "")}${unit.suffix}`;
-}
-
-export function formatUsdCompact(value: number): string {
-  return compactUsdAbs(Math.abs(value));
-}

@@ -1,28 +1,8 @@
 import { aggregateBySource, type CategoryBreakdownItem } from "@/lib/aura-category-groups";
-import {
-  formatUsdCompact,
-  type ProjectedSnapshotTvl,
-} from "@/lib/projected-snapshot-tvl";
-import type { TvlKpiSecondaryMetrics } from "@/lib/tvl-kpi-secondary";
 import { DEPOSITOR_AURA_RANGES } from "@/lib/utils";
-
-/** Headline figures are shown in full — the design never abbreviates them. */
-function usdFull(value: number): string {
-  return `$${Math.round(value).toLocaleString("en-US")}`;
-}
 
 function numFull(value: number): string {
   return Math.round(value).toLocaleString("en-US");
-}
-
-export interface OverviewSubStat {
-  label: string;
-  value: string;
-  /** Second line under the value — the percentage behind an amount, say.
-   * Carried separately rather than baked into `value` so the card can stack
-   * the two instead of running them together on one line. */
-  sub?: string;
-  tone?: "positive" | "negative" | "neutral";
 }
 
 export interface OverviewDonutSegment {
@@ -97,22 +77,6 @@ function mergeBuckets(buckets: DepositSizeBucket[]): DepositSizeBucket {
   );
 }
 
-/** One side of a metric that can be looked at two ways, e.g. TVL now vs projected. */
-export interface OverviewMetricView {
-  id: string;
-  /** Short label for the in-card toggle. */
-  toggleLabel: string;
-  /** Raw number backing `value`, for the count-up animation. */
-  valueNumber: number;
-  value: string;
-  change: string | null;
-  changeTone: "positive" | "negative" | "neutral";
-  subStats: OverviewSubStat[];
-  /** Supporting lines shown under the headline (expected growth). Same shape
-   * as subStats — the card renders the two from one concatenated list. */
-  notes?: OverviewSubStat[];
-}
-
 /** Shared by the Overview ring, Aura Sources breakdown, and Aura Distribution
  * histogram, so a source that is gold on one chart is gold on the others.
  * Drill-down views (Retro, Week N) can have more than six slices; the extra
@@ -131,19 +95,8 @@ export interface OverviewMetricView {
  * Index 0 (usually the largest share) takes the accent; the rest step through
  * the ramp so proportions stay readable without a rainbow. */
 export const CHART_GOLD = "var(--t-accent)";
-/** Ordered prominent→recessive companions (subset of SUPPORT_RAMP). Prefer
- * `chartPrimaryRamp` when the series length is known. */
-export const CHART_SLATE = [
-  "var(--t-ramp-0)",
-  "var(--t-ramp-2)",
-  "var(--t-ramp-3)",
-  "var(--t-ramp-4)",
-  "var(--t-ramp-5)",
-  "var(--t-ramp-6)",
-] as const;
-
 /** Ordered prominent→recessive for sequential charts (Aura histogram buckets).
- * Unlike chartDuochrome this never injects the accent mid-series. Each theme
+ * Unlike chartPrimaryRamp this never injects the accent mid-series. Each theme
  * defines these seven stops by interpolating its own pair of support tones,
  * walked so index 0 is always the most prominent against that background. */
 const SUPPORT_RAMP = [
@@ -170,95 +123,10 @@ export function chartPrimaryRamp(index: number, count: number): string {
   return chartSlateRamp(index - 1, Math.max(1, count - 1));
 }
 
-/** Fallback when series length is unknown — same ramp as chartPrimaryRamp. */
-export function chartDuochrome(index: number, count = CHART_SLATE.length + 1): string {
-  return chartPrimaryRamp(index, count);
-}
-
 /** Homepage ring stays at six named sources even though the palette now
  * has room for drill-downs. More than that and the legend crowds the tier
  * table it has to line up with. */
 const MAX_OVERVIEW_DONUT_SLICES = 6;
-
-function toneOf(value: number | null | undefined): "positive" | "negative" | "neutral" {
-  if (value == null) return "neutral";
-  return value >= 0 ? "positive" : "negative";
-}
-
-function signedPct(value: number | null): string | null {
-  if (value == null) return null;
-  return `${value >= 0 ? "+" : "−"}${Math.abs(value).toFixed(1)}%`;
-}
-
-function signedUsd(value: number | null): string {
-  if (value == null) return "—";
-  return `${value >= 0 ? "+" : "−"}${formatUsdCompact(Math.abs(value))}`;
-}
-
-/**
- * Current vs projected TVL as two views of one card. Exported so the client
- * can rebuild it from live-polled data and re-trigger the count-up animation
- * on refresh, instead of only on the initial server render.
- */
-export function buildTvlViews(
-  currentTvl: number,
-  projection: ProjectedSnapshotTvl,
-  secondaryMetrics: TvlKpiSecondaryMetrics
-): OverviewMetricView[] {
-  const currentView: OverviewMetricView = {
-    id: "current",
-    toggleLabel: "Current",
-    valueNumber: currentTvl,
-    value: usdFull(currentTvl),
-    change: signedPct(secondaryMetrics.growth7dPct)
-      ? `${signedPct(secondaryMetrics.growth7dPct)} · 7D`
-      : null,
-    changeTone: toneOf(secondaryMetrics.growth7dPct),
-    subStats: [
-      {
-        label: "24H net flow",
-        value: signedUsd(secondaryMetrics.netFlow24h),
-        tone: toneOf(secondaryMetrics.netFlow24h),
-      },
-      {
-        label: "7D growth",
-        value: signedPct(secondaryMetrics.growth7dPct) ?? "—",
-        tone: toneOf(secondaryMetrics.growth7dPct),
-      },
-    ],
-  };
-
-  if (!projection.available) return [currentView];
-
-  const projectedView: OverviewMetricView = {
-    id: "projected",
-    toggleLabel: "Projected",
-    valueNumber: projection.projectedTvl,
-    value: usdFull(projection.projectedTvl),
-    change: `${signedPct(projection.expectedGrowthPercent)} · vs current`,
-    changeTone: toneOf(projection.expectedGrowthPercent),
-    // No "Snapshot" note: the KPI strip's Current Week card already counts
-    // down to that same moment, so spelling out the date here spent one of
-    // the card's two stat slots restating it.
-    notes: [
-      {
-        label: "Expected growth",
-        value: signedUsd(projection.expectedGrowth),
-        sub: `(${signedPct(projection.expectedGrowthPercent) ?? "—"})`,
-        tone: toneOf(projection.expectedGrowth),
-      },
-    ],
-    subStats: [
-      {
-        label: "Weighted daily flow",
-        value: signedUsd(projection.weightedDailyFlow),
-        tone: toneOf(projection.weightedDailyFlow),
-      },
-    ],
-  };
-
-  return [currentView, projectedView];
-}
 
 // APR is modelled, not observed — this campaign pays Aura points, not yield,
 // so there is no on-chain rate to read. FDV and allocation are the same
@@ -299,12 +167,6 @@ export function computeDepositApr(weeklyAuraEmissions: number, currentTvl: numbe
 }
 
 export interface OverviewPanelsData {
-  tvl: {
-    value: string;
-    change: string | null;
-    changeTone: "positive" | "negative" | "neutral";
-    views: OverviewMetricView[];
-  };
   auraSources: {
     totalAuraValue: string;
     totalAuraNumber: number;
@@ -328,8 +190,6 @@ export function buildOverviewPanels(input: {
   depositSizeDistribution: DepositSizeBucket[];
   ogHodlers: number;
   weeklyAuraEmissions: number;
-  projection: ProjectedSnapshotTvl;
-  secondaryMetrics: TvlKpiSecondaryMetrics;
   categoryBreakdown: CategoryBreakdownItem[];
   currentWeek: number;
   nextSnapshotTimestamp: number;
@@ -341,22 +201,10 @@ export function buildOverviewPanels(input: {
     depositSizeDistribution,
     ogHodlers,
     weeklyAuraEmissions,
-    projection,
-    secondaryMetrics,
     categoryBreakdown,
     currentWeek,
     nextSnapshotTimestamp,
   } = input;
-
-  const views = buildTvlViews(currentTvl, projection, secondaryMetrics);
-  const current = views[0];
-
-  const tvl = {
-    value: current.value,
-    change: current.change,
-    changeTone: current.changeTone,
-    views,
-  };
 
   // Keep the meaningful sources named and roll the long tail into "Others", so
   // the ring stays readable instead of fraying into 1% slivers.
@@ -462,5 +310,5 @@ export function buildOverviewPanels(input: {
     tiers,
   };
 
-  return { tvl, auraSources, depositApr, depositorsAnalysis };
+  return { auraSources, depositApr, depositorsAnalysis };
 }
