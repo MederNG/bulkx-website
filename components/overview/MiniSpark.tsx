@@ -224,7 +224,7 @@ export function MiniSpark({
         >
           <defs>
             <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor={CHART_GOLD} stopOpacity="0.16" />
+              <stop offset="0%" stopColor={CHART_GOLD} stopOpacity="0.26" />
               <stop offset="100%" stopColor={CHART_GOLD} stopOpacity="0" />
             </linearGradient>
           </defs>

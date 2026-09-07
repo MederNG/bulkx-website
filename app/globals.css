@@ -12,11 +12,14 @@
 :root {
   color-scheme: dark;
 
-  /* Surfaces — page is the darkest plane; cards lift one step. */
-  --t-base: #141310;
-  --t-base-rgb: 20 19 16;
-  --t-bg-primary: #1b1a14;
-  --t-bg-raised: #222118;
+  /* Surfaces — page is the darkest plane; cards lift one step.
+     These are production's values, unchanged: the near-black plane is what
+     keeps the palette reading crisp, and every warmer base tried on top of
+     it turned the translucent washes into a veil. */
+  --t-base: #0b0b0c;
+  --t-base-rgb: 11 11 12;
+  --t-bg-primary: #121214;
+  --t-bg-raised: #161618;
   --t-bg-secondary: #544a4c;
 
   /* Text — primary reads, secondary supports, muted labels, dim icons. */
@@ -30,10 +33,9 @@
   --t-accent: #ffb547;
   --t-accent-rgb: 255 181 71;
   /* One accent, not a family. These aliases used to carry lighter and
-     muddier golds (#ffd591, #c47e2e, #6a4018) left over from the old
-     design; against the warm base they read as haze rather than as the
-     brand colour. Everything now resolves to --t-accent exactly, and the
-     pulses that used to shift hue shift their glow instead. */
+     muddier golds (#ffd591, #c47e2e, #6a4018); everything now resolves to
+     --t-accent exactly, so labels, chart marks, toggles and highlights are
+     all #FFB547. The pulses that shifted hue shift their glow instead. */
   --t-accent-hover: var(--t-accent);
   --t-accent-hi: var(--t-accent);
   --t-accent-deep: var(--t-accent);
@@ -64,8 +66,8 @@
 
   /* Opaque faces that sit under a spinning gradient ring, so they cannot
      be transparent or the ring shows through the middle. */
-  --t-card-hover-face: #222118;
-  --t-badge-face: #141b16;
+  --t-card-hover-face: #17171a;
+  --t-badge-face: #111e16;
   --t-shimmer-dim: #c8c8c8;
   --t-shimmer-hi: #ffffff;
   /* Wash used for hover/idle veils. Light flips it so the same rules tint
