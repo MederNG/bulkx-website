@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import {
+  Area,
   Bar,
   CartesianGrid,
   ComposedChart,
@@ -207,6 +208,25 @@ export function VolumeChart() {
               barCategoryGap={OVERVIEW_BAR_GAP}
               barGap={0}
             >
+              <defs>
+                {/* Cumulative area: wash for body, then a dot lattice turned
+                    45 degrees for the mesh. Sparser and fainter than the KPI
+                    sparklines because the bars have to stay readable through
+                    it — see the ordering note below. */}
+                <linearGradient id="volCumWash" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor={CHART_GOLD} stopOpacity={0.2} />
+                  <stop offset="100%" stopColor={CHART_GOLD} stopOpacity={0.02} />
+                </linearGradient>
+                <pattern
+                  id="volCumMesh"
+                  width="5"
+                  height="5"
+                  patternUnits="userSpaceOnUse"
+                  patternTransform="rotate(45)"
+                >
+                  <circle cx="1.25" cy="1.25" r="0.6" fill={CHART_GOLD} fillOpacity={0.34} />
+                </pattern>
+              </defs>
               <CartesianGrid stroke="rgb(var(--t-veil-rgb)/.05)" vertical={false} />
               <XAxis
                 dataKey="t"
@@ -268,6 +288,31 @@ export function VolumeChart() {
                   );
                 }}
               />
+              {/* Drawn ahead of the bars on purpose. Recharts paints children
+                  in order, so declaring the area here puts it behind the bars
+                  rather than burying them under the cumulative fill. */}
+              {showCumulative && (
+                <Area
+                  yAxisId="cum"
+                  type="monotone"
+                  dataKey="cumulative"
+                  stroke="none"
+                  fill="url(#volCumWash)"
+                  isAnimationActive={false}
+                  activeDot={false}
+                />
+              )}
+              {showCumulative && (
+                <Area
+                  yAxisId="cum"
+                  type="monotone"
+                  dataKey="cumulative"
+                  stroke="none"
+                  fill="url(#volCumMesh)"
+                  isAnimationActive={false}
+                  activeDot={false}
+                />
+              )}
               {VOLUME_COINS.map((coin) =>
                 enabled[coin] ? (
                   <Bar
@@ -290,7 +335,7 @@ export function VolumeChart() {
                   yAxisId="cum"
                   type="monotone"
                   dataKey="cumulative"
-                  stroke={CHART_GOLD}
+                  stroke="var(--t-spark-line)"
                   strokeWidth={2.2}
                   dot={false}
                   activeDot={{ r: 3, fill: CHART_GOLD }}
