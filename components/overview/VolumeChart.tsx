@@ -36,7 +36,7 @@ const COIN_META: Record<VolumeCoin, { label: string; color: string }> = {
 };
 
 const AXIS_TICK = {
-  fill: "#8b8580",
+  fill: "var(--t-text-muted)",
   fontSize: 11,
   fontFamily: "var(--font-overpass-mono), ui-monospace, monospace",
 } as const;
@@ -207,7 +207,7 @@ export function VolumeChart() {
               barCategoryGap={OVERVIEW_BAR_GAP}
               barGap={0}
             >
-              <CartesianGrid stroke="rgba(255,255,255,.05)" vertical={false} />
+              <CartesianGrid stroke="rgb(var(--t-veil-rgb)/.05)" vertical={false} />
               <XAxis
                 dataKey="t"
                 tickFormatter={(t) => formatAxisTick(Number(t), range)}
@@ -238,13 +238,13 @@ export function VolumeChart() {
                 width={52}
               />
               <Tooltip
-                cursor={{ fill: "rgba(255,255,255,0.03)" }}
+                cursor={{ fill: "rgb(var(--t-veil-rgb)/0.03)" }}
                 content={({ active, payload: tip, label }) => {
                   if (!active || !tip?.length) return null;
                   const row = tip[0]?.payload as VolumeBucket | undefined;
                   if (!row) return null;
                   return (
-                    <div className="rounded-lg border border-[var(--color-line-strong)] bg-[#17171a] px-2.5 py-2 text-[11px] shadow-[0_14px_36px_rgba(0,0,0,.55)]">
+                    <div className="rounded-lg border border-[var(--color-line-strong)] bg-[var(--t-bg-raised)] px-2.5 py-2 text-[11px] shadow-[0_14px_36px_rgba(0,0,0,.55)]">
                       <p className="font-data m-0 mb-1.5 text-text-muted">
                         {formatAxisTick(Number(label), range)}
                       </p>

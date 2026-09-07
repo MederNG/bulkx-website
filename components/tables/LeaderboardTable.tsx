@@ -314,7 +314,7 @@ export function LeaderboardTable({
               pageData.map((entry, i) => (
                 <tr
                   key={entry.wallet}
-                  className="group border-b border-[var(--color-line-soft)] transition-colors hover:bg-[rgba(255,255,255,0.045)] [&>td:first-child]:rounded-l-md [&>td:last-child]:rounded-r-md"
+                  className="group border-b border-[var(--color-line-soft)] transition-colors hover:bg-[rgb(var(--t-veil-rgb)/0.045)] [&>td:first-child]:rounded-l-md [&>td:last-child]:rounded-r-md"
                 >
                   {columns.map((col) => {
                     const value = col.isDisplayRank

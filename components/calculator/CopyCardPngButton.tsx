@@ -23,9 +23,14 @@ export function CopyCardPngButton({ exportRef, filename, className }: CopyCardPn
     setCopyError(false);
 
     try {
+      // Match the live theme rather than a baked-in dark, so a light-mode
+      // export does not come back on a near-black plate.
+      const themeBg = getComputedStyle(document.documentElement)
+        .getPropertyValue("--t-base")
+        .trim();
       const dataUrl = await toPng(exportRef.current, {
         pixelRatio: 2,
-        backgroundColor: "#1b1a14",
+        backgroundColor: themeBg || "#1b1a14",
         cacheBust: true,
         skipFonts: true,
       });
@@ -71,7 +76,7 @@ function ToolExportSurface({
 }) {
   return (
     <div className="pointer-events-none fixed -left-[9999px] top-0 opacity-100" aria-hidden="true">
-      <div ref={exportRef} className="rounded-[12px] bg-[var(--color-bulk-base)] p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.07)] md:p-5" style={{ width }}>
+      <div ref={exportRef} className="rounded-[12px] bg-[var(--color-bulk-base)] p-4 shadow-[inset_0_1px_0_rgb(var(--t-veil-rgb)/0.07)] md:p-5" style={{ width }}>
         {children}
       </div>
     </div>

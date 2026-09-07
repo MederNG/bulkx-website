@@ -118,41 +118,49 @@ export interface OverviewMetricView {
  * Drill-down views (Retro, Week N) can have more than six slices; the extra
  * four stop Roles / Others wrapping back onto Bulk validator stake / Testnet
  * and give the ten Aura buckets a unique bar each. */
-/** Overview / Aura ring duochrome: primary gold, secondary slate blues.
- * Index 0 (usually the largest share) takes gold; the rest step through
- * slate so proportions stay readable without a rainbow. */
-export const CHART_GOLD = "#FFB547";
-/** Ordered bright→dull slate companions (subset of SLATE_RAMP). Prefer
+/**
+ * Chart colours are CSS custom properties, not literals: SVG `fill` and
+ * `stroke` resolve var() at paint time, so the same server-rendered payload
+ * repaints when the theme flips without re-fetching or re-computing.
+ *
+ * Identity still works — callers compare against CHART_GOLD to decide which
+ * mark is the primary one, and string equality holds across both themes.
+ */
+
+/** Overview / Aura ring duochrome: primary accent, then the supporting ramp.
+ * Index 0 (usually the largest share) takes the accent; the rest step through
+ * the ramp so proportions stay readable without a rainbow. */
+export const CHART_GOLD = "var(--t-accent)";
+/** Ordered prominent→recessive companions (subset of SUPPORT_RAMP). Prefer
  * `chartPrimaryRamp` when the series length is known. */
 export const CHART_SLATE = [
-  "#C5D6E6",
-  "#8AABC4",
-  "#5E819E",
-  "#4A6B84",
-  "#3D5A73",
-  "#4F6F88",
+  "var(--t-ramp-0)",
+  "var(--t-ramp-2)",
+  "var(--t-ramp-3)",
+  "var(--t-ramp-4)",
+  "var(--t-ramp-5)",
+  "var(--t-ramp-6)",
 ] as const;
 
-/** Ordered bright→dull slate for sequential charts (Aura histogram buckets).
- * Unlike chartDuochrome this never injects gold mid-series. */
-/** Ordered bright→dull slate for sequential charts. Stops before near-black
- * so the last marks stay readable on bulk-base (the old tail `#263B4E` /
- * `#1C2E3E` vanished against the card). */
-const SLATE_RAMP = [
-  "#C5D6E6",
-  "#A8C0D4",
-  "#8AABC4",
-  "#7296B0",
-  "#5E819E",
-  "#4A6B84",
-  "#3D5A73",
+/** Ordered prominent→recessive for sequential charts (Aura histogram buckets).
+ * Unlike chartDuochrome this never injects the accent mid-series. Each theme
+ * defines these seven stops by interpolating its own pair of support tones,
+ * walked so index 0 is always the most prominent against that background. */
+const SUPPORT_RAMP = [
+  "var(--t-ramp-0)",
+  "var(--t-ramp-1)",
+  "var(--t-ramp-2)",
+  "var(--t-ramp-3)",
+  "var(--t-ramp-4)",
+  "var(--t-ramp-5)",
+  "var(--t-ramp-6)",
 ] as const;
 
 export function chartSlateRamp(index: number, count: number): string {
-  if (count <= 1) return SLATE_RAMP[0];
+  if (count <= 1) return SUPPORT_RAMP[0];
   const t = Math.min(1, Math.max(0, index / (count - 1)));
-  const i = Math.round(t * (SLATE_RAMP.length - 1));
-  return SLATE_RAMP[i];
+  const i = Math.round(t * (SUPPORT_RAMP.length - 1));
+  return SUPPORT_RAMP[i];
 }
 
 /** Gold on the primary (index 0), then bright→dull slate for the rest.

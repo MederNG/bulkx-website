@@ -387,13 +387,13 @@ export function CategoryCharts({ data, wallet, className }: CategoryChartsProps)
                     const row = payload[0]?.payload as CategoryChartRow | undefined;
                     if (!row) return null;
                     return (
-                      <div className="rounded-[4px] border border-[rgba(198,182,186,0.2)] bg-[#1B1A14] px-3 py-2.5 shadow-[0_14px_36px_rgba(0,0,0,.55)]">
-                        <p className="m-0 mb-1.5 font-sans text-[13px] font-medium leading-none text-[#FFFEEF]">
+                      <div className="rounded-[4px] border border-[var(--color-line-strong)] bg-[var(--t-bg-raised)] px-3 py-2.5 shadow-[0_14px_36px_rgba(0,0,0,.55)]">
+                        <p className="m-0 mb-1.5 font-sans text-[13px] font-medium leading-none text-[var(--t-text-primary)]">
                           {String(label)}
                         </p>
                         <div className="grid grid-cols-[auto_auto] gap-x-3 leading-none">
                           <span className="font-label text-text-muted">Share</span>
-                          <span className="font-data text-right text-[#FFB547]">
+                          <span className="font-data text-right text-[var(--t-accent)]">
                             {row.groupShare.toFixed(1)}% of group · {row.share.toFixed(2)}% total
                           </span>
                         </div>

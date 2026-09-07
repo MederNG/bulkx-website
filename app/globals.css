@@ -1,35 +1,147 @@
 @import "tailwindcss";
 
-@theme inline {
+/* ---------------------------------------------------------------------
+   Theme tokens. Two palettes live here and nothing else in the file may
+   hard-code a brand colour: every --color-* below resolves to one of
+   these, so flipping data-theme on <html> repaints the whole site.
+
+   Ramps are pre-interpolated between the two supporting tones rather
+   than generated at runtime, because chart colours are chosen in JS and
+   handed to SVG as plain strings.
+   --------------------------------------------------------------------- */
+:root {
+  color-scheme: dark;
+
   /* Surfaces — page is the darkest plane; cards lift one step. */
-  --color-bulk-base: #0b0b0c;
-  --color-bg-primary: #121214;
-  --color-bg-raised: #161618;
-  --color-bg-secondary: #544a4c;
+  --t-base: #1b1a14;
+  --t-base-rgb: 27 26 20;
+  --t-bg-primary: #22211b;
+  --t-bg-raised: #292822;
+  --t-bg-secondary: #544a4c;
 
-  /* Text — primary reads, secondary supports, muted labels, dim icons */
-  --color-text-primary: #f5f3ee;
-  --color-text-secondary: #c9c4bd;
-  --color-text-muted: #8b8580;
-  --color-text-dim: #6b6660;
+  /* Text — primary reads, secondary supports, muted labels, dim icons. */
+  --t-text-primary: #f5f3ee;
+  --t-text-secondary: #c9c4bd;
+  --t-text-muted: #8b8580;
+  --t-text-dim: #6b6660;
 
-  /* Accent + data colours — Overview charts are gold + slate blue. */
-  --color-accent: #ffb547;
-  --color-accent-hover: #ffcb7d;
-  --color-slate: #6b8cae;
-  --color-bid-green: #4ade80;
-  --color-ask-red: #f87171;
-  /* Deep red for the TVL card's negative supporting figures. Distinct
-     from --color-ask-red, which stays the lighter red used for bid/ask
-     tone elsewhere and for error text. */
-  --color-neg-strong: #ef4a3c;
-  --color-data-blue: #60a5fa;
-  --color-live: #22c55e;
+  /* Accent. -rgb is the same colour as a bare triplet so effects can do
+     rgb(var(--t-accent-rgb) / 0.5) instead of a second hard-coded rgba. */
+  --t-accent: #ffb547;
+  --t-accent-rgb: 255 181 71;
+  --t-accent-hover: #ffcb7d;
+  --t-accent-hi: #ffd591;
+  /* Four stops of the accent, dark→pale, for the APR gradient bar. */
+  --t-accent-deep: #6a4018;
+  --t-accent-mid: #c47e2e;
+  --t-accent-pale: #ffe7c2;
+
+  /* Status — identical in both themes by design. */
+  --t-green: #00b481;
+  --t-red: #ef4a3c;
+
+  /* Supporting data tones + the ramp interpolated between them,
+     ordered most prominent -> least against this theme's background. */
+  --t-chart-a: #544a4c;
+  --t-chart-b: #c6b6ba;
+  --t-chart-b-rgb: 198 182 186;
+  --t-ramp-0: #c6b6ba;
+  --t-ramp-1: #b3a4a8;
+  --t-ramp-2: #a09295;
+  --t-ramp-3: #8d8083;
+  --t-ramp-4: #7a6e71;
+  --t-ramp-5: #675c5e;
+  --t-ramp-6: #544a4c;
 
   /* Hairlines — structural lines stay soft; panels prefer elevation. */
-  --color-line: rgba(255, 255, 255, 0.06);
-  --color-line-soft: rgba(255, 255, 255, 0.04);
-  --color-line-strong: rgba(255, 255, 255, 0.1);
+  --t-line: rgba(255, 255, 255, 0.06);
+  --t-line-soft: rgba(255, 255, 255, 0.04);
+  --t-line-strong: rgba(255, 255, 255, 0.1);
+
+  /* Opaque faces that sit under a spinning gradient ring, so they cannot
+     be transparent or the ring shows through the middle. */
+  --t-card-hover-face: #201f19;
+  --t-badge-face: #141b16;
+  --t-shimmer-dim: #c8c8c8;
+  --t-shimmer-hi: #ffffff;
+  /* Wash used for hover/idle veils. Light flips it so the same rules tint
+     downward on cream instead of disappearing into it. */
+  --t-veil-rgb: 255 255 255;
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+
+  --t-base: #f9f8ed;
+  --t-base-rgb: 249 248 237;
+  --t-bg-primary: #fdfcf4;
+  --t-bg-raised: #fffff9;
+  --t-bg-secondary: #736a6c;
+
+  --t-text-primary: #1b1a14;
+  --t-text-secondary: #4a473c;
+  --t-text-muted: #6e6a5c;
+  --t-text-dim: #8c8878;
+
+  --t-accent: #5a2c40;
+  --t-accent-rgb: 90 44 64;
+  --t-accent-hover: #7a3e58;
+  --t-accent-hi: #8a4a63;
+  --t-accent-deep: #2e1621;
+  --t-accent-mid: #45212f;
+  --t-accent-pale: #9c6b80;
+
+  --t-green: #00b481;
+  --t-red: #ef4a3c;
+
+  /* Same two tones, walked the other way: on cream the darker mauve is
+     the prominent one, so index 0 stays "most prominent". */
+  --t-chart-a: #736a6c;
+  --t-chart-b: #c6b6ba;
+  --t-chart-b-rgb: 198 182 186;
+  --t-ramp-0: #736a6c;
+  --t-ramp-1: #817779;
+  --t-ramp-2: #8f8386;
+  --t-ramp-3: #9c9093;
+  --t-ramp-4: #aa9da0;
+  --t-ramp-5: #b8a9ad;
+  --t-ramp-6: #c6b6ba;
+
+  --t-line: rgba(27, 26, 20, 0.1);
+  --t-line-soft: rgba(27, 26, 20, 0.06);
+  --t-line-strong: rgba(27, 26, 20, 0.16);
+
+  --t-card-hover-face: #fffff9;
+  --t-badge-face: #eaf6f1;
+  --t-shimmer-dim: #b8b2a4;
+  --t-shimmer-hi: #ffffff;
+  --t-veil-rgb: 27 26 20;
+}
+
+@theme inline {
+  --color-bulk-base: var(--t-base);
+  --color-bg-primary: var(--t-bg-primary);
+  --color-bg-raised: var(--t-bg-raised);
+  --color-bg-secondary: var(--t-bg-secondary);
+
+  --color-text-primary: var(--t-text-primary);
+  --color-text-secondary: var(--t-text-secondary);
+  --color-text-muted: var(--t-text-muted);
+  --color-text-dim: var(--t-text-dim);
+
+  --color-accent: var(--t-accent);
+  --color-accent-hover: var(--t-accent-hover);
+  /* Was a slate blue; the supporting mauve ramp carries these roles now. */
+  --color-slate: var(--t-ramp-4);
+  --color-data-blue: var(--t-chart-b);
+  --color-bid-green: var(--t-green);
+  --color-ask-red: var(--t-red);
+  --color-neg-strong: var(--t-red);
+  --color-live: var(--t-green);
+
+  --color-line: var(--t-line);
+  --color-line-soft: var(--t-line-soft);
+  --color-line-strong: var(--t-line-strong);
 
   /* Familjen Grotesk = nav / labels / KPIs; Overpass Mono = data cells. */
   --font-sans: var(--font-familjen);
@@ -361,10 +473,10 @@ body {
 @keyframes tier-row-pulse {
   0%,
   100% {
-    background-color: rgba(255, 255, 255, 0.02);
+    background-color: rgb(var(--t-veil-rgb) / 0.02);
   }
   50% {
-    background-color: rgba(255, 255, 255, 0.1);
+    background-color: rgb(var(--t-veil-rgb) / 0.1);
   }
 }
 
@@ -375,7 +487,7 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .tier-row-pulse {
     animation: none;
-    background-color: rgba(255, 255, 255, 0.08);
+    background-color: rgb(var(--t-veil-rgb) / 0.08);
   }
 }
 
@@ -402,23 +514,23 @@ body {
 }
 
 .week-tick {
-  background: rgba(255, 255, 255, 0.09);
+  background: rgb(var(--t-veil-rgb) / 0.09);
   transition:
     background-color 220ms ease,
     box-shadow 220ms ease;
 }
 
 .week-tick.is-past {
-  background: #6b8cae;
+  background: var(--t-ramp-4);
 }
 
 .week-tick.is-today {
-  background: #ffb547;
+  background: var(--t-accent);
 }
 
 .week-tick-hit:hover .week-tick {
-  background: #ffb547;
-  box-shadow: 0 0 7px rgba(255, 181, 71, 0.5);
+  background: var(--t-accent);
+  box-shadow: 0 0 7px rgb(var(--t-accent-rgb) / 0.5);
   animation: apr-current-week-pulse 1150ms ease-in-out infinite;
 }
 
@@ -457,17 +569,17 @@ body {
 @keyframes volume-mode-glow {
   0%,
   100% {
-    color: #ffb547;
-    text-shadow: 0 0 6px rgba(255, 181, 71, 0.28);
+    color: var(--t-accent);
+    text-shadow: 0 0 6px rgb(var(--t-accent-rgb) / 0.28);
   }
   50% {
-    color: #ffe29a;
-    text-shadow: 0 0 12px rgba(255, 215, 120, 0.7);
+    color: var(--t-accent-hi);
+    text-shadow: 0 0 12px rgb(var(--t-accent-rgb) / 0.7);
   }
 }
 
 .volume-mode-on {
-  color: #ffb547;
+  color: var(--t-accent);
   animation: volume-mode-glow 1.2s ease-in-out infinite;
 }
 
@@ -523,8 +635,8 @@ body {
   gap: 2px;
   padding: 3px;
   border-radius: 10px;
-  background: rgba(255, 255, 255, 0.045);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+  background: rgb(var(--t-veil-rgb) / 0.045);
+  box-shadow: inset 0 0 0 1px rgb(var(--t-veil-rgb) / 0.06);
 }
 
 .term-seg-btn {
@@ -602,18 +714,18 @@ body {
 }
 
 .live-air-core {
-  background: rgba(255, 255, 255, 0.32);
+  background: rgb(var(--t-veil-rgb) / 0.32);
 }
 
 .live-air.is-live .live-air-core {
-  background: #ff2d2d;
-  box-shadow: 0 0 5px 1px rgba(255, 45, 45, 0.9);
+  background: var(--t-red);
+  box-shadow: 0 0 5px 1px rgb(var(--t-red-rgb, 239 74 60) / 0.9);
   animation: live-air-blink 1.15s ease-in-out infinite;
 }
 
 .live-air-halo {
   opacity: 0;
-  background: #ff2d2d;
+  background: var(--t-red);
 }
 
 .live-air.is-live .live-air-halo {
@@ -698,9 +810,9 @@ body {
     from 0deg,
     transparent 0deg,
     transparent 250deg,
-    rgba(255, 181, 71, 0.5) 300deg,
-    #ffd591 335deg,
-    #ffb547 350deg,
+    rgb(var(--t-accent-rgb) / 0.5) 300deg,
+    var(--t-accent-hi) 335deg,
+    var(--t-accent) 350deg,
     transparent 360deg
   );
   animation: hodler-halo-spin 1.2s linear infinite;
@@ -714,7 +826,7 @@ body {
   position: absolute;
   inset: 1.5px;
   border-radius: inherit;
-  background: #111e16;
+  background: var(--t-badge-face);
   pointer-events: none;
   z-index: 1;
 }
@@ -754,8 +866,8 @@ body {
 .help-dot:hover,
 .help-dot:focus-visible,
 .help-dot[aria-expanded="true"] {
-  color: #00b481;
-  border-color: #00b481;
+  color: var(--t-green);
+  border-color: var(--t-green);
 }
 
 /* Side KPI cards lift and run a gold light around their edge on hover — the
@@ -783,9 +895,9 @@ body {
     from 0deg,
     transparent 0deg,
     transparent 250deg,
-    rgba(255, 181, 71, 0.5) 300deg,
-    #ffd591 335deg,
-    #ffb547 350deg,
+    rgb(var(--t-accent-rgb) / 0.5) 300deg,
+    var(--t-accent-hi) 335deg,
+    var(--t-accent) 350deg,
     transparent 360deg
   );
   opacity: 0;
@@ -833,7 +945,7 @@ body {
 /* Slight warm tint so the face reads as active, not just outlined. */
 .kpi-card:hover::after,
 .kpi-card:focus-visible::after {
-  background: #17171a;
+  background: var(--t-card-hover-face);
 }
 
 /* Active nav item is underlined flush with the header's bottom border. */
@@ -973,7 +1085,7 @@ body {
 
 .scroll-to-top-btn:hover {
   border-color: rgba(255, 181, 71, 0.55);
-  color: #ffd27a;
+  color: var(--t-accent-hi);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1010,9 +1122,9 @@ body {
     from 0deg,
     transparent 0deg,
     transparent 250deg,
-    rgba(255, 181, 71, 0.5) 300deg,
-    #ffd591 335deg,
-    #ffb547 350deg,
+    rgb(var(--t-accent-rgb) / 0.5) 300deg,
+    var(--t-accent-hi) 335deg,
+    var(--t-accent) 350deg,
     transparent 360deg
   );
   opacity: 0;
@@ -1176,9 +1288,9 @@ input[type="number"] {
     from 0deg,
     transparent 0deg,
     transparent 210deg,
-    rgba(255, 246, 224, 0.15) 270deg,
-    #fff6e0 325deg,
-    #ffffff 348deg,
+    rgb(var(--t-accent-rgb) / 0.15) 270deg,
+    var(--t-accent-hi) 325deg,
+    var(--t-shimmer-hi) 348deg,
     transparent 360deg
   );
   animation: hunter-search-spin 1.2s linear infinite;
@@ -1250,7 +1362,7 @@ input[type="number"] {
   color: var(--color-accent);
   text-shadow:
     0 0 10px rgba(255, 181, 71, 0.7),
-    0 0 4px rgba(255, 181, 71, 0.5);
+    0 0 4px rgb(var(--t-accent-rgb) / 0.5);
 }
 
 .recharts-cartesian-grid-horizontal line,
@@ -1318,7 +1430,7 @@ input[type="number"] {
 }
 
 .hero-intelligence-title-base {
-  color: #fffeef;
+  color: var(--t-text-primary);
 }
 
 .hero-intelligence-title-shine {
@@ -1326,10 +1438,10 @@ input[type="number"] {
     90deg,
     transparent 0%,
     transparent 44%,
-    #c8c8c8 47%,
-    #ffffff 49%,
-    #ffffff 51%,
-    #c8c8c8 53%,
+    var(--t-shimmer-dim) 47%,
+    var(--t-shimmer-hi) 49%,
+    var(--t-shimmer-hi) 51%,
+    var(--t-shimmer-dim) 53%,
     transparent 56%,
     transparent 100%
   );
@@ -1341,8 +1453,8 @@ input[type="number"] {
   -webkit-text-fill-color: transparent;
   color: transparent;
   text-shadow:
-    0 0 8px rgba(255, 255, 255, 0.6),
-    0 0 16px rgba(255, 255, 255, 0.3);
+    0 0 8px rgb(var(--t-veil-rgb) / 0.6),
+    0 0 16px rgb(var(--t-veil-rgb) / 0.3);
   opacity: 0;
   pointer-events: none;
 }

@@ -459,7 +459,7 @@ const FIGURE_FIELD =
 const DATA_META = "font-data text-[11px] leading-none";
 /** Shared Million/Billion/LIVE chrome — one typeface, one size, text centered. */
 const TOGGLE_TRACK =
-  "relative shrink-0 rounded-full bg-[rgba(255,255,255,0.045)] p-[3px] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.06)]";
+  "relative shrink-0 rounded-full bg-[rgb(var(--t-veil-rgb)/0.045)] p-[3px] shadow-[inset_0_0_0_1px_rgb(var(--t-veil-rgb)/0.06)]";
 const TOGGLE_BTN =
   "relative z-10 inline-flex h-[22px] items-center justify-center rounded-full px-2.5 text-center font-sans text-[11px] font-semibold leading-none tracking-[0.02em] transition-colors duration-300";
 
@@ -531,7 +531,7 @@ function EstimatorWorkbench({
           <PanelLabel>Your inputs</PanelLabel>
           <div className="mt-4 flex flex-col gap-5">
             {/* Your Aura — hero amount + quick chips */}
-            <div className="rounded-[12px] border border-[rgba(255,181,71,0.22)] bg-[rgba(255,181,71,0.03)] px-3.5 py-3">
+            <div className="rounded-[12px] border border-[rgb(var(--t-accent-rgb)/0.22)] bg-[rgb(var(--t-accent-rgb)/0.03)] px-3.5 py-3">
               <FieldLabel label="Your Aura" info={FDV_FIELD_INFO.yourAura} accent />
               <div className="mt-2 flex h-11 items-center rounded-[10px] border border-accent/50 bg-[var(--color-bulk-base)] px-3.5">
                 <NumericInput
@@ -555,8 +555,8 @@ function EstimatorWorkbench({
                       className={cn(
                         "h-7 min-w-0 rounded-[8px] border px-1 text-center text-[11px] font-medium tabular-nums transition-colors",
                         on
-                          ? "border-[rgba(255,255,255,0.16)] bg-[rgba(255,255,255,0.08)] text-text-primary"
-                          : "border-[var(--color-line-strong)] bg-[var(--color-bulk-base)] text-text-muted hover:border-[rgba(255,255,255,0.14)] hover:text-text-secondary"
+                          ? "border-[rgb(var(--t-veil-rgb)/0.16)] bg-[rgb(var(--t-veil-rgb)/0.08)] text-text-primary"
+                          : "border-[var(--color-line-strong)] bg-[var(--color-bulk-base)] text-text-muted hover:border-[rgb(var(--t-veil-rgb)/0.14)] hover:text-text-secondary"
                       )}
                     >
                       {formatCommaNumber(preset)}
@@ -800,7 +800,7 @@ function AllocationSlider({
       aria-valuenow={Math.round(clamped)}
       aria-valuetext={`${Math.round(clamped)}%`}
       tabIndex={0}
-      className="relative h-8 min-w-0 cursor-pointer touch-none overflow-hidden rounded-full border border-[var(--color-line-strong)] bg-[rgba(255,255,255,0.035)] outline-none select-none focus-visible:ring-1 focus-visible:ring-accent/50"
+      className="relative h-8 min-w-0 cursor-pointer touch-none overflow-hidden rounded-full border border-[var(--color-line-strong)] bg-[rgb(var(--t-veil-rgb)/0.035)] outline-none select-none focus-visible:ring-1 focus-visible:ring-accent/50"
       onPointerDown={(e) => {
         e.currentTarget.setPointerCapture(e.pointerId);
         setDragging(true);
@@ -840,10 +840,10 @@ function AllocationSlider({
           >
             <defs>
               <linearGradient id={fillId} x1="0" y1="0" x2="1" y2="0">
-                <stop offset="0%" stopColor="#6a4018" />
-                <stop offset="38%" stopColor="#c47e2e" />
-                <stop offset="72%" stopColor="#ffb547" />
-                <stop offset="100%" stopColor="#ffe7c2" />
+                <stop offset="0%" stopColor="var(--t-accent-deep)" />
+                <stop offset="38%" stopColor="var(--t-accent-mid)" />
+                <stop offset="72%" stopColor="var(--t-accent)" />
+                <stop offset="100%" stopColor="var(--t-accent-pale)" />
               </linearGradient>
               <mask id={maskId} maskUnits="userSpaceOnUse">
                 {ticks.xs.map((x) => (
@@ -853,6 +853,8 @@ function AllocationSlider({
                     y={0}
                     width={ticks.tick}
                     height={svgH}
+                    /* Mask channel, not a colour: white = opaque. Must not
+                       be themed or the tick mask stops masking. */
                     fill="#fff"
                   />
                 ))}
@@ -866,7 +868,7 @@ function AllocationSlider({
               y="0"
               width={ticks.devW}
               height={svgH}
-              fill="rgba(255,255,255,0.16)"
+              fill="rgb(var(--t-veil-rgb)/0.16)"
               mask={`url(#${maskId})`}
             />
             <rect
@@ -1035,21 +1037,21 @@ function FdvValueChart({
           >
             <defs>
               <linearGradient id="fdv-curve-fill" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#ffb547" stopOpacity={0.28} />
-                <stop offset="100%" stopColor="#ffb547" stopOpacity={0} />
+                <stop offset="0%" stopColor="var(--t-accent)" stopOpacity={0.28} />
+                <stop offset="100%" stopColor="var(--t-accent)" stopOpacity={0} />
               </linearGradient>
               <linearGradient id="fdv-curve-stroke" x1="0" y1="0" x2="1" y2="0">
-                <stop offset="0%" stopColor="#ffb547" stopOpacity={0} />
-                <stop offset="7%" stopColor="#ffb547" stopOpacity={1} />
-                <stop offset="93%" stopColor="#ffb547" stopOpacity={1} />
-                <stop offset="100%" stopColor="#ffb547" stopOpacity={0} />
+                <stop offset="0%" stopColor="var(--t-accent)" stopOpacity={0} />
+                <stop offset="7%" stopColor="var(--t-accent)" stopOpacity={1} />
+                <stop offset="93%" stopColor="var(--t-accent)" stopOpacity={1} />
+                <stop offset="100%" stopColor="var(--t-accent)" stopOpacity={0} />
               </linearGradient>
             </defs>
             {yTicks.map((y) => (
               <ReferenceLine
                 key={`h-${y}`}
                 y={y}
-                stroke="rgba(198, 182, 186, 0.16)"
+                stroke="rgb(var(--t-chart-b-rgb)/0.16)"
                 strokeDasharray="3 3"
               />
             ))}
@@ -1057,7 +1059,7 @@ function FdvValueChart({
               <ReferenceLine
                 key={`v-${f}`}
                 x={f}
-                stroke="rgba(198, 182, 186, 0.12)"
+                stroke="rgb(var(--t-chart-b-rgb)/0.12)"
                 strokeDasharray="3 3"
               />
             ))}
@@ -1097,7 +1099,7 @@ function FdvValueChart({
               activeDot={{
                 r: 5,
                 fill: "var(--color-bulk-base)",
-                stroke: "#ffb547",
+                stroke: "var(--t-accent)",
                 strokeWidth: 2,
               }}
             />
@@ -1107,8 +1109,8 @@ function FdvValueChart({
                 x={point.fdv}
                 y={point.value}
                 r={2.5}
-                fill="#ffb547"
-                stroke="#0b0b0c"
+                fill="var(--t-accent)"
+                stroke="var(--t-base)"
                 strokeWidth={1.5}
               />
             ))}
@@ -1117,7 +1119,7 @@ function FdvValueChart({
                 x={beacon.fdv}
                 y={beacon.value}
                 r={3.5}
-                fill="#ffb547"
+                fill="var(--t-accent)"
                 stroke="none"
                 className="chart-beacon"
                 isFront
@@ -1193,7 +1195,7 @@ function FdvScenarioPanel({
               "-mx-2.5 grid grid-cols-4 items-center gap-x-2 rounded-md px-2.5 sm:gap-x-8",
               i > 0 && "border-t border-[var(--color-line-soft)]",
               "cursor-default transition-colors",
-              "hover:border-transparent hover:bg-[rgba(255,255,255,0.045)]"
+              "hover:border-transparent hover:bg-[rgb(var(--t-veil-rgb)/0.045)]"
             )}
             style={{ height: 42 }}
           >
@@ -1471,7 +1473,7 @@ function PredictorWeekBars({
                     height: bar.selected
                       ? `${Math.max(8, (bar.aura / selectedMax) * 100)}%`
                       : "8%",
-                    background: active || bar.selected ? "#ffb547" : "rgba(255,181,71,0.32)",
+                    background: active || bar.selected ? "var(--t-accent)" : "rgb(var(--t-accent-rgb) / 0.32)",
                   }}
                 />
               </div>
@@ -1507,7 +1509,7 @@ function PoolShareTrack({ pct }: { pct: number }) {
         <p className="m-0 font-label text-text-muted">Your slice</p>
         <p className="m-0 text-[13px] font-data text-text-secondary">{label}</p>
       </div>
-      <div className="relative mt-1.5 h-1.5 overflow-hidden rounded-full bg-[rgba(255,181,71,0.12)]">
+      <div className="relative mt-1.5 h-1.5 overflow-hidden rounded-full bg-[rgb(var(--t-accent-rgb)/0.12)]">
         <span
           className="absolute top-0 h-full w-[3px] rounded-full bg-accent"
           style={{ left: `min(calc(100% - 3px), ${clamped}%)` }}

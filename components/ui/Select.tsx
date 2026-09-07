@@ -106,7 +106,7 @@ export function Select({ value, onChange, options, className, compact }: SelectP
           open
             ? "border-accent"
             : compact
-              ? "border-[var(--color-line-strong)] hover:border-[rgba(255,181,71,0.4)]"
+              ? "border-[var(--color-line-strong)] hover:border-[rgb(var(--t-accent-rgb)/0.4)]"
               : undefined
         )}
       >
@@ -161,8 +161,8 @@ export function Select({ value, onChange, options, className, compact }: SelectP
                           "flex w-full items-center justify-between rounded-md text-left transition-colors",
                           compact ? "h-[30px] px-2.5" : "px-3 py-2",
                           active
-                            ? "bg-[rgba(255,181,71,0.12)] text-accent"
-                            : "text-text-secondary hover:bg-[rgba(255,181,71,0.06)] hover:text-text-primary"
+                            ? "bg-[rgb(var(--t-accent-rgb)/0.12)] text-accent"
+                            : "text-text-secondary hover:bg-[rgb(var(--t-accent-rgb)/0.06)] hover:text-text-primary"
                         )}
                       >
                         {o.label}

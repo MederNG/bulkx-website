@@ -55,7 +55,7 @@ export function PageHeading({
                 // Same clamp as production: half again the previous mark,
                 // faint enough that the bigger shape stays texture, not a
                 // second headline.
-                "text-[clamp(108px,22.5vw,285px)] text-[rgba(255,181,71,0.05)]"
+                "text-[clamp(108px,22.5vw,285px)] text-[rgb(var(--t-accent-rgb)/0.05)]"
               )}
               // Inline, not utilities: tailwind-merge drops `leading-none`
               // next to an arbitrary text-[…] size, and the 1.5 body leading

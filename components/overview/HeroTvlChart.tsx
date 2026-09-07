@@ -159,7 +159,7 @@ function TvlDot({
       cy={cy}
       r={1.5}
       fill={CHART_GOLD}
-      stroke="#0b0b0c"
+      stroke="var(--t-base)"
       strokeWidth={1.1}
     />
   );
@@ -419,8 +419,8 @@ export function HeroTvlChart({
           >
             <defs>
               <linearGradient id="heroTvlFill" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="rgba(255,181,71,0.12)" />
-                <stop offset="100%" stopColor="rgba(255,181,71,0)" />
+                <stop offset="0%" stopColor="rgb(var(--t-accent-rgb)/0.12)" />
+                <stop offset="100%" stopColor="rgb(var(--t-accent-rgb)/0)" />
               </linearGradient>
               {/* Softly fades the line's own opacity toward both ends —
                   objectBoundingBox coordinates, so 0%/100% track the line's
@@ -431,7 +431,7 @@ export function HeroTvlChart({
                 <stop offset="100%" stopColor={CHART_GOLD} stopOpacity={1} />
               </linearGradient>
             </defs>
-            <CartesianGrid stroke="rgba(255,255,255,.05)" vertical={false} />
+            <CartesianGrid stroke="rgb(var(--t-veil-rgb)/.05)" vertical={false} />
             {/* Label steps, not time — see the chart memo. The ticks are the
                 whole numbers on that scale, which is why they cannot come out
                 unevenly spaced: they are evenly spaced by definition, and each
@@ -471,7 +471,7 @@ export function HeroTvlChart({
               tickFormatter={usdCompact}
               tick={{
                 fontSize: 10.5,
-                fill: "#8b8580",
+                fill: "var(--t-text-muted)",
                 fontFamily: "var(--font-mono)",
                 textAnchor: "end",
                 dx: Y_AXIS_W,
@@ -487,16 +487,16 @@ export function HeroTvlChart({
               interval={0}
             />
             <Tooltip
-              cursor={{ stroke: "rgba(255,255,255,.18)" }}
+              cursor={{ stroke: "rgb(var(--t-veil-rgb)/.18)" }}
               contentStyle={{
-                background: "#17171a",
-                border: "1px solid rgba(255,255,255,.1)",
+                background: "var(--t-bg-raised)",
+                border: "1px solid rgb(var(--t-veil-rgb)/.1)",
                 borderRadius: 8,
                 fontSize: 11,
                 boxShadow: "0 14px 36px rgba(0,0,0,.55)",
               }}
-              labelStyle={{ color: "#c9c4bd", marginBottom: 6 }}
-              itemStyle={{ color: "#f5f3ee" }}
+              labelStyle={{ color: "var(--t-text-secondary)", marginBottom: 6 }}
+              itemStyle={{ color: "var(--t-text-primary)" }}
               // Read off the hovered reading's own timestamp rather than the
               // axis value, which is a label step and means nothing to anyone.
               labelFormatter={(_v, payload) => {
@@ -531,7 +531,7 @@ export function HeroTvlChart({
               // glued to the nearer label (16 against 17, today's snapshot
               // against the live figure).
               dot={<TvlDot />}
-              activeDot={{ r: 2.75, fill: CHART_GOLD, stroke: "#0b0b0c", strokeWidth: 1.4 }}
+              activeDot={{ r: 2.75, fill: CHART_GOLD, stroke: "var(--t-base)", strokeWidth: 1.4 }}
               // Entrance animation off, and not just for taste: Recharts
               // holds the dots back until the animation reports finished, and
               // that animation runs on requestAnimationFrame — which browsers
@@ -551,7 +551,7 @@ export function HeroTvlChart({
                 // Without this the whole projected stretch was dead to the
                 // cursor: the TVL series has no points out there, so hovering
                 // the right-hand ~18% of the plot produced no dot at all.
-                activeDot={{ r: 2.75, fill: CHART_GOLD, stroke: "#0b0b0c", strokeWidth: 1.4 }}
+                activeDot={{ r: 2.75, fill: CHART_GOLD, stroke: "var(--t-base)", strokeWidth: 1.4 }}
                 connectNulls
                 isAnimationActive={false}
               />

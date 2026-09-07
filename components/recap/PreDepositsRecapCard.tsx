@@ -18,7 +18,7 @@ function RecapStat({
   return (
     <div
       className={cn(
-        "flex min-w-0 flex-col gap-2 rounded-[12px] bg-[var(--color-bulk-base)] px-5 py-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.07)]",
+        "flex min-w-0 flex-col gap-2 rounded-[12px] bg-[var(--color-bulk-base)] px-5 py-4 shadow-[inset_0_1px_0_rgb(var(--t-veil-rgb)/0.07)]",
         className,
       )}
     >
@@ -43,7 +43,7 @@ export function PreDepositsRecapCard({ className }: { className?: string }) {
   return (
     <div
       className={cn(
-        "relative flex h-[675px] w-[1200px] flex-col overflow-hidden rounded-[16px] bg-[#0b0b0c] px-10 py-9",
+        "relative flex h-[675px] w-[1200px] flex-col overflow-hidden rounded-[16px] bg-[var(--t-base)] px-10 py-9",
         className,
       )}
     >
@@ -52,7 +52,7 @@ export function PreDepositsRecapCard({ className }: { className?: string }) {
         className="pointer-events-none absolute inset-0 opacity-70"
         style={{
           background:
-            "radial-gradient(ellipse 80% 55% at 12% -8%, rgba(255,181,71,0.14), transparent 58%), radial-gradient(ellipse 60% 45% at 92% 108%, rgba(107,140,174,0.12), transparent 55%)",
+            "radial-gradient(ellipse 80% 55% at 12% -8%, rgb(var(--t-accent-rgb)/0.14), transparent 58%), radial-gradient(ellipse 60% 45% at 92% 108%, rgb(var(--t-chart-b-rgb)/0.12), transparent 55%)",
         }}
       />
 

@@ -6,6 +6,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { ChevronDown } from "lucide-react";
 import { HeaderCampaignStatus } from "@/components/layout/HeaderCampaignStatus";
+import { ThemeToggle } from "@/components/theme/ThemeToggle";
 import { cn } from "@/lib/utils";
 
 interface NavItem {
@@ -61,7 +62,7 @@ export function SiteNav() {
   }, [menuOpen]);
 
   return (
-    <header className="sticky top-0 z-50 border-b border-[var(--color-line)] bg-[rgba(11,11,12,0.92)] backdrop-blur-[10px]">
+    <header className="sticky top-0 z-50 border-b border-[var(--color-line)] bg-[rgb(var(--t-base-rgb)/0.92)] backdrop-blur-[10px]">
       <div className="shell flex min-h-[60px] items-center justify-between gap-x-3 py-[11px] sm:gap-x-[26px]">
         <div className="flex min-w-0 items-center gap-[26px]">
           <Link href="/" className="flex min-w-0 items-center gap-[11px] text-text-primary">
@@ -103,6 +104,8 @@ export function SiteNav() {
 
         <div className="flex min-w-0 items-center justify-end gap-2.5 sm:gap-[18px]">
           <HeaderCampaignStatus />
+
+          <ThemeToggle />
           {/* Flattened nav for narrow screens, where the inline bar is hidden. */}
           <div ref={menuRef} className="relative lg:hidden">
             <button
@@ -113,8 +116,8 @@ export function SiteNav() {
               className={cn(
                 "inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-[13px] transition-colors",
                 menuOpen
-                  ? "border-accent bg-[rgba(255,181,71,0.14)] text-accent"
-                  : "border-[rgba(255,181,71,0.4)] text-accent"
+                  ? "border-accent bg-[rgb(var(--t-accent-rgb)/0.14)] text-accent"
+                  : "border-[rgb(var(--t-accent-rgb)/0.4)] text-accent"
               )}
             >
               Menu
@@ -129,7 +132,7 @@ export function SiteNav() {
             <div
               role="menu"
               className={cn(
-                "absolute right-0 top-full z-[60] mt-2 min-w-[220px] origin-top-right rounded-[10px] border border-[rgba(255,181,71,0.22)] bg-[var(--color-bulk-base)] p-1.5 shadow-[0_20px_48px_rgba(0,0,0,0.72)] transition-[opacity,transform] duration-150",
+                "absolute right-0 top-full z-[60] mt-2 min-w-[220px] origin-top-right rounded-[10px] border border-[rgb(var(--t-accent-rgb)/0.22)] bg-[var(--color-bulk-base)] p-1.5 shadow-[0_20px_48px_rgba(0,0,0,0.72)] transition-[opacity,transform] duration-150",
                 menuOpen
                   ? "pointer-events-auto scale-100 opacity-100"
                   : "pointer-events-none scale-[0.98] opacity-0"
@@ -145,8 +148,8 @@ export function SiteNav() {
                     className={cn(
                       "relative block rounded-md px-3 py-2.5 text-[13px] transition-colors",
                       active
-                        ? "bg-[rgba(255,181,71,0.12)] font-medium text-accent"
-                        : "text-text-primary hover:bg-[rgba(255,181,71,0.08)] hover:text-accent"
+                        ? "bg-[rgb(var(--t-accent-rgb)/0.12)] font-medium text-accent"
+                        : "text-text-primary hover:bg-[rgb(var(--t-accent-rgb)/0.08)] hover:text-accent"
                     )}
                   >
                     {active && (

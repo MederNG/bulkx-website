@@ -410,7 +410,7 @@ export function DepositorsDistributionPanel({ tiers }: { tiers: DepositTier[] })
                   key={i}
                   // IBM Plex Sans, 11px, text-secondary — matches the TVL
                   // chart's own Y-axis labels exactly. HeroTvlChart's source
-                  // declares fontSize 10.5 and fill #8b8580 (text-muted) on
+                  // declares fontSize 10.5 and fill var(--t-text-muted) on
                   // its YAxis ticks, but globals.css's
                   // `.recharts-text { fill: var(--color-text-secondary) !important;
                   // font-size: 11px !important }` overrides both on any tick
@@ -530,8 +530,8 @@ export function DepositorsDistributionPanel({ tiers }: { tiers: DepositTier[] })
                             transition={CHART_GOLD_PULSE_TRANSITION}
                             style={{
                               background: CHART_GOLD,
-                              outline: "1px solid #FFFEEF",
-                              filter: "drop-shadow(0 0 4px rgba(255,181,71,0.28))",
+                              outline: "1px solid var(--t-text-primary)",
+                              filter: "drop-shadow(0 0 4px rgb(var(--t-accent-rgb)/0.28))",
                             }}
                           />
                         </div>
@@ -574,8 +574,8 @@ export function DepositorsDistributionPanel({ tiers }: { tiers: DepositTier[] })
                             transition={CHART_GOLD_PULSE_TRANSITION}
                             style={{
                               background: CHART_GOLD,
-                              outline: "1px solid #FFFEEF",
-                              filter: "drop-shadow(0 0 4px rgba(255,181,71,0.28))",
+                              outline: "1px solid var(--t-text-primary)",
+                              filter: "drop-shadow(0 0 4px rgb(var(--t-accent-rgb)/0.28))",
                             }}
                           />
                         </div>
@@ -613,13 +613,13 @@ export function DepositorsDistributionPanel({ tiers }: { tiers: DepositTier[] })
               >
                 <div
                   ref={cardRef}
-                  className="-translate-x-1/2 rounded-[4px] border border-[rgba(198,182,186,0.2)] bg-[#1B1A14] px-3 py-2.5 shadow-[0_14px_36px_rgba(0,0,0,.55)]"
+                  className="-translate-x-1/2 rounded-[4px] border border-[var(--color-line-strong)] bg-[var(--t-bg-raised)] px-3 py-2.5 shadow-[0_14px_36px_rgba(0,0,0,.55)]"
                 >
                   {/* Tier name alone, centred. The size band it used to carry
                       is the same string the table's own SIZE column shows for
                       this row a few inches away, and the range labels under
                       the bars repeat it a third time. */}
-                  <div className="mb-2 whitespace-nowrap text-center font-sans text-[13px] font-medium leading-none text-[#FFFEEF]">
+                  <div className="mb-2 whitespace-nowrap text-center font-sans text-[13px] font-medium leading-none text-[var(--t-text-primary)]">
                     {hoveredRow.name}
                   </div>
                   {/* Only the pair the active toggle actually explains: Count
@@ -649,7 +649,7 @@ export function DepositorsDistributionPanel({ tiers }: { tiers: DepositTier[] })
                     ).map(([label, value]) => (
                       <Fragment key={label}>
                         <span className="font-label text-text-muted">{label}</span>
-                        <span className="font-data text-right text-[#FFB547]">{value}</span>
+                        <span className="font-data text-right text-[var(--t-accent)]">{value}</span>
                       </Fragment>
                     ))}
                   </div>
@@ -737,7 +737,7 @@ export function DepositorsDistributionPanel({ tiers }: { tiers: DepositTier[] })
             // Dim every non-active row — including the primary tier (gold
             // transfer used to leave Snowflake fully lit).
             const dimmed = muted || (hovered != null && !lit);
-            const color = dimmed ? "#6B6660" : "#F5F3EE";
+            const color = dimmed ? "var(--t-text-dim)" : "var(--t-text-primary)";
             return (
               <div
                 key={row.id}
@@ -758,7 +758,7 @@ export function DepositorsDistributionPanel({ tiers }: { tiers: DepositTier[] })
                   "-mx-2.5 shrink-0 cursor-pointer rounded-md px-2.5 transition-colors select-none [-webkit-touch-callout:none]",
                   i > 0 && "border-t border-[var(--color-line-soft)]",
                   lit && i > 0 && "border-transparent",
-                  lit && "bg-[rgba(255,255,255,0.045)]"
+                  lit && "bg-[rgb(var(--t-veil-rgb)/0.045)]"
                 )}
                 style={{ height: ROW_H }}
               >
@@ -814,7 +814,7 @@ export function DepositorsDistributionPanel({ tiers }: { tiers: DepositTier[] })
                     </span>
                     <span
                       className={cn(CELL, "text-right")}
-                      style={{ color: muted ? "#6B6660" : "#C9C4BD" }}
+                      style={{ color: muted ? "var(--t-text-dim)" : "var(--t-text-secondary)" }}
                     >
                       {auraCompact(row.avgAura)}
                     </span>
@@ -842,7 +842,7 @@ export function DepositorsDistributionPanel({ tiers }: { tiers: DepositTier[] })
                 {!narrow && (
                   <span
                     className={cn(CELL, "text-right")}
-                    style={{ color: muted ? "#6B6660" : "#C9C4BD" }}
+                    style={{ color: muted ? "var(--t-text-dim)" : "var(--t-text-secondary)" }}
                   >
                     {auraCompact(row.avgAura)}
                   </span>

@@ -200,7 +200,7 @@ export function MiniSpark({
       >
         {active && (
           <div
-            className="pointer-events-none absolute z-10 rounded-md border border-[var(--color-line-strong)] bg-[#17171a] px-1.5 py-1 shadow-[0_10px_24px_rgba(0,0,0,.5)]"
+            className="pointer-events-none absolute z-10 rounded-md border border-[var(--color-line-strong)] bg-[var(--t-bg-raised)] px-1.5 py-1 shadow-[0_10px_24px_rgba(0,0,0,.5)]"
             style={{
               left: `${(active.x / VW) * 100}%`,
               top: 0,
@@ -244,7 +244,7 @@ export function MiniSpark({
               x2={active.x}
               y1="0"
               y2={VH}
-              stroke="rgba(255,255,255,0.22)"
+              stroke="rgb(var(--t-veil-rgb)/0.22)"
               strokeWidth="1"
             />
           )}

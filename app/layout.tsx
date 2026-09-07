@@ -9,6 +9,8 @@ import { LIVE_FINANCIAL_SEED } from "@/lib/live-financial-seed";
 import { buildLiveExchangePayload } from "@/lib/live-exchange-payload";
 import { ScrollToTop } from "@/components/layout/ScrollToTop";
 import { HashScrollOnLoad } from "@/components/layout/HashScrollOnLoad";
+import { ThemeProvider } from "@/components/theme/ThemeProvider";
+import { THEME_INIT_SCRIPT } from "@/lib/theme";
 
 /** Nav, labels, tier names, big KPI figures. */
 const familjenGrotesk = localFont({
@@ -61,7 +63,10 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#0b0b0c",
+  themeColor: [
+    { media: "(prefers-color-scheme: dark)", color: "#1b1a14" },
+    { media: "(prefers-color-scheme: light)", color: "#f9f8ed" },
+  ],
 };
 
 export default async function RootLayout({
@@ -76,16 +81,29 @@ export default async function RootLayout({
   const exchange = await buildLiveExchangePayload();
 
   return (
-    <html lang="en" className={`${familjenGrotesk.variable} ${overpassMono.variable}`}>
+    <html
+      lang="en"
+      // Server default; the head script below replaces it before first paint.
+      data-theme="dark"
+      className={`${familjenGrotesk.variable} ${overpassMono.variable}`}
+      suppressHydrationWarning
+    >
+      <head>
+        {/* Blocking on purpose: the stored theme must land on <html> before
+            anything paints, or a light-mode visitor gets a dark flash. */}
+        <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
+      </head>
       <body className="antialiased">
-        <LiveFinancialProvider initial={live}>
-          <LiveExchangeProvider initial={exchange}>
-            <HashScrollOnLoad />
-            <SiteNav />
-            <main>{children}</main>
-            <ScrollToTop />
-          </LiveExchangeProvider>
-        </LiveFinancialProvider>
+        <ThemeProvider>
+          <LiveFinancialProvider initial={live}>
+            <LiveExchangeProvider initial={exchange}>
+              <HashScrollOnLoad />
+              <SiteNav />
+              <main>{children}</main>
+              <ScrollToTop />
+            </LiveExchangeProvider>
+          </LiveFinancialProvider>
+        </ThemeProvider>
         <Analytics />
       </body>
     </html>

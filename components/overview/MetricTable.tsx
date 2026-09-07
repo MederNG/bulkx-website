@@ -212,7 +212,7 @@ export function MetricTableRow({
   onMouseEnter: () => void;
   onMouseLeave: () => void;
 }) {
-  const textColor = dimmed ? "#6B6660" : "#F5F3EE";
+  const textColor = dimmed ? "var(--t-text-dim)" : "var(--t-text-primary)";
   // Must match the header's — each row is its own grid container, so the
   // columns line up only because every one is handed the same template.
   const shape =
@@ -238,7 +238,7 @@ export function MetricTableRow({
         "-mx-2.5 shrink-0 cursor-pointer items-center rounded-md px-2.5 transition-colors select-none [-webkit-touch-callout:none]",
         !isFirst && "border-t border-[var(--color-line-soft)]",
         active && !isFirst && "border-transparent",
-        active && !pulse && "bg-[rgba(255,255,255,0.045)]",
+        active && !pulse && "bg-[rgb(var(--t-veil-rgb)/0.045)]",
         active && pulse && "tier-row-pulse"
       )}
       // An explicit height rather than vertical padding: padding leaves the

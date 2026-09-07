@@ -8,7 +8,7 @@ export function PanelLabel({ children }: { children: React.ReactNode }) {
 }
 
 /**
- * Overview panels — lifted #121214 cards with a hairline, matching the
+ * Overview panels — lifted bg-primary cards with a hairline, matching the
  * dashboard layout mockup.
  */
 export function PanelCard({

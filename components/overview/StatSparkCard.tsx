@@ -52,7 +52,7 @@ export function StatSparkCard({
         <div className="min-w-0">
           {typeof label === "string" ? <PanelLabel>{label}</PanelLabel> : label}
         </div>
-        <span className="font-label shrink-0 text-[#FFB547]">{badge}</span>
+        <span className="font-label shrink-0 text-[var(--t-accent)]">{badge}</span>
       </div>
       <div className="flex min-h-0 min-w-0 flex-1 items-stretch gap-3">
         <div className="flex min-h-0 min-w-0 shrink-0 flex-col">
