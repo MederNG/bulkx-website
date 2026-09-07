@@ -26,15 +26,6 @@ export interface LeaderboardEntry {
   pnl_usd?: number;
 }
 
-export interface AlphaInsight {
-  label: string;
-  value: string;
-  detail?: string;
-  mono?: boolean;
-  /** Full wallet address to copy, when `detail` shows a truncated one. */
-  copyValue?: string;
-}
-
 export interface WalletData extends LeaderboardEntry {
   percentile: number;
   hold_time_days: number;
@@ -60,14 +51,13 @@ export interface Totals {
   updatedAt: string;
 }
 
+/**
+ * Only what the Overview and Aura pages actually render. Everything else this
+ * used to carry — Gini, the Lorenz curve, top-N shares, median/average, the
+ * rank thresholds, the Aura histogram and the alpha insights — was computed
+ * on every refresh and read by nothing.
+ */
 export interface DashboardMetrics {
-  totalWallets: number;
-  depositWallets: number;
-  currentTvl: number;
-  totalDeposited: number;
-  totalWithdrawn: number;
-  totalAura: number;
-  qualifiedReferrals: number;
   /** Depositor count and USD still held per deposit-size bucket, smallest to
    * largest.
    *
@@ -85,36 +75,11 @@ export interface DashboardMetrics {
     auraMin: number;
     auraMax: number;
   }[];
-  /** Depositor count and Aura totals per exclusive Aura band. */
-  auraRangeDistribution: {
-    bucket: string;
-    id: string;
-    count: number;
-    held: number;
-    aura: number;
-    auraMin: number;
-    auraMax: number;
-  }[];
   /**
-   * "OG Hodlers": earned Aura in week 1 (categories.week1 > 0 — the campaign's
-   * `first_seen` field is never populated, so this is the only real signal
-   * for early participation) and have never withdrawn since.
+   * "OG Hodlers": earned Aura in week 1 and have never withdrawn since.
    */
   ogHodlers: number;
-  medianAura: number;
-  averageAura: number;
-  top10Threshold: number;
-  top5Threshold: number;
-  top1Threshold: number;
-  top10Share: number;
-  top100Share: number;
-  top1000Share: number;
-  giniCoefficient: number;
-  lorenzCurve: { cumulativeWallets: number; cumulativeAura: number }[];
-  auraDistribution: { bucket: string; count: number }[];
   categoryBreakdown: { key: string; category: string; points: number; share: number }[];
-  alphaInsights: AlphaInsight[];
-  lastUpdated: string;
 }
 
 export type LeaderboardTab = "aura" | "volume" | "pnl";

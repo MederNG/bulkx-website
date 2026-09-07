@@ -64,17 +64,4 @@ export const DEPOSITOR_AURA_RANGES = [
   { id: "100000+", label: "100k+ AURA", min: 100000, max: Infinity },
 ] as const;
 
-export const AURA_BUCKETS = [
-  { label: "0", min: 0, max: 0 },
-  { label: "1-10", min: 1, max: 10 },
-  { label: "10-50", min: 10, max: 50 },
-  { label: "50-100", min: 50, max: 100 },
-  { label: "100-250", min: 100, max: 250 },
-  { label: "250-500", min: 250, max: 500 },
-  { label: "500-1000", min: 500, max: 1000 },
-  { label: "1000-2500", min: 1000, max: 2500 },
-  { label: "2500-5000", min: 2500, max: 5000 },
-  { label: "5000+", min: 5000, max: Infinity },
-];
-
 export const FDV_SCENARIOS = [100_000_000, 250_000_000, 500_000_000, 750_000_000, 1_000_000_000, 2_000_000_000];

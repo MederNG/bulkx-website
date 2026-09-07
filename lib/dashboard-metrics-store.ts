@@ -25,10 +25,6 @@ export interface DashboardMetricsFile {
   metrics: DashboardMetrics;
 }
 
-export function getDashboardMetricsPath(): string {
-  return METRICS_FILE;
-}
-
 export function readDashboardMetricsFile(): DashboardMetricsFile | null {
   try {
     const parsed = JSON.parse(
