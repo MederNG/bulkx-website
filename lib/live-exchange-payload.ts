@@ -65,13 +65,35 @@ export async function buildLiveExchangePayload(
   }
 
   try {
-    const [stats, metrics, candleVolume, fillStats] = await Promise.all([
+    // allSettled, not all: these are four independent upstreams and every
+    // reader below already tolerates a missing one. Under Promise.all a single
+    // network-level rejection rejected the lot and dropped the payload to
+    // zeros — which is what blanked every KPI in production while /stats and
+    // klines were answering fine on their own.
+    const [statsR, metricsR, candleR, fillsR] = await Promise.allSettled([
       fetchExchangeStats(revalidate),
       // no-store only on the live API path; a static render must not use it.
       fetchExchangeMetrics(revalidate == null, revalidate),
       sumCandleVolumes(revalidate),
       fetchBulkstatsTradeStats(revalidate),
     ]);
+
+    function settled<T>(result: PromiseSettledResult<T>, label: string): T | null {
+      if (result.status === "fulfilled") return result.value;
+      console.warn(`[live-exchange] ${label} unavailable:`, result.reason);
+      return null;
+    }
+
+    const stats = settled(statsR, "stats");
+    const metrics = settled(metricsR, "metrics");
+    const candleVolume = settled(candleR, "klines");
+    const fillStats = settled(fillsR, "bulkstats");
+
+    // Nothing answered — hold the last good payload instead of publishing
+    // zeros over it.
+    if (!stats && !metrics && !candleVolume && !fillStats) {
+      return payloadCache?.data ?? EMPTY;
+    }
     const unique = Number(metrics?.unique_submissions) || 0;
     const sampled = unique > 0 ? tpsFromSample(unique, Date.now()) : null;
     const tps = sampled ?? payloadCache?.data.tps ?? null;
@@ -79,14 +101,26 @@ export async function buildLiveExchangePayload(
     const data: LiveExchangePayload = {
       // Volume from klines only. `/stats`, `/ticker`, and ticker WS fields
       // currently under-report 24h volume / change.
-      volume24hUsd: candleVolume.volume24hUsd,
-      volumeTotalUsd: candleVolume.volumeTotalUsd || candleVolume.volume24hUsd,
+      volume24hUsd: candleVolume?.volume24hUsd ?? payloadCache?.data.volume24hUsd ?? 0,
+      volumeTotalUsd:
+        candleVolume?.volumeTotalUsd ||
+        candleVolume?.volume24hUsd ||
+        payloadCache?.data.volumeTotalUsd ||
+        0,
       // Unique fills from BulkStats (same Total Trades as their General card).
       // Candle `n` and `unique_submissions` are not fill counts.
       tradesTotal: uniqueFills,
-      openInterestUsd: (Number(stats?.openInterest.totalUsd) || 0) * OI_SIDES,
-      activeTraders: Number(metrics?.executor_cardinality?.primary?.cached_accounts) || 0,
-      totalAccounts: Number(metrics?.executor_cardinality?.primary?.world_accounts) || 0,
+      // A source that is down holds its previous reading rather than
+      // reporting a real zero.
+      openInterestUsd:
+        (Number(stats?.openInterest?.totalUsd) || 0) * OI_SIDES ||
+        (payloadCache?.data.openInterestUsd ?? 0),
+      activeTraders:
+        Number(metrics?.executor_cardinality?.primary?.cached_accounts) ||
+        (payloadCache?.data.activeTraders ?? 0),
+      totalAccounts:
+        Number(metrics?.executor_cardinality?.primary?.world_accounts) ||
+        (payloadCache?.data.totalAccounts ?? 0),
       tps,
       oiHistory: [],
       tradersHistory: [],
