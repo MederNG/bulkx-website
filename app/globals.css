@@ -13,10 +13,10 @@
   color-scheme: dark;
 
   /* Surfaces — page is the darkest plane; cards lift one step. */
-  --t-base: #1b1a14;
-  --t-base-rgb: 27 26 20;
-  --t-bg-primary: #22211b;
-  --t-bg-raised: #292822;
+  --t-base: #141310;
+  --t-base-rgb: 20 19 16;
+  --t-bg-primary: #1b1a14;
+  --t-bg-raised: #222118;
   --t-bg-secondary: #544a4c;
 
   /* Text — primary reads, secondary supports, muted labels, dim icons. */
@@ -64,7 +64,7 @@
 
   /* Opaque faces that sit under a spinning gradient ring, so they cannot
      be transparent or the ring shows through the middle. */
-  --t-card-hover-face: #201f19;
+  --t-card-hover-face: #222118;
   --t-badge-face: #141b16;
   --t-shimmer-dim: #c8c8c8;
   --t-shimmer-hi: #ffffff;

@@ -6,7 +6,7 @@ export const DEFAULT_THEME: Theme = "dark";
 
 /** Browser chrome colour per theme — kept in sync with --t-base. */
 export const THEME_BG: Record<Theme, string> = {
-  dark: "#1b1a14",
+  dark: "#141310",
   light: "#f9f8ed",
 };
 
