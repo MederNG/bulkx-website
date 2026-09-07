@@ -37,19 +37,20 @@ function formatLeftCompact(ms: number): string {
 
 function WeekTicks({ today }: { today: number | null }) {
   return (
-    <div className="flex items-center gap-[2px]" aria-hidden>
+    <div className="flex items-center">
       {WEEK_DAYS.map((day, i) => {
         const current = today != null && i === today;
         const past = today != null && i < today;
         return (
-          <div
-            key={day}
-            title={day}
-            className={cn("h-[9px] w-[7px]", current && "apr-week-pulse")}
-            style={{
-              background: current ? "#ffb547" : past ? "#6b8cae" : "rgba(255,255,255,.09)",
-            }}
-          />
+          <div key={day} className="week-tick-hit flex h-[13px] w-[9px] cursor-default items-center justify-center" title={day}>
+            <div
+              className={cn(
+                "week-tick h-[9px] w-[7px]",
+                current && "is-today apr-week-pulse",
+                past && !current && "is-past",
+              )}
+            />
+          </div>
         );
       })}
     </div>

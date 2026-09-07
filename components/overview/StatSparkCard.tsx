@@ -47,7 +47,7 @@ export function StatSparkCard({
   stats: SparkFootStat[];
 }) {
   return (
-    <div className="flex h-full min-w-0 flex-col rounded-[10px] border border-[var(--color-line)] bg-[var(--color-bg-primary)] px-4 py-3">
+    <div className="panel-gold-hover flex h-full min-w-0 flex-col rounded-[10px] border border-[var(--color-line)] bg-[var(--color-bg-primary)] px-4 py-3">
       <div className="mb-2.5 flex h-4 items-center justify-between gap-3 leading-none">
         <div className="min-w-0">
           {typeof label === "string" ? <PanelLabel>{label}</PanelLabel> : label}

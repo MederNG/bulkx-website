@@ -401,6 +401,59 @@ body {
   animation: apr-current-week-pulse 1150ms ease-in-out infinite;
 }
 
+.week-tick {
+  background: rgba(255, 255, 255, 0.09);
+  transition:
+    background-color 220ms ease,
+    box-shadow 220ms ease;
+}
+
+.week-tick.is-past {
+  background: #6b8cae;
+}
+
+.week-tick.is-today {
+  background: #ffb547;
+}
+
+.week-tick-hit:hover .week-tick {
+  background: #ffb547;
+  box-shadow: 0 0 7px rgba(255, 181, 71, 0.5);
+  animation: apr-current-week-pulse 1150ms ease-in-out infinite;
+}
+
+@keyframes panel-gold-hover-pulse {
+  0%,
+  100% {
+    border-color: rgba(255, 181, 71, 0.38);
+    box-shadow: 0 0 12px rgba(255, 181, 71, 0.16);
+  }
+  50% {
+    border-color: rgba(255, 181, 71, 0.72);
+    box-shadow: 0 0 22px rgba(255, 181, 71, 0.32);
+  }
+}
+
+.panel-gold-hover {
+  transition:
+    border-color 220ms ease,
+    box-shadow 220ms ease;
+}
+
+.panel-gold-hover:hover {
+  position: relative;
+  z-index: 2;
+  animation: panel-gold-hover-pulse 1150ms ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .panel-gold-hover:hover {
+    animation: none;
+    border-color: rgba(255, 181, 71, 0.55);
+    box-shadow: 0 0 16px rgba(255, 181, 71, 0.22);
+  }
+}
+
 @keyframes volume-mode-glow {
   0%,
   100% {

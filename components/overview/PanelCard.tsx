@@ -27,19 +27,21 @@ export function PanelCard({
   return (
     <div
       className={cn(
-        "flex min-h-0 min-w-0 flex-col rounded-[10px] border border-[var(--color-line)] bg-[var(--color-bg-primary)] px-3 py-3 sm:px-5 sm:py-4",
-        glossy && "relative overflow-hidden",
+        "panel-gold-hover flex min-h-0 min-w-0 flex-col rounded-[10px] border border-[var(--color-line)] bg-[var(--color-bg-primary)] px-3 py-3 sm:px-5 sm:py-4",
+        glossy && "relative",
         className
       )}
     >
       {glossy && (
-        <div
-          aria-hidden="true"
-          className="gloss-drift pointer-events-none"
-          style={{
-            animationDelay: `${glossDelay}s, ${glossDelay - 5}s, ${glossDelay - 3}s`,
-          }}
-        />
+        <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-[inherit]">
+          <div
+            aria-hidden="true"
+            className="gloss-drift"
+            style={{
+              animationDelay: `${glossDelay}s, ${glossDelay - 5}s, ${glossDelay - 3}s`,
+            }}
+          />
+        </div>
       )}
       {glossy ? <div className="relative flex min-h-0 flex-1 flex-col">{children}</div> : children}
     </div>
