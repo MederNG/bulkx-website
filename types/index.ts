@@ -29,7 +29,6 @@ export interface LeaderboardEntry {
 export interface WalletData extends LeaderboardEntry {
   percentile: number;
   hold_time_days: number;
-  efficiency: number;
   aura_breakdown: WalletAuraBreakdown;
 }
 

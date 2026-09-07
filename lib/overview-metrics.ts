@@ -128,13 +128,6 @@ export function chartPrimaryRamp(index: number, count: number): string {
  * table it has to line up with. */
 const MAX_OVERVIEW_DONUT_SLICES = 6;
 
-// APR is modelled, not observed — this campaign pays Aura points, not yield,
-// so there is no on-chain rate to read. FDV and allocation are the same
-// default scenario the FDV calculator itself starts from (Tools page), not a
-// number invented for this card. The panel must say so out loud; never show
-// this as a bare, unqualified percentage.
-export const APR_ASSUMED_FDV = 500_000_000;
-export const APR_ASSUMED_ALLOCATION_PCT = 30;
 /**
  * The campaign's total distributable AURA supply — fixed, not the "earned
  * so far" figure shown elsewhere on the page (that one only grows over the
@@ -142,37 +135,12 @@ export const APR_ASSUMED_ALLOCATION_PCT = 30;
  */
 export const APR_TOTAL_AURA_SUPPLY = 60_000_000;
 
-export interface DepositAprResult {
-  aprPercent: number | null;
-  assumedFdv: number;
-  assumedAllocationPct: number;
-  currentWeek: number;
-  /** Next weekly Aura snapshot (Sat 13:00 UTC) — not a final-airdrop date;
-   * no such date exists anywhere in the campaign data. */
-  nextSnapshotTimestamp: number;
-}
-
-/**
- * APR = (Weekly AURA Emissions / TVL) × (FDV × Allocation / Total AURA Supply) × 52 × 100%
- *
- * Exported so the KPI strip can recompute it from the live-polled TVL rather
- * than showing a figure that drifts out of step with the TVL card beside it.
- */
-export function computeDepositApr(weeklyAuraEmissions: number, currentTvl: number): number | null {
-  if (currentTvl <= 0) return null;
-  const auraPerDollarPerWeek = weeklyAuraEmissions / currentTvl;
-  const auraPriceUsd =
-    (APR_ASSUMED_FDV * (APR_ASSUMED_ALLOCATION_PCT / 100)) / APR_TOTAL_AURA_SUPPLY;
-  return auraPerDollarPerWeek * auraPriceUsd * 52 * 100;
-}
-
 export interface OverviewPanelsData {
   auraSources: {
     totalAuraValue: string;
     totalAuraNumber: number;
     donut: OverviewDonutSegment[];
   };
-  depositApr: DepositAprResult;
   depositorsAnalysis: {
     totalDepositors: number;
     bars: OverviewDistributionBar[];
@@ -184,26 +152,18 @@ export interface OverviewPanelsData {
 }
 
 export function buildOverviewPanels(input: {
-  currentTvl: number;
   totalAura: number;
   depositWallets: number;
   depositSizeDistribution: DepositSizeBucket[];
   ogHodlers: number;
-  weeklyAuraEmissions: number;
   categoryBreakdown: CategoryBreakdownItem[];
-  currentWeek: number;
-  nextSnapshotTimestamp: number;
 }): OverviewPanelsData {
   const {
-    currentTvl,
     totalAura,
     depositWallets,
     depositSizeDistribution,
     ogHodlers,
-    weeklyAuraEmissions,
     categoryBreakdown,
-    currentWeek,
-    nextSnapshotTimestamp,
   } = input;
 
   // Keep the meaningful sources named and roll the long tail into "Others", so
@@ -238,14 +198,6 @@ export function buildOverviewPanels(input: {
       pct: source.share,
       points: source.points,
     })),
-  };
-
-  const depositApr: DepositAprResult = {
-    aprPercent: computeDepositApr(weeklyAuraEmissions, currentTvl),
-    assumedFdv: APR_ASSUMED_FDV,
-    assumedAllocationPct: APR_ASSUMED_ALLOCATION_PCT,
-    currentWeek,
-    nextSnapshotTimestamp,
   };
 
   // Size tiers keep the old names. The Aura column is the exclusive numeric
@@ -310,5 +262,5 @@ export function buildOverviewPanels(input: {
     tiers,
   };
 
-  return { auraSources, depositApr, depositorsAnalysis };
+  return { auraSources, depositorsAnalysis };
 }

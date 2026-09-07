@@ -24,23 +24,6 @@ export function computeHoldTimeDays(entry: LeaderboardEntry): number {
   return Math.round(usdHours / amount / 24);
 }
 
-export function computeDepositAura(entry: LeaderboardEntry): number {
-  // Deposit-only aura: base weekly deposit-holding categories (week1, week2, ...).
-  // Excludes retro_*, referral_*, and week*_protocol_* (protocol-specific bonuses).
-  let total = 0;
-  for (const [key, val] of Object.entries(entry.categories ?? {})) {
-    if (/^week\d+$/.test(key)) {
-      total += Number(val) || 0;
-    }
-  }
-  return total;
-}
-
-export function computeEfficiency(entry: LeaderboardEntry): number {
-  if (entry.deposited_amount <= 0) return 0;
-  return computeDepositAura(entry) / entry.deposited_amount;
-}
-
 export function computeFdv(
   userAura: number,
   fdv: number,

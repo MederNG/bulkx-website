@@ -180,12 +180,3 @@ export function formatSnapshotUtc(timestampMs: number): string {
   });
   return `${date}, 13:00 UTC`;
 }
-
-/** Snapshot date/time split for compact tooltip layout. */
-export function formatRemainingDuration(ms: number): string {
-  const totalMinutes = Math.floor(ms / 60_000);
-  const days = Math.floor(totalMinutes / (24 * 60));
-  const hours = Math.floor((totalMinutes % (24 * 60)) / 60);
-  const minutes = totalMinutes % 60;
-  return `${days}d ${hours}h ${minutes}m`;
-}

@@ -14,15 +14,11 @@ export default async function OverviewPage() {
   const live = buildLiveFinancialPayloadFromDisk();
 
   const panels = buildOverviewPanels({
-    currentTvl: live.currentTvl,
     totalAura: live.totalAura,
     depositWallets: live.depositWallets,
     depositSizeDistribution: metrics.depositSizeDistribution,
     ogHodlers: metrics.ogHodlers,
-    weeklyAuraEmissions: live.depositPredict.depositPool,
     categoryBreakdown: metrics.categoryBreakdown,
-    currentWeek: live.depositPredict.campaignWeek,
-    nextSnapshotTimestamp: live.depositPredict.nextSnapshotTimestamp,
   });
 
   return (

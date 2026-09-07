@@ -1,19 +1,11 @@
 "use client";
 
 import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { motion } from "framer-motion";
 import { FDV_SCENARIOS, cn, formatNumber, formatUsd } from "@/lib/utils";
 import { useNarrowViewport } from "@/lib/use-narrow-viewport";
 import { APR_TOTAL_AURA_SUPPLY } from "@/lib/overview-metrics";
 import { computeFdv } from "@/lib/percentiles";
-import {
-  predictDepositAura,
-  type DepositAuraPredictContext,
-  type DepositPredictMode,
-} from "@/lib/deposit-aura-predict";
 import { useLiveFinancials } from "@/components/live/LiveFinancialProvider";
-import { formatRemainingDuration } from "@/lib/projected-snapshot-tvl";
-import { Select } from "@/components/ui/Select";
 import { InfoTooltip } from "@/components/ui/InfoTooltip";
 import { PanelCard, PanelLabel } from "@/components/overview/PanelCard";
 import { PageHeading } from "@/components/layout/PageHeading";
@@ -271,7 +263,7 @@ type ToolTab = (typeof TOOL_TABS)[number]["id"];
 type SupplyPreset = "live" | "custom";
 
 export function CalculatorSection({ totalAuraSupply = 0 }: { totalAuraSupply?: number }) {
-  const { depositPredict, totalAura } = useLiveFinancials();
+  const { totalAura } = useLiveFinancials();
   const liveSupply = Math.round(totalAura || totalAuraSupply);
   const [tab, setTab] = useState<ToolTab>("estimator");
   // Bumped on every click and used as the underline's key. Keying on the tab
@@ -376,7 +368,12 @@ export function CalculatorSection({ totalAuraSupply = 0 }: { totalAuraSupply?: n
           result={result}
         />
       ) : (
-        <DepositAuraPredictor context={depositPredict} />
+        <PanelCard glossy glossDelay={-11} className="py-10 text-center">
+          <p className="font-label m-0 text-text-dim">Aura Predictor</p>
+          <p className="mx-auto m-0 mt-3 max-w-[560px] font-sans text-[13px] leading-relaxed text-text-secondary">
+            Coming Soon. Model what trading earns over the weeks.
+          </p>
+        </PanelCard>
       )}
     </div>
   );
@@ -1269,328 +1266,6 @@ function FdvScenarioPanel({
   );
 }
 
-function formatUsdHours(value: number): string {
-  if (value >= 1_000_000_000) return `${(value / 1_000_000_000).toFixed(2)}B`;
-  if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(2)}M`;
-  if (value >= 1_000) return `${(value / 1_000).toFixed(1)}K`;
-  return Math.round(value).toLocaleString("en-US");
-}
-
-export function DepositAuraPredictor({
-  context,
-}: {
-  context: DepositAuraPredictContext;
-}) {
-  const [deposit, setDeposit] = useState(1_000);
-  const [mode, setMode] = useState<DepositPredictMode | null>("new_deposit");
-  const [holdSinceWeek, setHoldSinceWeek] = useState<number | null>(null);
-  const [hoveredWeek, setHoveredWeek] = useState<number | null>(null);
-
-  const result = useMemo(
-    () =>
-      predictDepositAura(
-        deposit,
-        {
-          depositPool: context.depositPool,
-          cohortUsdHoursAtSnapshot: context.cohortUsdHoursAtSnapshot,
-          hoursUntilSnapshot: context.hoursUntilSnapshot,
-          hoursInWeek: context.hoursInWeek,
-          campaignWeek: context.campaignWeek,
-          weekTvl: context.weekTvl,
-          weekPool: context.weekPool,
-          weekEligibleCumUsdHours: context.weekEligibleCumUsdHours,
-          eligibleCumUsdHoursAtSnapshot: context.eligibleCumUsdHoursAtSnapshot,
-        },
-        {
-          mode: mode ?? undefined,
-          holdSinceWeek,
-        }
-      ),
-    [deposit, context, mode, holdSinceWeek]
-  );
-
-  const holdSinceActive = holdSinceWeek != null;
-  const timeUntilSnapshot = formatRemainingDuration(context.hoursUntilSnapshot * 3_600_000);
-
-  const campaignBars = useMemo(
-    () =>
-      predictDepositAura(
-        deposit,
-        {
-          depositPool: context.depositPool,
-          cohortUsdHoursAtSnapshot: context.cohortUsdHoursAtSnapshot,
-          hoursUntilSnapshot: context.hoursUntilSnapshot,
-          hoursInWeek: context.hoursInWeek,
-          campaignWeek: context.campaignWeek,
-          weekTvl: context.weekTvl,
-          weekPool: context.weekPool,
-          weekEligibleCumUsdHours: context.weekEligibleCumUsdHours,
-          eligibleCumUsdHoursAtSnapshot: context.eligibleCumUsdHoursAtSnapshot,
-        },
-        { holdSinceWeek: 1 }
-      ).weekBreakdown ?? [],
-    [deposit, context]
-  );
-
-  const bars = useMemo(() => {
-    const counted = new Map((result.weekBreakdown ?? []).map((row) => [row.week, row]));
-    const campaign = new Map(campaignBars.map((row) => [row.week, row]));
-    const selectedStart = holdSinceWeek ?? context.campaignWeek;
-
-    return Array.from({ length: context.campaignWeek }, (_, i) => i + 1).map((week) => {
-      const selected = week >= selectedStart;
-      const inProgress = week === context.campaignWeek;
-      const countedRow = counted.get(week);
-      const campaignRow = campaign.get(week);
-      let aura = campaignRow?.aura ?? 0;
-      if (countedRow) aura = countedRow.aura;
-      else if (!holdSinceActive && inProgress) aura = result.predictedAura;
-      return { week, aura, inProgress, selected };
-    });
-  }, [
-    result.weekBreakdown,
-    result.predictedAura,
-    campaignBars,
-    holdSinceWeek,
-    holdSinceActive,
-    context.campaignWeek,
-  ]);
-
-  const holdSinceOptions = Array.from({ length: context.campaignWeek }, (_, i) => i + 1);
-  const hovered = bars.find((bar) => bar.week === hoveredWeek) ?? null;
-  const shownAura = hovered?.aura ?? result.predictedAura;
-  const shownCaption = hovered
-    ? hovered.inProgress
-      ? `Week ${hovered.week} · ${timeUntilSnapshot} left`
-      : `Week ${hovered.week}`
-    : holdSinceActive
-      ? "Predicted total Aura"
-      : "Predicted deposit Aura";
-
-  return (
-    <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
-      <PanelCard glossy glossDelay={-16}>
-        <PanelLabel>Aura Predictor</PanelLabel>
-        <div className="mt-3 flex flex-1 flex-col">
-          <div className="mb-3">
-            <div className="mb-1">
-              <FieldLabel label="Hold scenario" />
-            </div>
-            <SegmentToggle
-              value={holdSinceActive ? "" : mode ?? "new_deposit"}
-              onChange={(v) => {
-                if (!v) return;
-                setHoldSinceWeek(null);
-                setMode(v as DepositPredictMode);
-              }}
-              options={[
-                { value: "new_deposit", label: "Deposit now" },
-                { value: "full_week_hold", label: "Full week hold" },
-              ]}
-            />
-          </div>
-
-          <div className="mb-3">
-            <div className="mb-1">
-              <FieldLabel label="Hold since" />
-            </div>
-            <Select
-              value={holdSinceWeek != null ? String(holdSinceWeek) : ""}
-              onChange={(v) => {
-                if (v) {
-                  setMode(null);
-                  setHoldSinceWeek(Number(v));
-                  return;
-                }
-                setHoldSinceWeek(null);
-                setMode("new_deposit");
-              }}
-              options={[
-                { value: "", label: "Not set" },
-                ...holdSinceOptions.map((week) => ({
-                  value: String(week),
-                  label: `Week ${week}`,
-                })),
-              ]}
-            />
-          </div>
-
-          <Field label="Deposit Amount ($)" value={deposit} onChange={setDeposit} step={100} />
-        </div>
-      </PanelCard>
-
-      <PanelCard glossy glossDelay={-11}>
-        <PanelLabel>Projection</PanelLabel>
-        <p className="m-0 mt-3 font-figure text-[clamp(28px,3.2vw,44px)] leading-none text-accent tabular-nums">
-          {formatNumber(Math.round(shownAura))}
-        </p>
-        <p className="m-0 mt-2 font-label text-text-muted">
-          {shownCaption}
-        </p>
-
-        <div className="mt-4 h-px w-full bg-[var(--color-line)]" />
-        <div className="grid grid-cols-2 divide-x divide-[var(--color-line)]">
-          <div className="min-w-0 px-2 py-3 text-center">
-            <p className="m-0 font-label text-text-muted">
-              Efficiency
-            </p>
-            <p className="font-data m-0 mt-1.5 truncate text-[13px] font-semibold leading-none">
-              {result.efficiency.toFixed(4)} A/$
-            </p>
-          </div>
-          <div className="min-w-0 px-2 py-3 text-center">
-            <p className="m-0 font-label text-text-muted">
-              {holdSinceActive ? "Lifetime USD-hours" : "Your USD-hours"}
-            </p>
-            <p className="font-data m-0 mt-1.5 truncate text-[13px] font-semibold leading-none">
-              {formatUsdHours(result.userUsdHours)}
-            </p>
-          </div>
-        </div>
-
-        <PredictorWeekBars bars={bars} hovered={hoveredWeek} onHover={setHoveredWeek} />
-        <PoolShareTrack pct={result.poolSharePct} />
-      </PanelCard>
-    </div>
-  );
-}
-
-function PredictorWeekBars({
-  bars,
-  hovered,
-  onHover,
-}: {
-  bars: { week: number; aura: number; inProgress: boolean; selected: boolean }[];
-  hovered: number | null;
-  onHover: (week: number | null) => void;
-}) {
-  const selectedMax = Math.max(
-    ...bars.filter((bar) => bar.selected).map((bar) => bar.aura),
-    1
-  );
-
-  return (
-    <div className="mt-4 flex min-h-0 flex-1 flex-col">
-      <div className="relative min-h-[148px] flex-1">
-        <div
-          className="absolute inset-0 flex items-stretch gap-[3px]"
-          onMouseLeave={() => onHover(null)}
-        >
-        {bars.map((bar) => {
-          const active = hovered === bar.week;
-          const pulsing = bar.selected && bar.inProgress && (hovered == null || active);
-          return (
-            <div
-              key={bar.week}
-              className="flex flex-1 cursor-default flex-col items-stretch"
-              onMouseEnter={() => onHover(bar.week)}
-              role="img"
-              aria-label={`Week ${bar.week}: ${Math.round(bar.aura)} Aura`}
-            >
-              <div className="flex min-h-0 flex-1 items-end">
-                <div
-                  className={cn(
-                    "w-full rounded-[2px] transition-[height,background-color] duration-500 ease-in-out",
-                    pulsing && "apr-week-pulse",
-                    hovered != null && !active && "opacity-45"
-                  )}
-                  style={{
-                    height: bar.selected
-                      ? `${Math.max(8, (bar.aura / selectedMax) * 100)}%`
-                      : "8%",
-                    background: active || bar.selected ? "var(--t-accent)" : "rgb(var(--t-accent-rgb) / 0.32)",
-                  }}
-                />
-              </div>
-            </div>
-          );
-        })}
-        </div>
-      </div>
-      <div className="mt-1.5 flex gap-[3px]">
-        {bars.map((bar) => (
-          <div
-            key={bar.week}
-            className={cn(
-              "min-w-0 flex-1 text-center text-[10px] leading-none tabular-nums sm:text-[11px]",
-              bar.selected ? "text-accent" : "text-text-muted"
-            )}
-          >
-            W{bar.week}
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function PoolShareTrack({ pct }: { pct: number }) {
-  const clamped = Math.min(100, Math.max(0, pct));
-  const label = pct < 0.01 ? `${pct.toFixed(4)}%` : `${pct.toFixed(2)}%`;
-
-  return (
-    <div className="mt-4">
-      <div className="flex items-baseline justify-between gap-3">
-        <p className="m-0 font-label text-text-muted">Your slice</p>
-        <p className="m-0 text-[13px] font-data text-text-secondary">{label}</p>
-      </div>
-      <div className="relative mt-1.5 h-1.5 overflow-hidden rounded-full bg-[rgb(var(--t-accent-rgb)/0.12)]">
-        <span
-          className="absolute top-0 h-full w-[3px] rounded-full bg-accent"
-          style={{ left: `min(calc(100% - 3px), ${clamped}%)` }}
-        />
-      </div>
-    </div>
-  );
-}
-
-function SegmentToggle({
-  value,
-  onChange,
-  options,
-  disabled,
-  allowDeselect,
-}: {
-  value: string;
-  onChange: (value: string) => void;
-  options: { value: string; label: string }[];
-  disabled?: boolean;
-  allowDeselect?: boolean;
-}) {
-  return (
-    <div className={cn("term-seg w-full", disabled && "pointer-events-none opacity-45")}>
-      {options.map(({ value: optionValue, label }, i) => {
-        const selected = value === optionValue;
-        return (
-          <button
-            key={optionValue || `${label}-${i}`}
-            type="button"
-            disabled={disabled}
-            onClick={() => {
-              if (allowDeselect && selected) {
-                onChange("");
-                return;
-              }
-              onChange(optionValue);
-            }}
-            aria-pressed={selected}
-            className={cn("term-seg-btn", selected ? "is-on" : "is-off")}
-          >
-            {selected && (
-              <motion.span
-                layoutId="predictor-hold-toggle"
-                className="term-seg-pill"
-                transition={{ type: "spring", stiffness: 480, damping: 32 }}
-              />
-            )}
-            <span className="relative z-10">{label}</span>
-          </button>
-        );
-      })}
-    </div>
-  );
-}
-
 function FieldLabel({
   label,
   info,
@@ -1703,55 +1378,6 @@ function CompoundInput({
     <div className="flex h-11 items-center rounded-[10px] border border-[var(--color-line-strong)] bg-[var(--color-bulk-base)] pl-3.5 pr-1.5 transition-[border-color] duration-150 focus-within:border-accent">
       {children}
       <div className="shrink-0">{trailing}</div>
-    </div>
-  );
-}
-
-function Field({
-  label,
-  info,
-  value,
-  onChange,
-  step,
-  max,
-  disabled,
-  suffix,
-}: {
-  label?: string;
-  info?: string;
-  value: number;
-  onChange: (v: number) => void;
-  step?: number;
-  max?: number;
-  disabled?: boolean;
-  /** Unit inside the box, on the right — a percent sign. */
-  suffix?: React.ReactNode;
-}) {
-  return (
-    <div className="min-w-0">
-      {label && (
-        <div className="mb-1">
-          <FieldLabel label={label} info={info} />
-        </div>
-      )}
-      <div className="relative">
-        <NumericInput
-          value={value}
-          onChange={onChange}
-          step={step}
-          max={max}
-          disabled={disabled}
-          className={cn(
-            "input-field min-w-0 tabular-nums disabled:opacity-50",
-            suffix && "pr-8"
-          )}
-        />
-        {suffix && (
-          <div className="pointer-events-none absolute inset-y-0 right-3 flex items-center">
-            {suffix}
-          </div>
-        )}
-      </div>
     </div>
   );
 }

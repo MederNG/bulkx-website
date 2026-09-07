@@ -223,32 +223,6 @@ export interface DepositAuraPredictContext {
   };
 }
 
-export interface PredictDepositAuraOptions {
-  mode?: DepositPredictMode;
-  /** Continuous holder since campaign Week N — cumulative deposit Aura through current week. */
-  holdSinceWeek?: number | null;
-}
-
-export interface HoldSinceWeekBreakdown {
-  week: number;
-  aura: number;
-  userUsdHours: number;
-  /** Hours credited in this week's snapshot window. */
-  hoursInPeriod: number;
-  /** True for the in-progress campaign week (snapshot not taken yet). */
-  inProgress: boolean;
-}
-
-export interface DepositAuraPrediction {
-  predictedAura: number;
-  userUsdHours: number;
-  totalUsdHours: number;
-  poolSharePct: number;
-  efficiency: number;
-  /** Per-week deposit Aura when Hold since is active. */
-  weekBreakdown?: HoldSinceWeekBreakdown[];
-}
-
 /** Campaign Week N start (W1 = Jun 1 launch; W2+ = Sat 13:00 UTC snapshots). */
 export function getCampaignWeekStartMs(week: number): number {
   if (week <= 1) return CAMPAIGN_LAUNCH_MS;
@@ -259,10 +233,6 @@ export function getCampaignWeekStartMs(week: number): number {
 export function getCampaignWeekEndMs(week: number): number {
   if (week === 1) return CAMPAIGN_WEEK1_SNAPSHOT_MS;
   return getCampaignWeekStartMs(week) + MS_PER_WEEK;
-}
-
-export function getCampaignWeekHours(week: number): number {
-  return (getCampaignWeekEndMs(week) - getCampaignWeekStartMs(week)) / MS_PER_HOUR;
 }
 
 function formatCampaignLaunchUtc(timestampMs: number): string {
@@ -359,22 +329,6 @@ export function computeUserWeekUsdHours(
   }
 
   return deposit * context.hoursInWeek;
-}
-
-/**
- * Hours in a hold-since week window (Sat 13:00 UTC → Sat 13:00 UTC).
- * Completed weeks use the full snapshot period; the current week uses elapsed + remaining hours.
- */
-export function resolveHoldSinceWeekHours(
-  week: number,
-  context: Pick<DepositAuraPredictContext, "campaignWeek" | "hoursInWeek" | "hoursUntilSnapshot">
-): number {
-  if (week < context.campaignWeek) {
-    return getCampaignWeekHours(week);
-  }
-
-  const hoursElapsed = Math.max(0, context.hoursInWeek - context.hoursUntilSnapshot);
-  return hoursElapsed + context.hoursUntilSnapshot;
 }
 
 export function computeDepositAuraPredictContext(
@@ -533,131 +487,6 @@ export function refreshDepositPredictClock(
   };
 }
 
-type PredictContext = Pick<
-  DepositAuraPredictContext,
-  | "depositPool"
-  | "cohortUsdHoursAtSnapshot"
-  | "hoursUntilSnapshot"
-  | "hoursInWeek"
-  | "campaignWeek"
-  | "weekTvl"
-  | "weekPool"
-  | "weekEligibleCumUsdHours"
-  | "eligibleCumUsdHoursAtSnapshot"
->;
-
-export function predictDepositAura(
-  deposit: number,
-  context: PredictContext,
-  options: PredictDepositAuraOptions = {}
-): DepositAuraPrediction {
-  const holdSinceWeek = options.holdSinceWeek ?? null;
-
-  if (holdSinceWeek != null && holdSinceWeek > 0) {
-    return predictCumulativeHoldSince(deposit, holdSinceWeek, context);
-  }
-
-  const mode = options.mode ?? "new_deposit";
-  // Lifetime USD-hours this deposit will have accrued by the snapshot. A brand
-  // new deposit starts from zero, which is why it earns far less than an
-  // established position of the same size.
-  const userUsdHours = computeUserWeekUsdHours(deposit, context, mode);
-
-  if (deposit <= 0 || userUsdHours <= 0) {
-    return {
-      predictedAura: 0,
-      userUsdHours: 0,
-      totalUsdHours: context.eligibleCumUsdHoursAtSnapshot,
-      poolSharePct: 0,
-      efficiency: 0,
-    };
-  }
-
-  // New money is not yet inside the measured cohort, so it enlarges it.
-  const totalUsdHours = context.eligibleCumUsdHoursAtSnapshot + userUsdHours;
-  const predictedAura =
-    totalUsdHours > 0 ? (userUsdHours / totalUsdHours) * context.depositPool : 0;
-
-  return {
-    predictedAura,
-    userUsdHours,
-    totalUsdHours,
-    poolSharePct: totalUsdHours > 0 ? (userUsdHours / totalUsdHours) * 100 : 0,
-    efficiency: deposit > 0 ? predictedAura / deposit : 0,
-  };
-}
-
-/**
- * Cumulative deposit Aura if the same balance were held every week since Week N.
- *
- * Completed weeks use that week's realised Aura-per-dollar, so those rows are
- * what the wallet would actually have been paid — not a model estimate.
- */
-function predictCumulativeHoldSince(
-  deposit: number,
-  holdSinceWeek: number,
-  context: PredictContext
-): DepositAuraPrediction {
-  if (deposit <= 0) {
-    return {
-      predictedAura: 0,
-      userUsdHours: 0,
-      totalUsdHours: 0,
-      poolSharePct: 0,
-      efficiency: 0,
-      weekBreakdown: [],
-    };
-  }
-
-  const weekBreakdown: HoldSinceWeekBreakdown[] = [];
-  let predictedAura = 0;
-  let poolShareSum = 0;
-  let cumulativeUsdHours = 0;
-
-  const holdStartMs = getCampaignWeekStartMs(holdSinceWeek);
-
-  for (let week = holdSinceWeek; week <= context.campaignWeek; week += 1) {
-    const inProgress = week === context.campaignWeek;
-    const weekHours = resolveHoldSinceWeekHours(week, context);
-
-    // Lifetime USD-hours accrued by the end of this week — the basis each
-    // week's pool is split on. It grows every week, which is why a steady
-    // balance earns progressively more.
-    const hoursSinceHoldStart = Math.max(
-      0,
-      (getCampaignWeekEndMs(week) - holdStartMs) / MS_PER_HOUR
-    );
-    cumulativeUsdHours = deposit * hoursSinceHoldStart;
-
-    const pool = context.weekPool?.[week] ?? context.depositPool;
-    const eligible =
-      context.weekEligibleCumUsdHours?.[week] ?? context.eligibleCumUsdHoursAtSnapshot;
-    const denominator = eligible + cumulativeUsdHours;
-
-    const weekAura = denominator > 0 ? (cumulativeUsdHours / denominator) * pool : 0;
-
-    weekBreakdown.push({
-      week,
-      aura: weekAura,
-      userUsdHours: cumulativeUsdHours,
-      hoursInPeriod: weekHours,
-      inProgress,
-    });
-    predictedAura += weekAura;
-    poolShareSum += denominator > 0 ? (cumulativeUsdHours / denominator) * 100 : 0;
-  }
-
-  return {
-    predictedAura,
-    userUsdHours: cumulativeUsdHours,
-    totalUsdHours: context.eligibleCumUsdHoursAtSnapshot,
-    poolSharePct: weekBreakdown.length > 0 ? poolShareSum / weekBreakdown.length : 0,
-    efficiency: deposit > 0 ? predictedAura / deposit : 0,
-    weekBreakdown,
-  };
-}
-
-/** Back-test helper: integrate USD-hours from deposit/withdraw events in a week window. */
 export function usdHoursFromEvents(
   events: { ts: number; type: "deposit" | "withdraw"; amount: number }[],
   periodStart: number,
