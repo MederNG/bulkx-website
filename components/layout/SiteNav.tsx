@@ -85,7 +85,11 @@ export function SiteNav() {
                 className="logo-ink-dark"
               />
             </span>
-            <span className="font-sans text-[17px] font-semibold tracking-[-0.02em] text-text-secondary">
+            {/* Truncates rather than holding its width. The corner opposite
+                carries the switch, the week clock and the Menu button, none
+                of which shrink; without this the wordmark keeps its full
+                length and that row rides over it instead of pushing it. */}
+            <span className="font-sans truncate text-[14px] font-semibold tracking-[-0.02em] text-text-secondary sm:text-[17px]">
               INTELLIGENCE
             </span>
           </Link>
@@ -113,7 +117,12 @@ export function SiteNav() {
           </nav>
         </div>
 
-        <div className="flex min-w-0 items-center justify-end gap-2.5 sm:gap-[18px]">
+        {/* shrink-0 because nothing in here can give: the switch, the ticks
+            and the Menu button all hold their size. Without it flexbox still
+            hands this side a box narrower than its contents, and `justify-end`
+            spills the overflow leftwards over the wordmark. Refusing to shrink
+            sends the shortfall to the wordmark instead, which can truncate. */}
+        <div className="flex shrink-0 items-center justify-end gap-2.5 sm:gap-[18px]">
           <HeaderCampaignStatus />
 
           {/* Flattened nav for narrow screens, where the inline bar is hidden. */}

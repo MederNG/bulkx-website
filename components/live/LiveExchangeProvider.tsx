@@ -41,7 +41,26 @@ export function LiveExchangeProvider({
         const response = await fetch("/api/live-exchange");
         if (!response.ok) return;
         const next: LiveExchangePayload = await response.json();
-        setData(next);
+        // Skip the write when nothing moved. Every consumer under this
+        // provider — KPI cards, sparklines, the header — re-renders on
+        // setData, and the poll lands every 20s whether the numbers changed
+        // or not. On Overview that also restarts the spark morphs for no
+        // reason, which on a desktop full of charts is the "page feels a
+        // bit sticky" tax between real updates.
+        setData((prev) =>
+          prev.updatedAt === next.updatedAt &&
+          prev.volume24hUsd === next.volume24hUsd &&
+          prev.volumeTotalUsd === next.volumeTotalUsd &&
+          prev.openInterestUsd === next.openInterestUsd &&
+          prev.activeTraders === next.activeTraders &&
+          prev.tradesTotal === next.tradesTotal &&
+          prev.tps === next.tps &&
+          prev.totalAccounts === next.totalAccounts &&
+          prev.oiHistory.length === next.oiHistory.length &&
+          prev.tradersHistory.length === next.tradersHistory.length
+            ? prev
+            : next,
+        );
       } catch {
         // Keep the last good payload.
       } finally {

@@ -34,8 +34,11 @@ function WeekTicks({ today }: { today: number | null }) {
       {WEEK_DAYS.map((day, i) => {
         const current = today != null && i === today;
         const past = today != null && i < today;
+        // The hit box is wider than the mark it holds, to give the hover a
+        // target. It gives a pixel of that back on phones, where seven of
+        // them add up to the room the wordmark needs.
         return (
-          <div key={day} className="week-tick-hit flex h-[13px] w-[9px] cursor-default items-center justify-center" title={day}>
+          <div key={day} className="week-tick-hit flex h-[13px] w-[8px] cursor-default items-center justify-center sm:w-[9px]" title={day}>
             <div
               className={cn(
                 "week-tick h-[9px] w-[7px]",
@@ -70,19 +73,26 @@ export function HeaderCampaignStatus() {
   const left = remainingMs != null ? formatLeftCompact(remainingMs) : "—";
 
   return (
-    <div className="flex items-center gap-2.5 lg:gap-[18px]">
-      {/* Where the TPS readout used to sit. The week clock is the only other
-          thing in this corner, so the rule stays at every width now that both
-          sides of it always render. */}
+    <div className="flex items-center gap-2 sm:gap-2.5 lg:gap-[18px]">
+      {/* Where the TPS readout used to sit. The rule between the switch and
+          the week clock is desktop-only: below the inline nav's breakpoint
+          this corner also carries the Menu button, and every pixel it spends
+          is one the wordmark loses. */}
       <ThemeToggle />
-      <span className="h-[18px] w-px bg-[var(--color-line-strong)]" aria-hidden />
+      <span className="hidden h-[18px] w-px bg-[var(--color-line-strong)] lg:block" aria-hidden />
       <span
         className="flex shrink-0 items-center gap-1.5 lg:gap-[9px]"
         title={`Week ${week} · ${left}`}
       >
         <span className="font-label text-text-muted">W{week}</span>
         <WeekTicks today={today} />
-        <span className="font-data hidden whitespace-nowrap text-[11px] text-text-muted min-[400px]:inline">
+        {/* Desktop only. Below the inline nav's breakpoint the corner also
+            carries the switch and the Menu button, and the countdown was the
+            piece that pushed the row wide enough to ride over the wordmark.
+            It is the least load-bearing of the three — the week number and
+            its ticks already say where the week stands, and the exact hours
+            are still in the group's title. */}
+        <span className="font-data hidden whitespace-nowrap text-[11px] text-text-muted lg:inline">
           {left}
         </span>
       </span>

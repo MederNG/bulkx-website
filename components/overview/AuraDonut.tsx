@@ -144,6 +144,180 @@ interface DonutRow {
 }
 
 /**
+ * The ring, and the sweep that draws it in.
+ *
+ * Recharts' own entrance animation stays off: it runs through react-smooth,
+ * which was observed leaving sectors with no rendered path at all here. So
+ * the wipe is driven from this component instead — `endAngle` stepped from
+ * the start angle round to a full turn, with Recharts redrawing the arcs
+ * each step.
+ *
+ * Two things about how that used to be done cost the sweep its smoothness,
+ * and both were paid on every one of its ~55 steps.
+ *
+ * The step ran on `setTimeout(…, 16)`. A timer is not tied to the display,
+ * so the real interval was 16ms *plus* the step's own render, and it drifted
+ * against the frame boundary — some frames showed the previous arc again,
+ * which is the stutter. On requestAnimationFrame the step is measured off
+ * the frame's own timestamp and lands on the frame that will show it. It
+ * also idles in a background tab instead of burning the sweep down unseen,
+ * so the animation is still there when the tab is finally opened.
+ *
+ * And the counter lived in `AuraDonut`, one level up, so every step also
+ * re-rendered the legend beside the ring — a row per slice, each with a
+ * Framer Motion colour swatch, none of which the sweep touches. Down here a
+ * step redraws the arcs and nothing else.
+ */
+function DonutRing({
+  width,
+  innerRadius,
+  outerRadius,
+  chartData,
+  hoverIndex,
+  paintIndex,
+  activeVisible,
+  borrowColor,
+  onHoverIndex,
+  onLeave,
+}: {
+  width: number;
+  innerRadius: number;
+  outerRadius: number;
+  chartData: DonutRow[];
+  hoverIndex: number | undefined;
+  paintIndex: number | undefined;
+  activeVisible: boolean;
+  /** Non-null while a secondary slice is lit and has taken the gold: the
+   *  primary wears this instead for as long as that lasts. */
+  borrowColor: string | null;
+  onHoverIndex: (index: number) => void;
+  onLeave: () => void;
+}) {
+  const [sweep, setSweep] = useState(0);
+  // Freeze the box the sweep was measured for. On Overview this ring shares
+  // a row with the Volume chart, which lands its own data a beat later and
+  // reallocates the row's height mid-wipe — every ResizeObserver tick then
+  // handed Recharts a new width and the arcs jumped instead of travelling.
+  // Aura's Source Breakdown never sees that: its well has a fixed min-height,
+  // so the first measure is the last. Holding the entrance geometry here
+  // makes Overview behave the same way for the wipe; after it finishes we
+  // follow live size again so a real resize still lands.
+  const [geom, setGeom] = useState({ width, innerRadius, outerRadius });
+  const sweeping = sweep < 1;
+
+  useEffect(() => {
+    if (sweeping) return;
+    setGeom({ width, innerRadius, outerRadius });
+  }, [width, innerRadius, outerRadius, sweeping]);
+
+  // Runs once, on mount — this component only mounts once the row has been
+  // measured, and takes no dependencies, so a resize mid-sweep cannot tear
+  // the loop down. It used to: the cleanup cancelled the timer, and the
+  // re-run bailed straight back out on a ref that had already latched. The
+  // sweep then stayed frozen at whatever it had reached, and at 0 that is an
+  // `endAngle` equal to the start angle — sectors of no length at all, so the
+  // ring never appeared while the centre readout (a plain HTML overlay)
+  // carried on showing the total.
+  //
+  // That ref is gone rather than moved down here with it. With no
+  // dependencies there is nothing left for it to guard, and it actively
+  // breaks the one re-run that does still happen: StrictMode mounts, tears
+  // down and remounts, so the cleanup cancels both timers and a latched ref
+  // sends the second mount straight out again — never scheduling anything,
+  // and leaving exactly the empty ring described above. Restarting the sweep
+  // on a genuine remount is the correct behaviour anyway.
+  useEffect(() => {
+    let frame = 0;
+    let start = 0;
+    const step = (now: number) => {
+      if (start === 0) start = now;
+      const t = Math.min(1, (now - start) / SWEEP_MS);
+      setSweep(1 - Math.pow(1 - t, 3)); // ease-out
+      if (t < 1) frame = requestAnimationFrame(step);
+    };
+    frame = requestAnimationFrame(step);
+
+    // A hidden tab gets no frames, and this ring at sweep 0 is not a faint
+    // ring — Recharts draws zero-length sectors as no path at all. So rather
+    // than leave a backgrounded tab holding an empty box until it is looked
+    // at, snap the sweep home once it is clear no frames are coming. Timers
+    // do still run there, which is what makes this reachable. On a visible
+    // tab the sweep has been done for two seconds by the time this fires and
+    // the state is already 1, so it costs nothing.
+    const fallback = window.setTimeout(() => {
+      cancelAnimationFrame(frame);
+      setSweep(1);
+    }, SWEEP_MS * 3);
+
+    return () => {
+      cancelAnimationFrame(frame);
+      window.clearTimeout(fallback);
+    };
+  }, []);
+
+  return (
+    <PieChart width={geom.width} height={geom.width}>
+      <Pie
+        data={chartData}
+        dataKey="share"
+        nameKey="category"
+        cx="50%"
+        cy="50%"
+        // Ratios of the measured box rather than fixed pixels, so the
+        // ring can never outgrow its box on a narrow viewport — it
+        // stays correctly sized at every width instead of only at the
+        // one a hardcoded radius would have been tuned for.
+        innerRadius={geom.innerRadius}
+        outerRadius={geom.outerRadius}
+        startAngle={START_ANGLE}
+        endAngle={START_ANGLE - 360 * sweep}
+        // Scaled with the sweep rather than switched on at the end:
+        // snapping them to full size on the last step visibly squeezed
+        // every sector to make room, then let it spring back.
+        minAngle={5 * sweep}
+        paddingAngle={(chartData.length > 5 ? 1 : 2) * sweep}
+        isAnimationActive={false}
+        activeIndex={paintIndex}
+        activeShape={(props: unknown) =>
+          renderActiveShape(
+            props,
+            activeVisible,
+            paintIndex != null ? chartData[paintIndex].color : CHART_GOLD,
+            paintIndex != null,
+            paintIndex ?? 0
+          )
+        }
+        onMouseEnter={(_, i) => onHoverIndex(i)}
+        onMouseLeave={onLeave}
+      >
+        {chartData.map((row, i) => {
+          const isPrimary = i === 0;
+          // Gold stays on the primary at rest; on a secondary hover it
+          // borrows that slice's slate so the gold can move over.
+          const fill =
+            isPrimary && borrowColor != null
+              ? borrowColor
+              : isPrimary
+                ? CHART_GOLD
+                : row.color;
+          return (
+            <Cell
+              key={row.category}
+              fill={fill}
+              stroke="var(--color-bulk-base)"
+              strokeWidth={1}
+              opacity={hoverIndex == null || hoverIndex === i ? 1 : 0.5}
+              className={undefined}
+              style={{ transition: "fill 0.5s cubic-bezier(0.4, 0, 0.2, 1)" }}
+            />
+          );
+        })}
+      </Pie>
+    </PieChart>
+  );
+}
+
+/**
  * Aura-by-source ring — the same Recharts donut the Aura Sources page uses,
  * so both views share one sweep-in animation and hover treatment.
  */
@@ -219,6 +393,16 @@ export function AuraDonut({
   // size, which a transform can't skew.
   const rowRef = useRef<HTMLDivElement | null>(null);
   const [avail, setAvail] = useState({ w: 0, h: 0, legendFloor: 0 });
+  // Overview shares a flex row with the Volume chart, which is empty for a
+  // beat and then fills in — every pass reallocates this row's height. Aura's
+  // Source Breakdown never has that neighbour, so its first measure is final
+  // and the wipe reads clean. Waiting out the shuffle before mounting the
+  // ring means Overview starts the same wipe on a settled box instead of
+  // mid-reflow.
+  const [ringMountWidth, setRingMountWidth] = useState(0);
+  const ringShownRef = useRef(false);
+  const sweepLockUntilRef = useRef(0);
+  const widthRef = useRef(0);
 
   useEffect(() => {
     const el = rowRef.current;
@@ -276,40 +460,36 @@ export function AuraDonut({
           Math.min(MIN_RING, avail.h),
           Math.min(avail.h, leftover)
         );
-
-  // Recharts' own entrance runs through react-smooth, which ticks on
-  // requestAnimationFrame and was observed leaving sectors with no rendered
-  // path at all here. So the sweep is driven manually instead: `endAngle` is
-  // stepped from the start angle round to a full turn on a plain timer, and
-  // Recharts redraws the arcs each step. Same clockwise wipe as the built-in
-  // load animation, without the rAF dependency.
-  const [sweep, setSweep] = useState(0);
-  const sweptRef = useRef(false);
-
-  // Keyed on "has the row been measured yet", not on the measurement itself.
-  // Depending on `width` meant any resize mid-sweep tore the effect down —
-  // the cleanup cancelled the timer, and the re-run bailed straight back out
-  // on `sweptRef`, which had already latched. The sweep then stayed frozen at
-  // whatever it had reached, and at 0 that is an `endAngle` equal to the start
-  // angle: sectors of no length at all, so the ring never appeared while the
-  // centre readout (a plain HTML overlay) carried on showing the total.
-  const measured = width > 0;
+  widthRef.current = width;
 
   useEffect(() => {
-    if (!measured || sweptRef.current) return;
-    sweptRef.current = true;
-
-    let timer = 0;
-    const start = performance.now();
-    const step = () => {
-      const t = Math.min(1, (performance.now() - start) / SWEEP_MS);
-      setSweep(1 - Math.pow(1 - t, 3)); // ease-out
-      if (t < 1) timer = window.setTimeout(step, 16);
-    };
-    timer = window.setTimeout(step, 30);
-
-    return () => window.clearTimeout(timer);
-  }, [measured]);
+    if (width <= 0) return;
+    if (!ringShownRef.current) {
+      // Quiet window: as long as `width` keeps moving, this timer resets, so
+      // the ring only mounts once the Volume neighbour (or anything else
+      // reshaping the row) has stopped. Matches the settled first paint Aura
+      // gets from its fixed well.
+      let unlock = 0;
+      const settle = window.setTimeout(() => {
+        ringShownRef.current = true;
+        setRingMountWidth(widthRef.current);
+        // Hold the box still for the wipe — a Volume load landing mid-sweep
+        // used to resize the parent and make the arcs jump.
+        sweepLockUntilRef.current = performance.now() + SWEEP_MS + 80;
+        unlock = window.setTimeout(() => {
+          setRingMountWidth((prev) =>
+            prev === widthRef.current ? prev : widthRef.current,
+          );
+        }, SWEEP_MS + 80);
+      }, 120);
+      return () => {
+        window.clearTimeout(settle);
+        window.clearTimeout(unlock);
+      };
+    }
+    if (performance.now() < sweepLockUntilRef.current) return;
+    setRingMountWidth((prev) => (prev === width ? prev : width));
+  }, [width]);
 
   const chartData = useMemo<DonutRow[]>(
     () =>
@@ -357,14 +537,17 @@ export function AuraDonut({
   // glow headroom alone would take the radius negative — which then read as
   // an inset the size of the headroom and put a margin on the box while it
   // had no geometry at all.
+  // Prefer the settled mount size so the centre readout and the ring agree
+  // during the deferred entrance; fall back to the live measure before that.
+  const paintWidth = ringMountWidth > 0 ? ringMountWidth : width;
   const outerRadius = Math.max(
     0,
-    Math.min(width * RING_OUTER_RATIO, width / 2 - GLOW_HEADROOM)
+    Math.min(paintWidth * RING_OUTER_RATIO, paintWidth / 2 - GLOW_HEADROOM)
   );
   const innerRadius = outerRadius * (RING_INNER_RATIO / RING_OUTER_RATIO);
   /** Distance from the canvas's left edge to the ring's — the ring is
    * centred in a square box that is deliberately larger than it. */
-  const ringLeftInset = width / 2 - outerRadius;
+  const ringLeftInset = paintWidth / 2 - outerRadius;
   // The centre readout scales with the hole it sits in. It used to be a
   // fixed 18px, which fits a full-size donut but runs out over the ring as
   // soon as a shorter viewport shrinks the ring around it. Capped at the
@@ -410,78 +593,33 @@ export function AuraDonut({
       <div
         className={cn("relative shrink-0", stacked && "mx-auto")}
         style={
-          width > 0
+          paintWidth > 0
             ? {
-                width,
-                height: width,
+                width: paintWidth,
+                height: paintWidth,
                 marginLeft: stacked ? undefined : -ringLeftInset,
               }
             : undefined
         }
       >
-        {width > 0 && (
-          <PieChart width={width} height={width}>
-            <Pie
-              data={chartData}
-              dataKey="share"
-              nameKey="category"
-              cx="50%"
-              cy="50%"
-              // Ratios of the measured box rather than fixed pixels, so the
-              // ring can never outgrow its box on a narrow viewport — it
-              // stays correctly sized at every width instead of only at the
-              // one a hardcoded radius would have been tuned for.
-              innerRadius={innerRadius}
-              outerRadius={outerRadius}
-              startAngle={START_ANGLE}
-              endAngle={START_ANGLE - 360 * sweep}
-              // Scaled with the sweep rather than switched on at the end:
-              // snapping them to full size on the last step visibly squeezed
-              // every sector to make room, then let it spring back.
-              minAngle={5 * sweep}
-              paddingAngle={(chartData.length > 5 ? 1 : 2) * sweep}
-              isAnimationActive={false}
-              activeIndex={paintIndex}
-              activeShape={(props: unknown) =>
-                renderActiveShape(
-                  props,
-                  activeVisible,
-                  paintIndex != null ? chartData[paintIndex].color : CHART_GOLD,
-                  paintIndex != null,
-                  paintIndex ?? 0
-                )
-              }
-              onMouseEnter={(_, i) => setHoverIndex(i)}
-              onMouseLeave={() => {
-                if (!controlled) setHoverIndex(undefined);
-              }}
-            >
-              {chartData.map((row, i) => {
-                const isPrimary = i === 0;
-                // Gold stays on the primary at rest; on a secondary hover it
-                // borrows that slice's slate so the gold can move over.
-                const fill =
-                  isPrimary && borrowColor != null
-                    ? borrowColor
-                    : isPrimary
-                      ? CHART_GOLD
-                      : row.color;
-                return (
-                  <Cell
-                    key={row.category}
-                    fill={fill}
-                    stroke="var(--color-bulk-base)"
-                    strokeWidth={1}
-                    opacity={
-                      hoverIndex == null || hoverIndex === i ? 1 : 0.5
-                    }
-                    className={undefined}
-                    style={{ transition: "fill 0.5s cubic-bezier(0.4, 0, 0.2, 1)" }}
-                  />
-                );
-              })}
-            </Pie>
-          </PieChart>
+        {/* Mounted only once the row has settled, which is also what
+            starts the sweep — the ring owns that state, so a step redraws
+            the arcs without touching the legend below. */}
+        {ringMountWidth > 0 && (
+          <DonutRing
+            width={ringMountWidth}
+            innerRadius={innerRadius}
+            outerRadius={outerRadius}
+            chartData={chartData}
+            hoverIndex={hoverIndex}
+            paintIndex={paintIndex}
+            activeVisible={activeVisible}
+            borrowColor={borrowColor}
+            onHoverIndex={setHoverIndex}
+            onLeave={() => {
+              if (!controlled) setHoverIndex(undefined);
+            }}
+          />
         )}
 
         {/* Constrained to the hole rather than the whole canvas, so a long
