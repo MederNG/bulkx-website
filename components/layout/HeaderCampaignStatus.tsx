@@ -8,6 +8,19 @@ import { cn } from "@/lib/utils";
 const WEEK_DAYS = ["Sat", "Sun", "Mon", "Tue", "Wed", "Thu", "Fri"] as const;
 const MS_DAY = 86_400_000;
 
+function utcMidnight(ms: number): number {
+  const d = new Date(ms);
+  return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
+}
+
+/** Tick index for Sat→Fri labels. Uses the UTC calendar day, not 24h
+ * slices from Saturday 13:00 — those stay on Sunday until Monday 13:00 UTC. */
+function campaignDayIndex(nowMs: number, nextSnapshotMs: number): number {
+  const weekStartMs = nextSnapshotMs - 7 * MS_DAY;
+  const days = Math.floor((utcMidnight(nowMs) - utcMidnight(weekStartMs)) / MS_DAY);
+  return Math.min(6, Math.max(0, days));
+}
+
 function formatTps(value: number | null): string {
   if (value == null) return "—";
   if (value >= 100) return value.toFixed(0);
@@ -52,9 +65,7 @@ export function HeaderCampaignStatus() {
 
   useEffect(() => {
     const update = () => {
-      const start = nextSnapshot - 7 * MS_DAY;
-      const index = Math.floor((Date.now() - start) / MS_DAY);
-      setToday(Math.min(6, Math.max(0, index)));
+      setToday(campaignDayIndex(Date.now(), nextSnapshot));
       setRemainingMs(Math.max(0, nextSnapshot - Date.now()));
     };
     update();
