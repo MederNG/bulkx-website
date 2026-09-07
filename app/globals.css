@@ -1551,9 +1551,18 @@ input[type="number"] {
    centre to the furthest corner. Registered rather than a plain variable so
    it can be animated at all: an unregistered custom property has no type, so
    the browser can only flip it between keyframes instead of interpolating.
-   It inherits because the ring rides the same front from a pseudo-element. */
+   It inherits because the ring rides the same front from a pseudo-element.
+
+   The syntax is `<length-percentage>` and not the `<percentage>` this only
+   ever holds, because the CSS minifier rewrites `0%` to a bare `0` — correct
+   for a length, fatal here: `0` does not parse as a `<percentage>`, the whole
+   at-rule is then dropped as invalid, and the property silently falls back to
+   an unregistered one that jumps between keyframes instead of sweeping. That
+   shipped once and reached production as a black disc snapping on and off
+   while dev, unminified, was perfectly smooth. Accepting lengths as well
+   costs nothing and leaves the minified `0` valid. */
 @property --theme-wave {
-  syntax: "<percentage>";
+  syntax: "<length-percentage>";
   inherits: true;
   initial-value: 0%;
 }
