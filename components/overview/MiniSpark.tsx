@@ -156,6 +156,9 @@ export function MiniSpark({
   edgeLabels?: boolean;
 }) {
   const gradId = useId();
+  const meshId = useId();
+  const fadeId = useId();
+  const maskId = useId();
   const [hover, setHover] = useState<number | null>(null);
   const geo = useMorphedSpark(rows);
   const active = hover != null && geo ? geo.pts[hover] : null;
@@ -223,16 +226,41 @@ export function MiniSpark({
           aria-hidden
         >
           <defs>
+            {/* Flat wash under the mesh, so the fill still reads as solid
+                colour where the mesh dots leave gaps. */}
             <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor={CHART_GOLD} stopOpacity="0.26" />
-              <stop offset="100%" stopColor={CHART_GOLD} stopOpacity="0" />
+              <stop offset="0%" stopColor={CHART_GOLD} stopOpacity="0.3" />
+              <stop offset="100%" stopColor={CHART_GOLD} stopOpacity="0.04" />
             </linearGradient>
+            {/* Mosaic: a dot lattice turned 45 degrees so it reads as a fine
+                diamond mesh rather than as rows. The viewBox is drawn with
+                preserveAspectRatio="none", so the tile stretches with the
+                card — intended, it keeps the mesh density constant. */}
+            <pattern
+              id={meshId}
+              width="4"
+              height="4"
+              patternUnits="userSpaceOnUse"
+              patternTransform="rotate(45)"
+            >
+              <circle cx="1" cy="1" r="0.55" fill={CHART_GOLD} fillOpacity="0.55" />
+            </pattern>
+            {/* Depth fade for the mesh. White here is a mask channel, not a
+                colour: it must stay white in both themes. */}
+            <linearGradient id={fadeId} x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#fff" stopOpacity="0.9" />
+              <stop offset="100%" stopColor="#fff" stopOpacity="0.1" />
+            </linearGradient>
+            <mask id={maskId}>
+              <rect x="0" y="0" width={VW} height={VH} fill={`url(#${fadeId})`} />
+            </mask>
           </defs>
           <path d={geo.area} fill={`url(#${gradId})`} />
+          <path d={geo.area} fill={`url(#${meshId})`} mask={`url(#${maskId})`} />
           <path
             d={geo.line}
             fill="none"
-            stroke={CHART_GOLD}
+            stroke="var(--t-spark-line)"
             strokeWidth="1.5"
             strokeLinejoin="round"
             strokeLinecap="round"

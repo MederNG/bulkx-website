@@ -70,6 +70,9 @@
   --t-badge-face: #111e16;
   --t-shimmer-dim: #c8c8c8;
   --t-shimmer-hi: #ffffff;
+  /* Spark line rides above the accent wash, so it is the plane's contrast
+     colour rather than the accent: white on the dark plane, ink on cream. */
+  --t-spark-line: #ffffff;
   /* Wash used for hover/idle veils. Light flips it so the same rules tint
      downward on cream instead of disappearing into it. */
   --t-veil-rgb: 255 255 255;
@@ -121,6 +124,7 @@
   --t-badge-face: #eaf6f1;
   --t-shimmer-dim: #b8b2a4;
   --t-shimmer-hi: #ffffff;
+  --t-spark-line: #1b1a14;
   --t-veil-rgb: 27 26 20;
 }
 
