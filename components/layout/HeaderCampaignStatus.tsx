@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useLiveFinancials } from "@/components/live/LiveFinancialProvider";
-import { useLiveExchange } from "@/components/live/LiveExchangeProvider";
+import { ThemeToggle } from "@/components/theme/ThemeToggle";
 import { cn } from "@/lib/utils";
 
 const WEEK_DAYS = ["Sat", "Sun", "Mon", "Tue", "Wed", "Thu", "Fri"] as const;
@@ -19,13 +19,6 @@ function campaignDayIndex(nowMs: number, nextSnapshotMs: number): number {
   const weekStartMs = nextSnapshotMs - 7 * MS_DAY;
   const days = Math.floor((utcMidnight(nowMs) - utcMidnight(weekStartMs)) / MS_DAY);
   return Math.min(6, Math.max(0, days));
-}
-
-function formatTps(value: number | null): string {
-  if (value == null) return "—";
-  if (value >= 100) return value.toFixed(0);
-  if (value >= 10) return value.toFixed(1);
-  return value.toFixed(2);
 }
 
 function formatLeftCompact(ms: number): string {
@@ -59,7 +52,6 @@ function WeekTicks({ today }: { today: number | null }) {
 
 export function HeaderCampaignStatus() {
   const live = useLiveFinancials();
-  const exchange = useLiveExchange();
   const nextSnapshot = live.campaign.nextSnapshotTimestamp;
   const [today, setToday] = useState<number | null>(null);
   const [remainingMs, setRemainingMs] = useState<number | null>(null);
@@ -79,11 +71,11 @@ export function HeaderCampaignStatus() {
 
   return (
     <div className="flex items-center gap-2.5 lg:gap-[18px]">
-      <span className="hidden items-baseline gap-[7px] lg:flex">
-        <span className="font-label text-text-muted">TPS</span>
-        <span className="font-data text-[12px] text-text-secondary">{formatTps(exchange.tps)}</span>
-      </span>
-      <span className="hidden h-[18px] w-px bg-[var(--color-line-strong)] lg:block" aria-hidden />
+      {/* Where the TPS readout used to sit. The week clock is the only other
+          thing in this corner, so the rule stays at every width now that both
+          sides of it always render. */}
+      <ThemeToggle />
+      <span className="h-[18px] w-px bg-[var(--color-line-strong)]" aria-hidden />
       <span
         className="flex shrink-0 items-center gap-1.5 lg:gap-[9px]"
         title={`Week ${week} · ${left}`}

@@ -6,7 +6,6 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { ChevronDown } from "lucide-react";
 import { HeaderCampaignStatus } from "@/components/layout/HeaderCampaignStatus";
-import { ThemeToggle } from "@/components/theme/ThemeToggle";
 import { cn } from "@/lib/utils";
 
 interface NavItem {
@@ -117,7 +116,6 @@ export function SiteNav() {
         <div className="flex min-w-0 items-center justify-end gap-2.5 sm:gap-[18px]">
           <HeaderCampaignStatus />
 
-          <ThemeToggle />
           {/* Flattened nav for narrow screens, where the inline bar is hidden. */}
           <div ref={menuRef} className="relative lg:hidden">
             <button

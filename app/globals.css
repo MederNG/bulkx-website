@@ -1513,3 +1513,119 @@ input[type="number"] {
   }
 }
 
+
+/* The theme switch's sky. Both halves of the turn — the rotor carrying the
+   sun and moon, and each body counter-rotating so it stays upright — run on
+   one curve, so a body's orientation never drifts out of step with the arc
+   it is travelling. See components/theme/ThemeToggle.tsx for the geometry;
+   this file owns only the turn itself, because `data-theme` is on <html>
+   before the first paint and React state is not. */
+.theme-sky-rotor {
+  transform: rotate(0deg);
+  transition: transform 1000ms cubic-bezier(0.5, 0.15, 0.5, 0.85);
+}
+
+/* Its own declaration rather than one shared with the rotor: the disc rides
+   the rotor's turn, but its colour is a theme colour and eases on the
+   palette's own curve. */
+.theme-sky-body {
+  transform: rotate(0deg);
+  transition:
+    transform 1000ms cubic-bezier(0.5, 0.15, 0.5, 0.85),
+    background-color 1080ms cubic-bezier(0.4, 0, 0.2, 1),
+    box-shadow 200ms ease-out;
+}
+
+/* Counter-clockwise, so the moon leaves down the left and the sun comes up
+   the right. Returning to dark runs the same path backwards, which is what
+   keeps each body on its own side of the sky. */
+:root[data-theme="light"] .theme-sky-rotor {
+  transform: rotate(-180deg);
+}
+
+:root[data-theme="light"] .theme-sky-body {
+  transform: rotate(180deg);
+}
+
+/* How far the wave front has travelled, as a share of the distance from the
+   centre to the furthest corner. Registered rather than a plain variable so
+   it can be animated at all: an unregistered custom property has no type, so
+   the browser can only flip it between keyframes instead of interpolating.
+   It inherits because the ring rides the same front from a pseudo-element. */
+@property --theme-wave {
+  syntax: "<percentage>";
+  inherits: true;
+  initial-value: 0%;
+}
+
+/* The palette crossing over, as a drop landing in the middle of the page.
+
+   Not a transition on the colours themselves — that was the first attempt,
+   and interpolating a colour on every element at once dropped the switch
+   from ~90fps to about 20, which is worse to look at than the snap it was
+   replacing. This is one full-screen layer painted with the ground the page
+   is leaving; the new palette is already underneath it from the first frame,
+   and the layer opens a hole at the centre that widens until it clears the
+   corners.
+
+   The hole is a mask rather than a clip, because its edge has to be soft:
+   a hard circle expanding across the viewport reads as a wipe and is exactly
+   the kind of high-contrast edge that makes the eye flinch. The feathered
+   band spreads the brightness change over ~20% of the radius, so no pixel
+   ever jumps between the two palettes — it crossfades through the front. */
+.theme-veil {
+  position: fixed;
+  inset: 0;
+  z-index: 68;
+  pointer-events: none;
+  --theme-wave: 0%;
+  /* Opaque outside the front, clear inside it. Stops past 100% are what let
+     the feather itself finish travelling once the solid edge has already
+     passed the furthest corner. */
+  -webkit-mask-image: radial-gradient(
+    circle at 50% 50%,
+    transparent 0,
+    transparent var(--theme-wave),
+    #000 calc(var(--theme-wave) + 20%)
+  );
+  mask-image: radial-gradient(
+    circle at 50% 50%,
+    transparent 0,
+    transparent var(--theme-wave),
+    #000 calc(var(--theme-wave) + 20%)
+  );
+  animation: theme-wave 1400ms cubic-bezier(0.22, 0.61, 0.36, 1) both;
+}
+
+/* The ripple the drop leaves: one faint ring sitting on the wave front. It
+   is the only part that is *added* light rather than light being taken away,
+   and it is what makes the front read as water rather than as a mask. Kept
+   under a tenth of an alpha — any brighter and it becomes the hard edge the
+   feather exists to avoid. */
+.theme-veil::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    circle at 50% 50%,
+    rgb(var(--t-veil-rgb) / 0) calc(var(--theme-wave) - 7%),
+    rgb(var(--t-veil-rgb) / 0.09) var(--theme-wave),
+    rgb(var(--t-veil-rgb) / 0) calc(var(--theme-wave) + 9%)
+  );
+}
+
+@keyframes theme-wave {
+  from {
+    /* Not a full 1: the switch itself stays visible from the first frame, so
+       the turn that started the whole thing is never hidden behind its own
+       result. At this depth the instant under it is imperceptible anyway. */
+    opacity: 0.88;
+    --theme-wave: 0%;
+  }
+  to {
+    /* Past the corner by the width of the feather, so the last thing to
+       leave the screen is the softest part of the front. */
+    opacity: 0;
+    --theme-wave: 122%;
+  }
+}
