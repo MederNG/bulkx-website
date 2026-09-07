@@ -12,10 +12,12 @@ export interface BulkstatsTradeStats {
   uniqueTraders: number;
 }
 
-export async function fetchBulkstatsTradeStats(): Promise<BulkstatsTradeStats | null> {
+export async function fetchBulkstatsTradeStats(
+  revalidate = 15,
+): Promise<BulkstatsTradeStats | null> {
   const res = await fetch(`${BULKSTATS_API_BASE}/api/analytics/stats`, {
     headers: { Accept: "application/json", "User-Agent": "AURA-Intelligence/1.0" },
-    next: { revalidate: 15 },
+    next: { revalidate },
   });
   if (!res.ok) return null;
   const data = (await res.json()) as {

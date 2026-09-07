@@ -3,7 +3,7 @@ import { AuraSourcesClient } from "@/components/lookup/AuraSourcesClient";
 import { computeDashboardMetrics } from "@/lib/stats";
 
 export const dynamic = "force-static";
-export const revalidate = 60;
+export const revalidate = 3600;
 
 export default async function AuraPage() {
   const metrics = await computeDashboardMetrics();

@@ -48,7 +48,17 @@ function tpsFromSample(unique: number, at: number): number | null {
   return (unique - prev.unique) / dt;
 }
 
-export async function buildLiveExchangePayload(): Promise<LiveExchangePayload> {
+/**
+ * `revalidate` is the fetch-cache window for the upstream calls. It matters
+ * beyond freshness: a route's revalidate is the minimum of every cache used
+ * while rendering it, so the 15s default here pinned every statically
+ * generated page to a 15s window through the root layout. The layout passes
+ * a long one — its payload is baked into HTML that is already cached for an
+ * hour, and the client provider polls /api/live-exchange on mount anyway.
+ */
+export async function buildLiveExchangePayload(
+  revalidate?: number,
+): Promise<LiveExchangePayload> {
   const now = Date.now();
   if (payloadCache && now - payloadCache.at < LIVE_EXCHANGE_TTL_MS) {
     return payloadCache.data;
@@ -56,10 +66,11 @@ export async function buildLiveExchangePayload(): Promise<LiveExchangePayload> {
 
   try {
     const [stats, metrics, candleVolume, fillStats] = await Promise.all([
-      fetchExchangeStats(),
-      fetchExchangeMetrics(true),
-      sumCandleVolumes(),
-      fetchBulkstatsTradeStats(),
+      fetchExchangeStats(revalidate),
+      // no-store only on the live API path; a static render must not use it.
+      fetchExchangeMetrics(revalidate == null, revalidate),
+      sumCandleVolumes(revalidate),
+      fetchBulkstatsTradeStats(revalidate),
     ]);
     const unique = Number(metrics?.unique_submissions) || 0;
     const sampled = unique > 0 ? tpsFromSample(unique, Date.now()) : null;

@@ -78,7 +78,10 @@ export default async function RootLayout({
   // leaderboard. Exchange payload is 15s-cached API data — needed here so
   // the header TPS and Overview KPIs share one provider without a $0 flash.
   const live = LIVE_FINANCIAL_SEED;
-  const exchange = await buildLiveExchangePayload();
+  // One hour, matching this layout's own revalidate. A shorter window here
+  // would pin every page to it, and the figures are corrected by the client
+  // provider's first poll regardless.
+  const exchange = await buildLiveExchangePayload(3600);
 
   return (
     <html

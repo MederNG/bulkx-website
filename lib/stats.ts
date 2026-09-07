@@ -194,7 +194,13 @@ async function computeDashboardMetricsUncached(): Promise<DashboardMetrics> {
 export const computeDashboardMetrics = unstable_cache(
   computeDashboardMetricsUncached,
   ["dashboard-metrics-v4"],
-  { revalidate: 60 },
+  // Hourly. This is the expensive one — ~450ms of CPU to parse the 34MB
+  // leaderboard and run twenty passes plus eight sorts over 56k entries.
+  // Its inputs are a weekly aura refresh and a daily totals refresh, so a
+  // 60s window rebuilt it thousands of times per change. It also floors the
+  // revalidate of every page that calls it, since a route's window is the
+  // minimum of every cache used while rendering it.
+  { revalidate: 3600 },
 );
 
 function generateAlphaInsights(

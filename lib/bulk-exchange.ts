@@ -62,14 +62,17 @@ async function exchangeFetch(
 /** Markets + OI only. Do not use `volume` / `quoteVolume` — those fields
  * (and `/ticker` 24h volume / change) are currently wrong. Volume comes
  * from `fetchKlines`. */
-export async function fetchExchangeStats(): Promise<ExchangeStats | null> {
-  const res = await exchangeFetch("/stats?period=1d", { revalidate: 15 });
+export async function fetchExchangeStats(revalidate = 15): Promise<ExchangeStats | null> {
+  const res = await exchangeFetch("/stats?period=1d", { revalidate });
   if (!res.ok) return null;
   return (await res.json()) as ExchangeStats;
 }
 
-export async function fetchExchangeMetrics(noStore = false): Promise<ExchangeMetrics | null> {
-  const res = await exchangeFetch("/metrics", noStore ? { noStore: true } : { revalidate: 5 });
+export async function fetchExchangeMetrics(
+  noStore = false,
+  revalidate = 5,
+): Promise<ExchangeMetrics | null> {
+  const res = await exchangeFetch("/metrics", noStore ? { noStore: true } : { revalidate });
   if (!res.ok) return null;
   return (await res.json()) as ExchangeMetrics;
 }
@@ -79,11 +82,12 @@ export async function fetchKlines(
   interval: string,
   startTime?: number,
   endTime?: number,
+  revalidate = 60,
 ): Promise<ExchangeCandle[]> {
   const params = new URLSearchParams({ symbol, interval });
   if (startTime != null) params.set("startTime", String(startTime));
   if (endTime != null) params.set("endTime", String(endTime));
-  const res = await exchangeFetch(`/klines?${params.toString()}`, { revalidate: 60 });
+  const res = await exchangeFetch(`/klines?${params.toString()}`, { revalidate });
   if (!res.ok) return [];
   const data = (await res.json()) as ExchangeCandle[];
   return Array.isArray(data) ? data : [];

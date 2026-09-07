@@ -7,7 +7,7 @@ import { KpiStrip } from "@/components/overview/KpiStrip";
 import { DepositorsDistributionPanel } from "@/components/overview/DepositorsDistributionPanel";
 
 export const dynamic = "force-static";
-export const revalidate = 60;
+export const revalidate = 3600;
 
 export default async function OverviewPage() {
   const metrics = await computeDashboardMetrics();

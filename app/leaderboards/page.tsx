@@ -2,7 +2,7 @@ import { LeaderboardTable } from "@/components/tables/LeaderboardTable";
 import { getSortedLeaderboard } from "@/lib/stats";
 
 export const dynamic = "force-static";
-export const revalidate = 60;
+export const revalidate = 3600;
 
 export default function LeaderboardsPage() {
   const initialRows = getSortedLeaderboard("aura");

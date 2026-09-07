@@ -136,8 +136,8 @@ let volumeCache: {
   volumeTotalUsd: number;
 } | null = null;
 
-async function marketSymbols(): Promise<string[]> {
-  const stats = await fetchExchangeStats();
+async function marketSymbols(revalidate?: number): Promise<string[]> {
+  const stats = await fetchExchangeStats(revalidate);
   return (stats?.markets ?? []).map((m) => m.symbol).filter((s) => s && s !== "MEGA-USD");
 }
 
@@ -163,7 +163,7 @@ function sumCandlesUsd(candles: ExchangeCandle[], from?: number): number {
  * when `v` is 0 (orders/ticks). Unique fills come from BulkStats
  * `/api/analytics/stats` `trades.count`.
  */
-export async function sumCandleVolumes(): Promise<{
+export async function sumCandleVolumes(revalidate = 60): Promise<{
   volume24hUsd: number;
   volumeTotalUsd: number;
 }> {
@@ -178,10 +178,10 @@ export async function sumCandleVolumes(): Promise<{
   // bills the overlap twice. Splice on the hour instead and take the leading
   // partial hour from the minute series.
   const spliceMs = Math.floor(start24h / 3_600_000) * 3_600_000;
-  const symbols = await marketSymbols();
+  const symbols = await marketSymbols(revalidate);
   const [minuteSeries, hourSeries] = await Promise.all([
-    Promise.all(symbols.map((symbol) => fetchKlines(symbol, "1m", spliceMs, now))),
-    Promise.all(symbols.map((symbol) => fetchKlines(symbol, "1h", MAINNET_START_MS, now))),
+    Promise.all(symbols.map((symbol) => fetchKlines(symbol, "1m", spliceMs, now, revalidate))),
+    Promise.all(symbols.map((symbol) => fetchKlines(symbol, "1h", MAINNET_START_MS, now, revalidate))),
   ]);
 
   const volume24hUsd = minuteSeries.reduce((sum, candles) => sum + sumCandlesUsd(candles, start24h), 0);
