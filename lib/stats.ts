@@ -144,6 +144,10 @@ async function computeDashboardMetricsUncached(): Promise<DashboardMetrics> {
     }).length,
   }));
 
+  // Local only — these three feed `alphaInsights` and are not returned.
+  // `referralCandidates` is unbounded (one full entry per referring wallet);
+  // returning it pushed DashboardMetrics past unstable_cache's 2MB ceiling,
+  // so the cache silently stored nothing and every request recomputed.
   const referralCandidates = entries.filter(hasReferralActivity);
 
   const topReferrers = [...referralCandidates]
@@ -182,9 +186,6 @@ async function computeDashboardMetricsUncached(): Promise<DashboardMetrics> {
     lorenzCurve: computeLorenzCurve(auraValues),
     auraDistribution,
     categoryBreakdown,
-    topReferrers,
-    referralCandidates,
-    topEfficiency,
     alphaInsights,
     lastUpdated,
   };
@@ -192,7 +193,7 @@ async function computeDashboardMetricsUncached(): Promise<DashboardMetrics> {
 
 export const computeDashboardMetrics = unstable_cache(
   computeDashboardMetricsUncached,
-  ["dashboard-metrics-v3"],
+  ["dashboard-metrics-v4"],
   { revalidate: 60 },
 );
 

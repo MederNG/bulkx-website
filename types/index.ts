@@ -35,14 +35,6 @@ export interface AlphaInsight {
   copyValue?: string;
 }
 
-export interface LeaderboardResponse {
-  items: LeaderboardEntry[];
-  total: number;
-  page: number;
-  page_size: number;
-  total_pages: number;
-}
-
 export interface WalletData extends LeaderboardEntry {
   percentile: number;
   hold_time_days: number;
@@ -121,26 +113,8 @@ export interface DashboardMetrics {
   lorenzCurve: { cumulativeWallets: number; cumulativeAura: number }[];
   auraDistribution: { bucket: string; count: number }[];
   categoryBreakdown: { key: string; category: string; points: number; share: number }[];
-  topReferrers: LeaderboardEntry[];
-  referralCandidates: LeaderboardEntry[];
-  topEfficiency: (LeaderboardEntry & { efficiency: number })[];
   alphaInsights: AlphaInsight[];
   lastUpdated: string;
-}
-
-export interface RankTargets {
-  top10Percent: number;
-  top5Percent: number;
-  top1Percent: number;
-  top100: number;
-  top50: number;
-  top10: number;
-}
-
-export interface FdvResult {
-  poolValue: number;
-  auraValue: number;
-  userValue: number;
 }
 
 export type LeaderboardTab = "aura" | "volume" | "pnl";

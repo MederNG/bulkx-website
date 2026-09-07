@@ -127,7 +127,7 @@ export function VolumeStatCard() {
     : 0;
   const delta = mode === "24h" ? exchange.volume24hUsd - prev24h : exchange.volume24hUsd;
   const range = seriesRange(series);
-  const trades = mode === "24h" && exchange.trades24h > 0 ? exchange.trades24h : exchange.tradesTotal;
+  const trades = exchange.tradesTotal;
 
   return (
     <StatSparkCard

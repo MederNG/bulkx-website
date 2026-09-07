@@ -182,16 +182,6 @@ export function formatSnapshotUtc(timestampMs: number): string {
 }
 
 /** Snapshot date/time split for compact tooltip layout. */
-export function formatSnapshotUtcParts(timestampMs: number): { date: string; time: string } {
-  const date = new Date(timestampMs).toLocaleDateString("en-US", {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-    timeZone: "UTC",
-  });
-  return { date, time: "13:00 UTC" };
-}
-
 export function formatRemainingDuration(ms: number): string {
   const totalMinutes = Math.floor(ms / 60_000);
   const days = Math.floor(totalMinutes / (24 * 60));
@@ -211,18 +201,6 @@ function compactUsdAbs(abs: number): string {
           : null;
   if (!unit) return `$${Math.round(abs).toLocaleString("en-US")}`;
   return `$${unit.n.toFixed(1).replace(/\.0$/, "")}${unit.suffix}`;
-}
-
-export function formatSignedUsd(value: number, compact = false): string {
-  const sign = value >= 0 ? "+" : "-";
-  const abs = Math.abs(value);
-  if (compact) return `${sign}${compactUsdAbs(abs)}`;
-  return `${sign}$${Math.round(abs).toLocaleString("en-US")}`;
-}
-
-export function formatSignedPercent(value: number, decimals = 1): string {
-  const sign = value >= 0 ? "+" : "";
-  return `${sign}${value.toFixed(decimals)}%`;
 }
 
 export function formatUsdCompact(value: number): string {

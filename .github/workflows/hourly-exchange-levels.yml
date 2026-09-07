@@ -2,7 +2,7 @@ name: Hourly Exchange Levels
 
 on:
   schedule:
-    # One OI / traders / unique-submissions vertex per UTC hour.
+    # One OI / active-traders vertex per UTC hour for the Overview sparks.
     - cron: "7 * * * *"
   workflow_dispatch:
 

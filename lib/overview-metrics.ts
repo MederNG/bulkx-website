@@ -4,7 +4,6 @@ import {
   type ProjectedSnapshotTvl,
 } from "@/lib/projected-snapshot-tvl";
 import type { TvlKpiSecondaryMetrics } from "@/lib/tvl-kpi-secondary";
-import type { Snapshot } from "@/types";
 import { DEPOSITOR_AURA_RANGES } from "@/lib/utils";
 
 /** Headline figures are shown in full — the design never abbreviates them. */
@@ -98,23 +97,6 @@ function mergeBuckets(buckets: DepositSizeBucket[]): DepositSizeBucket {
   );
 }
 
-/**
- * Bucket-index ranges per tier, matching `depositSizeDistribution`'s fixed
- * 7-bucket order (see DEPOSIT_SIZE_BUCKETS in lib/stats.ts): <$100, $100-1K,
- * $1K-10K, $10K-100K, $100K-500K, $500K-1M, $1M+. Six tiers over those seven
- * buckets — one each, except the top tier folding the last two ($500K-1M
- * and $1M+) together. Shared by the tier aggregation below and the
- * distribution curve's per-segment highlighting.
- */
-export const DEPOSIT_TIER_BUCKET_RANGES: Record<string, [number, number]> = {
-  snowflake: [0, 0],
-  bulker: [1, 1],
-  lilYeti: [2, 2],
-  bulkingYeti: [3, 3],
-  auramaxer: [4, 4],
-  megalodon: [5, 6],
-};
-
 /** One side of a metric that can be looked at two ways, e.g. TVL now vs projected. */
 export interface OverviewMetricView {
   id: string;
@@ -184,16 +166,6 @@ export function chartPrimaryRamp(index: number, count: number): string {
 export function chartDuochrome(index: number, count = CHART_SLATE.length + 1): string {
   return chartPrimaryRamp(index, count);
 }
-
-export const CHART_RED = "#E55A4E";
-export const CHART_TEAL = "#1FB88A";
-
-export const DONUT_COLORS = [
-  CHART_GOLD,
-  ...CHART_SLATE,
-  "#5B9BD4",
-  "#8AABC4",
-];
 
 /** Homepage ring stays at six named sources even though the palette now
  * has room for drill-downs. More than that and the legend crowds the tier

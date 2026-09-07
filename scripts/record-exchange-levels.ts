@@ -1,14 +1,10 @@
 /**
- * Snapshot live OI, active traders, and unique submissions into
- * data/exchange-levels.json. Hourly cron builds the 24h KPI sparks and
- * the unique-trade 24h delta — Bulk has no history API for these.
+ * Snapshot live open interest + active traders into data/exchange-levels.json.
+ * Hourly cron builds the 24h KPI sparks — Bulk has no OI/traders history API.
  *
  *   npm run record:levels
  */
-import {
-  mergeCounterPoints,
-  mergeLevelPoints,
-} from "../lib/exchange-level-history";
+import { mergeLevelPoints } from "../lib/exchange-level-history";
 import {
   readExchangeLevelsFile,
   writeExchangeLevelsFile,
@@ -34,7 +30,6 @@ async function main() {
   const [stats, metrics] = await Promise.all([
     fetchJson<{ openInterest?: { totalUsd?: number } }>("/stats?period=1d"),
     fetchJson<{
-      unique_submissions?: number;
       executor_cardinality?: { primary?: { cached_accounts?: number } };
     }>("/metrics"),
   ]);
@@ -42,7 +37,6 @@ async function main() {
   const now = Date.now();
   const openInterestUsd = (Number(stats.openInterest?.totalUsd) || 0) * OI_SIDES;
   const activeTraders = Number(metrics.executor_cardinality?.primary?.cached_accounts) || 0;
-  const unique = Number(metrics.unique_submissions) || 0;
   if (!(openInterestUsd > 0) || !(activeTraders > 0)) {
     throw new Error(`bad snapshot oi=${openInterestUsd} traders=${activeTraders}`);
   }
@@ -51,15 +45,11 @@ async function main() {
   const next = writeExchangeLevelsFile({
     oi: mergeLevelPoints(prev.oi, [{ t: now, value: openInterestUsd }]),
     traders: mergeLevelPoints(prev.traders, [{ t: now, value: activeTraders }]),
-    uniqueSubmissions: mergeCounterPoints(prev.uniqueSubmissions, [
-      ...(unique > 0 ? [{ t: now, value: unique }] : []),
-    ]),
   });
 
   console.log(
     `[levels] oi=${next.oi.length} traders=${next.traders.length} ` +
-      `unique=${next.uniqueSubmissions.length} lastOi=${openInterestUsd.toFixed(0)} ` +
-      `lastTraders=${activeTraders} lastUnique=${unique}`,
+      `lastOi=${openInterestUsd.toFixed(0)} lastTraders=${activeTraders}`,
   );
 }
 

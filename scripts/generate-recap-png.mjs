@@ -7,12 +7,6 @@ const root = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 const outDir = path.join(root, "public", "recap");
 const outFile = path.join(outDir, "pre-deposits-recap.png");
 
-const familjen = fs
-  .readFileSync(path.join(root, "fonts", "FamiljenGrotesk-VariableFont_wght.ttf"))
-  .toString("base64");
-const mono = fs
-  .readFileSync(path.join(root, "fonts", "OverpassMono-VariableFont_wght.ttf"))
-  .toString("base64");
 const logoInner = fs
   .readFileSync(path.join(root, "public", "logos", "bulkx-logo-light.svg"), "utf8")
   .replace(/<\/?svg[^>]*>/g, "")
@@ -21,17 +15,16 @@ const logoInner = fs
 const svg = `<?xml version="1.0" encoding="UTF-8"?>
 <svg width="1200" height="675" viewBox="0 0 1200 675" xmlns="http://www.w3.org/2000/svg">
   <defs>
+    <!--
+      NOTE: sharp rasterises this through libvips/librsvg, which ignores
+      @font-face entirely — embedding the TTFs as base64 (~1MB) changed
+      nothing, and swapping in a nonexistent family produced a byte-identical
+      PNG. Every run therefore renders in a system fallback face. The
+      font-family names below record the intent; to actually get brand
+      typography this needs a rasteriser that loads fonts (Playwright is
+      already a devDependency).
+    -->
     <style><![CDATA[
-      @font-face {
-        font-family: "Familjen";
-        src: url(data:font/ttf;base64,${familjen}) format("truetype");
-        font-weight: 100 900;
-      }
-      @font-face {
-        font-family: "OverpassMono";
-        src: url(data:font/ttf;base64,${mono}) format("truetype");
-        font-weight: 100 900;
-      }
       .label {
         font-family: Familjen, sans-serif;
         font-size: 9.5px;
@@ -125,8 +118,9 @@ const svg = `<?xml version="1.0" encoding="UTF-8"?>
 </svg>`;
 
 fs.mkdirSync(outDir, { recursive: true });
-fs.writeFileSync(path.join(outDir, "pre-deposits-recap.svg"), svg);
 
+// The source SVG inlines both TTFs as base64 (~1MB) and nothing reads it, so
+// it is rasterised straight from memory rather than dropped into public/.
 await sharp(Buffer.from(svg))
   .png()
   .toFile(outFile);

@@ -3,14 +3,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import {
-  Area,
-  ComposedChart,
   Bar,
   BarChart,
   CartesianGrid,
   Cell,
   LabelList,
-  Line,
   Rectangle,
   ResponsiveContainer,
   Tooltip,
@@ -18,14 +15,7 @@ import {
   YAxis,
 } from "recharts";
 import type { RectangleProps } from "recharts";
-import type { ChartRange, WalletData } from "@/types";
-import type { ProjectedSnapshotTvl } from "@/lib/projected-snapshot-tvl";
-import {
-  formatSignedUsd,
-  formatSnapshotUtc,
-  formatSnapshotUtcParts,
-  formatUsdCompact,
-} from "@/lib/projected-snapshot-tvl";
+import type { WalletData } from "@/types";
 import { CHART_GOLD_PULSE, CHART_GOLD_PULSE_TRANSITION, CHART_GOLD_PULSE_UNDERLAY } from "@/lib/chart-gold-pulse";
 import { cn, formatNumber } from "@/lib/utils";
 import { useNarrowViewport } from "@/lib/use-narrow-viewport";
@@ -38,7 +28,7 @@ import {
   AuraDonut,
 } from "@/components/overview/AuraDonut";
 import { CATEGORY_NAME_SVG } from "@/components/overview/MetricTable";
-import { chartPrimaryRamp, chartSlateRamp, CHART_GOLD, type OverviewDonutSegment } from "@/lib/overview-metrics";
+import { chartPrimaryRamp, CHART_GOLD, type OverviewDonutSegment } from "@/lib/overview-metrics";
 import {
   AuraStatsPanel,
   PersonalSourcesPanel,
@@ -80,308 +70,6 @@ function useInViewOnce<T extends HTMLElement>(threshold = 0.25) {
   return { ref, hasEntered };
 }
 
-interface TvlChartPoint {
-  timestamp: string;
-  tvl?: number | null;
-  projectedTvl?: number | null;
-  isProjectionEndpoint?: boolean;
-  /** Live TVL anchor where historical line meets the projection. */
-  isCurrentTvl?: boolean;
-}
-
-interface TvlChartProps {
-  data: { timestamp: string; tvl: number; totalAura: number }[];
-  currentTvl: number;
-  projection: ProjectedSnapshotTvl;
-  referenceTimeMs: number;
-}
-
-function buildTvlChartData(
-  historical: { timestamp: string; tvl: number; totalAura: number }[],
-  currentTvl: number,
-  projection: ProjectedSnapshotTvl,
-  referenceTimeMs: number
-): TvlChartPoint[] {
-  const points: TvlChartPoint[] = historical.map((d) => ({
-    timestamp: d.timestamp,
-    tvl: d.tvl,
-    projectedTvl: null,
-  }));
-
-  if (!projection.available) {
-    return points;
-  }
-
-  const nowIso = new Date(referenceTimeMs).toISOString();
-  const lastHistorical = points[points.length - 1];
-  const bridgeTvl = currentTvl;
-
-  if (!lastHistorical || new Date(lastHistorical.timestamp).getTime() < referenceTimeMs - 60_000) {
-    points.push({ timestamp: nowIso, tvl: bridgeTvl, projectedTvl: bridgeTvl, isCurrentTvl: true });
-  } else {
-    lastHistorical.tvl = bridgeTvl;
-    lastHistorical.projectedTvl = bridgeTvl;
-    lastHistorical.isCurrentTvl = true;
-  }
-
-  const bridge = points[points.length - 1];
-  if (bridge) {
-    bridge.projectedTvl = bridgeTvl;
-    bridge.isCurrentTvl = true;
-  }
-
-  points.push({
-    timestamp: new Date(projection.nextSnapshotTimestamp).toISOString(),
-    tvl: null,
-    projectedTvl: projection.projectedTvl,
-    isProjectionEndpoint: true,
-  });
-
-  return points;
-}
-
-function TvlChartTooltip({
-  active,
-  payload,
-  label,
-  projection,
-}: {
-  active?: boolean;
-  payload?: { payload?: TvlChartPoint }[];
-  label?: string;
-  projection: ProjectedSnapshotTvl;
-}) {
-  if (!active || !payload?.length || !label) return null;
-
-  const point = payload[0]?.payload;
-  if (!point) return null;
-
-  if (point.isProjectionEndpoint && projection.available) {
-    const snapshotParts = formatSnapshotUtcParts(projection.nextSnapshotTimestamp);
-    return (
-      <div
-        className="rounded border border-[rgba(198,182,186,0.2)] px-3 py-2 text-xs"
-        style={{ background: "#1B1A14" }}
-      >
-        <p className="font-label text-accent">Projected TVL</p>
-        <p className="mt-1 font-data text-text-primary">
-          {formatUsdCompact(projection.projectedTvl)}
-        </p>
-        <p className="mt-2 font-label text-text-muted">Weighted Daily Flow</p>
-        <p className="mt-0.5 font-data text-bid-green">
-          {formatSignedUsd(projection.weightedDailyFlow, true)}/day
-        </p>
-        <p className="mt-2 font-label text-text-muted">Snapshot</p>
-        <p className="mt-0.5 font-data text-text-primary">{snapshotParts.date}</p>
-        <p className="font-data text-text-primary">{snapshotParts.time}</p>
-        <p className="mt-2 font-label text-text-muted">Expected Growth</p>
-        <p className="mt-0.5 font-data text-bid-green">
-          {formatSignedUsd(projection.expectedGrowth, true)}
-        </p>
-      </div>
-    );
-  }
-
-  const tvl = point.tvl ?? point.projectedTvl;
-  if (tvl == null) return null;
-
-  return (
-    <div
-      className="rounded border border-[rgba(198,182,186,0.2)] px-3 py-2 text-xs"
-      style={{ background: "#1B1A14" }}
-    >
-      <p className="font-label text-text-muted">
-        {new Date(label).toLocaleString("en-US", { timeZone: "UTC" })} UTC
-      </p>
-      <p className="mt-1 font-data text-text-primary">${tvl.toLocaleString("en-US")}</p>
-    </div>
-  );
-}
-
-function CurrentTvlBeaconDot({
-  cx,
-  cy,
-  payload,
-}: {
-  cx?: number;
-  cy?: number;
-  payload?: TvlChartPoint;
-}) {
-  if (cx == null || cy == null || !payload?.isCurrentTvl) return null;
-
-  const label = formatUsdCompact(payload.tvl ?? 0);
-
-  return (
-    <g aria-label={`Current TVL ${label}`}>
-      <circle cx={cx} cy={cy} r={14} fill="#FFB547" opacity={0.18}>
-        <animate attributeName="r" values="9;16;9" dur="2.2s" repeatCount="indefinite" />
-        <animate attributeName="opacity" values="0.32;0.08;0.32" dur="2.2s" repeatCount="indefinite" />
-      </circle>
-      <circle cx={cx} cy={cy} r={5} fill="#FFB547" stroke="#141310" strokeWidth={2} />
-    </g>
-  );
-}
-
-export function TvlChart({ data, currentTvl, projection, referenceTimeMs }: TvlChartProps) {
-  const [range, setRange] = useState<ChartRange>("7D");
-  const ranges: ChartRange[] = ["7D", "30D", "ALL"];
-  const { ref, hasEntered } = useInViewOnce<HTMLDivElement>(0.2);
-
-  const filtered = filterByRange(data, range, referenceTimeMs);
-  const chartData = useMemo(
-    () => buildTvlChartData(filtered, currentTvl, projection, referenceTimeMs),
-    [filtered, currentTvl, projection, referenceTimeMs]
-  );
-
-  return (
-    <PanelCard glossy glossDelay={-6} className="h-full">
-      <div ref={ref} className="flex min-h-0 flex-1 flex-col">
-      <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <PanelLabel>TVL History &amp; Projection</PanelLabel>
-          <InfoTooltip
-            floating
-            text="Historical TVL from hourly snapshots. The dashed line projects TVL to the next weekly snapshot using weighted 7-day TVL growth."
-          />
-        </div>
-        <div className="term-seg">
-          {ranges.map((r) => {
-            const on = r === range;
-            return (
-              <button
-                key={r}
-                type="button"
-                onClick={() => setRange(r)}
-                aria-pressed={on}
-                className={cn("term-seg-btn", on ? "is-on" : "is-off")}
-              >
-                {on && (
-                  <motion.span
-                    layoutId="legacy-tvl-range-pill"
-                    className="term-seg-pill"
-                    transition={{ type: "spring", stiffness: 480, damping: 32 }}
-                  />
-                )}
-                <span className="relative z-10">{r}</span>
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      {projection.available && (
-        <div className="mb-3 flex flex-wrap items-center gap-4 text-[11px] text-text-secondary">
-          <span className="inline-flex items-center gap-1.5">
-            <span className="inline-block h-0.5 w-4 rounded bg-[#FFB547]" />
-            <span className="relative inline-flex h-2 w-2 shrink-0">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#FFB547] opacity-60" />
-              <span className="relative inline-flex h-2 w-2 rounded-full bg-[#FFB547]" />
-            </span>
-            Historical TVL
-          </span>
-          <span className="inline-flex items-center gap-1.5">
-            <span
-              className="inline-block h-0.5 w-4 rounded border-t-2 border-dashed border-[#FFB547]"
-              style={{ opacity: 0.5 }}
-            />
-            Projection
-          </span>
-          <span className="ml-auto hidden text-text-secondary md:inline">
-            Snapshot: {formatSnapshotUtc(projection.nextSnapshotTimestamp)}
-          </span>
-        </div>
-      )}
-
-      <div className="relative">
-        <ResponsiveContainer width="100%" height={280}>
-          <ComposedChart key={hasEntered ? "tvl-animate" : "tvl-idle"} data={chartData}>
-            <defs>
-              <linearGradient id="tvlGrad" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#FFB547" stopOpacity={0.3} />
-                <stop offset="100%" stopColor="#FFB547" stopOpacity={0} />
-              </linearGradient>
-            </defs>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis
-              dataKey="timestamp"
-              tickFormatter={(v) =>
-                new Date(v).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" })
-              }
-              minTickGap={30}
-            />
-            <YAxis tickFormatter={(v) => `$${(v / 1e6).toFixed(1)}M`} width={60} domain={["auto", "auto"]} />
-            <Tooltip
-              content={(props) => (
-                <TvlChartTooltip
-                  active={props.active}
-                  payload={props.payload as { payload?: TvlChartPoint }[] | undefined}
-                  label={props.label as string | undefined}
-                  projection={projection}
-                />
-              )}
-            />
-            <Area
-              type="monotone"
-              dataKey="tvl"
-              stroke="#FFB547"
-              fill="url(#tvlGrad)"
-              strokeWidth={2}
-              connectNulls={false}
-              isAnimationActive={hasEntered}
-              dot={(props) => (
-                <CurrentTvlBeaconDot
-                  key={props.key ?? `tvl-dot-${props.index}`}
-                  cx={props.cx}
-                  cy={props.cy}
-                  payload={props.payload as TvlChartPoint | undefined}
-                />
-              )}
-              activeDot={false}
-            />
-            {projection.available && (
-              <Line
-                type="linear"
-                dataKey="projectedTvl"
-                stroke="#FFB547"
-                strokeWidth={2}
-                strokeDasharray="6 4"
-                strokeOpacity={0.5}
-                dot={false}
-                connectNulls
-                isAnimationActive={hasEntered}
-              />
-            )}
-          </ComposedChart>
-        </ResponsiveContainer>
-      </div>
-      </div>
-    </PanelCard>
-  );
-}
-
-function filterByRange(
-  data: { timestamp: string; tvl: number; totalAura: number }[],
-  range: ChartRange,
-  referenceTimeMs: number
-) {
-  if (range === "ALL") return data;
-  const ms =
-    range === "24H" ? 86400000 : range === "7D" ? 7 * 86400000 : 30 * 86400000;
-  return data.filter((d) => referenceTimeMs - new Date(d.timestamp).getTime() <= ms);
-}
-
-interface HistogramProps {
-  data: { bucket: string; count: number }[];
-}
-
-function shortAuraBucket(label: string): string {
-  return label
-    .replace("1000-2500", "1k–2.5k")
-    .replace("2500-5000", "2.5k–5k")
-    .replace("500-1000", "0.5–1k")
-    .replace("5000+", "5k+");
-}
-
 function CategoryYTick({
   x,
   y,
@@ -421,93 +109,6 @@ function CategoryYTick({
     >
       {payload?.value}
     </text>
-  );
-}
-
-export function AuraHistogram({ data }: HistogramProps) {
-  const { ref, hasEntered } = useInViewOnce<HTMLDivElement>(0.2);
-  const narrow = useNarrowViewport();
-  const n = data.length;
-
-  return (
-    <PanelCard glossy glossDelay={-6} className="h-full">
-      <div ref={ref} className="flex min-h-0 flex-1 flex-col">
-        <PanelLabel>Aura Distribution</PanelLabel>
-        <div className="aura-distribution-chart mt-3 min-h-[260px] flex-1">
-          <ResponsiveContainer width="100%" height={narrow ? 280 : 260}>
-            <BarChart
-              key={hasEntered ? "hist-animate" : "hist-idle"}
-              data={data}
-              margin={{ top: 8, right: 8, left: 0, bottom: 0 }}
-              barCategoryGap={narrow ? "16%" : "18%"}
-            >
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis
-                dataKey="bucket"
-                tickFormatter={narrow ? shortAuraBucket : undefined}
-                tick={{
-                  fontSize: narrow ? 10 : 12,
-                  fontFamily: "var(--font-mono)",
-                  fill: "var(--color-text-primary)",
-                }}
-                interval={0}
-                minTickGap={narrow ? 8 : 0}
-                angle={narrow ? -50 : -30}
-                textAnchor="end"
-                height={narrow ? 72 : 60}
-                tickMargin={4}
-              />
-              <YAxis
-                tickFormatter={(v) =>
-                  v >= 1000 ? `${Math.round(v / 1000)}k` : v.toLocaleString()
-                }
-                width={narrow ? 36 : 56}
-                tick={{
-                  fontSize: narrow ? 11 : 12,
-                  fontFamily: "var(--font-mono)",
-                  fill: "var(--color-text-primary)",
-                }}
-              />
-              <Tooltip
-                cursor={false}
-                content={({ active, payload, label }) => {
-                  if (!active || !payload?.length) return null;
-                  const value = Number(payload[0]?.value ?? 0);
-                  return (
-                    <div className="rounded-[4px] border border-[rgba(198,182,186,0.2)] bg-[#1B1A14] px-3 py-2.5 shadow-[0_14px_36px_rgba(0,0,0,.55)]">
-                      <p className="m-0 mb-1.5 font-sans text-[13px] font-medium leading-none text-[#FFFEEF]">
-                        {String(label)}
-                      </p>
-                      <div className="grid grid-cols-[auto_auto] gap-x-3 leading-none">
-                        <span className="font-label text-text-muted">Wallets</span>
-                        <span className="font-data text-right text-[#FFB547]">
-                          {value.toLocaleString("en-US")}
-                        </span>
-                      </div>
-                    </div>
-                  );
-                }}
-              />
-              <Bar
-                dataKey="count"
-                radius={[2, 2, 0, 0]}
-                maxBarSize={narrow ? 22 : 28}
-                isAnimationActive={hasEntered}
-                activeBar={{
-                  fill: CHART_GOLD,
-                  stroke: "none",
-                  filter: "drop-shadow(0 0 6px rgba(255,181,71,0.35))",
-                }}
-              >
-                {data.map((_, i) => (
-                  <Cell key={i} fill={chartSlateRamp(i, n)} />
-                ))}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-      </div>
-    </PanelCard>
   );
 }
 
@@ -769,10 +370,6 @@ export function CategoryCharts({ data, wallet, className }: CategoryChartsProps)
                   padding={{ top: 0, bottom: 0 }}
                   tick={(props) => {
                     const i = colored.findIndex((r) => r.category === props.payload?.value);
-                    const borrow =
-                      sharedHover != null && sharedHover > 0
-                        ? colored[sharedHover]?.color
-                        : null;
                     return (
                       <CategoryYTick
                         {...props}

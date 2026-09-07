@@ -52,6 +52,3 @@ export async function getLiveTotals(options?: { fresh?: boolean }): Promise<Tota
   }
 }
 
-export function clearLiveTotalsCache(): void {
-  cache = null;
-}

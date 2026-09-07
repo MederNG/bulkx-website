@@ -1,7 +1,6 @@
 import fs from "fs";
 import path from "path";
 import {
-  mergeCounterPoints,
   mergeLevelPoints,
   type LevelPoint,
 } from "@/lib/exchange-level-history";
@@ -12,12 +11,10 @@ export type ExchangeLevelsFile = {
   updatedAt: string;
   oi: LevelPoint[];
   traders: LevelPoint[];
-  uniqueSubmissions: LevelPoint[];
 };
 
 let oi: LevelPoint[] = [];
 let traders: LevelPoint[] = [];
-let uniqueSubmissions: LevelPoint[] = [];
 let seeded = false;
 
 export function readExchangeLevelsFile(): ExchangeLevelsFile {
@@ -27,10 +24,9 @@ export function readExchangeLevelsFile(): ExchangeLevelsFile {
       updatedAt: typeof parsed.updatedAt === "string" ? parsed.updatedAt : new Date(0).toISOString(),
       oi: Array.isArray(parsed.oi) ? parsed.oi : [],
       traders: Array.isArray(parsed.traders) ? parsed.traders : [],
-      uniqueSubmissions: Array.isArray(parsed.uniqueSubmissions) ? parsed.uniqueSubmissions : [],
     };
   } catch {
-    return { updatedAt: new Date(0).toISOString(), oi: [], traders: [], uniqueSubmissions: [] };
+    return { updatedAt: new Date(0).toISOString(), oi: [], traders: [] };
   }
 }
 
@@ -39,7 +35,6 @@ export function writeExchangeLevelsFile(next: Omit<ExchangeLevelsFile, "updatedA
     updatedAt: new Date().toISOString(),
     oi: mergeLevelPoints(next.oi),
     traders: mergeLevelPoints(next.traders),
-    uniqueSubmissions: mergeCounterPoints(next.uniqueSubmissions),
   };
   fs.mkdirSync(path.dirname(LEVELS_FILE), { recursive: true });
   fs.writeFileSync(LEVELS_FILE, `${JSON.stringify(payload, null, 2)}\n`);
@@ -52,26 +47,16 @@ function seedFromFile() {
   const file = readExchangeLevelsFile();
   oi = file.oi;
   traders = file.traders;
-  uniqueSubmissions = file.uniqueSubmissions;
 }
 
-export function recordExchangeLevels(
-  openInterestUsd: number,
-  activeTraders: number,
-  unique = 0,
-): void {
+export function recordExchangeLevels(openInterestUsd: number, activeTraders: number): void {
   seedFromFile();
   const now = Date.now();
   if (openInterestUsd > 0) oi = mergeLevelPoints(oi, [{ t: now, value: openInterestUsd }]);
   if (activeTraders > 0) traders = mergeLevelPoints(traders, [{ t: now, value: activeTraders }]);
-  if (unique > 0) uniqueSubmissions = mergeCounterPoints(uniqueSubmissions, [{ t: now, value: unique }]);
 }
 
-export function getExchangeLevelHistory(): {
-  oi: LevelPoint[];
-  traders: LevelPoint[];
-  uniqueSubmissions: LevelPoint[];
-} {
+export function getExchangeLevelHistory(): { oi: LevelPoint[]; traders: LevelPoint[] } {
   seedFromFile();
-  return { oi, traders, uniqueSubmissions };
+  return { oi, traders };
 }

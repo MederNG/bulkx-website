@@ -11,7 +11,8 @@ const OI_SIDES = 2;
 export interface LiveExchangePayload {
   volume24hUsd: number;
   volumeTotalUsd: number;
-  trades24h: number;
+  /** All-time unique fills. BulkStats exposes no 24h fill count, so there is
+   *  deliberately no `trades24h` — the old field held this same total. */
   tradesTotal: number;
   openInterestUsd: number;
   activeTraders: number;
@@ -25,7 +26,6 @@ export interface LiveExchangePayload {
 const EMPTY: LiveExchangePayload = {
   volume24hUsd: 0,
   volumeTotalUsd: 0,
-  trades24h: 0,
   tradesTotal: 0,
   openInterestUsd: 0,
   activeTraders: 0,
@@ -72,7 +72,6 @@ export async function buildLiveExchangePayload(): Promise<LiveExchangePayload> {
       volumeTotalUsd: candleVolume.volumeTotalUsd || candleVolume.volume24hUsd,
       // Unique fills from BulkStats (same Total Trades as their General card).
       // Candle `n` and `unique_submissions` are not fill counts.
-      trades24h: uniqueFills,
       tradesTotal: uniqueFills,
       openInterestUsd: (Number(stats?.openInterest.totalUsd) || 0) * OI_SIDES,
       activeTraders: Number(metrics?.executor_cardinality?.primary?.cached_accounts) || 0,
@@ -82,7 +81,7 @@ export async function buildLiveExchangePayload(): Promise<LiveExchangePayload> {
       tradersHistory: [],
       updatedAt: new Date(now).toISOString(),
     };
-    recordExchangeLevels(data.openInterestUsd, data.activeTraders, unique);
+    recordExchangeLevels(data.openInterestUsd, data.activeTraders);
     const history = getExchangeLevelHistory();
     data.oiHistory = history.oi;
     data.tradersHistory = history.traders;
@@ -92,8 +91,3 @@ export async function buildLiveExchangePayload(): Promise<LiveExchangePayload> {
     return payloadCache?.data ?? EMPTY;
   }
 }
-
-export const LIVE_EXCHANGE_SEED: LiveExchangePayload = {
-  ...EMPTY,
-  updatedAt: new Date().toISOString(),
-};

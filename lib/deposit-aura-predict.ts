@@ -249,10 +249,6 @@ export interface DepositAuraPrediction {
   weekBreakdown?: HoldSinceWeekBreakdown[];
 }
 
-export function getCampaignWeek1StartMs(): number {
-  return CAMPAIGN_LAUNCH_MS;
-}
-
 /** Campaign Week N start (W1 = Jun 1 launch; W2+ = Sat 13:00 UTC snapshots). */
 export function getCampaignWeekStartMs(week: number): number {
   if (week <= 1) return CAMPAIGN_LAUNCH_MS;
@@ -349,14 +345,6 @@ export function getCurrentCampaignWeek(nowMs: number = Date.now()): number {
   if (nowMs < CAMPAIGN_LAUNCH_MS) return 1;
   if (nowMs < CAMPAIGN_WEEK1_SNAPSHOT_MS) return 1;
   return 2 + Math.floor((nowMs - CAMPAIGN_WEEK1_SNAPSHOT_MS) / MS_PER_WEEK);
-}
-
-export function computeCohortUsdHoursAtSnapshot(
-  currentTvl: number,
-  hoursInWeek: number,
-  factor: number = COHORT_USD_HOURS_FACTOR
-): number {
-  return currentTvl * hoursInWeek * factor;
 }
 
 export function computeUserWeekUsdHours(

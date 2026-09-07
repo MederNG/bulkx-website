@@ -35,14 +35,10 @@ export function getLeaderboardSortValue(
   switch (sortKey) {
     case "aura_rank":
       return entry.aura_rank;
-    case "deposit_rank":
-      return entry.deposit_rank;
     case "wallet":
       return entry.wallet;
     case "aura":
       return entry.aura;
-    case "deposit":
-      return entry.balance_usd ?? entry.current_amount;
     case "volume":
       return entry.volume_usd ?? 0;
     case "pnl":

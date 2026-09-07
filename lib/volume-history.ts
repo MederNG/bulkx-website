@@ -48,7 +48,10 @@ const NAMED: Record<string, VolumeCoin> = {
   SOL: "sol",
 };
 
-let historyCache: { key: string; at: number; data: VolumeHistoryPayload } | null = null;
+/** Keyed, not a single slot: the Overview asks for `ALL:1h` and a range in the
+ *  same render, and one shared slot made each call evict the other — every
+ *  request then refetched klines for every market from mainnet start. */
+const historyCache = new Map<string, { at: number; data: VolumeHistoryPayload }>();
 const HISTORY_TTL_MS = 60_000;
 
 function candleUsd(candle: ExchangeCandle): number {
@@ -78,8 +81,9 @@ function coinForSymbol(symbol: string): VolumeCoin {
 
 export async function buildVolumeHistory(range: VolumeRange): Promise<VolumeHistoryPayload> {
   const now = Date.now();
-  if (historyCache && historyCache.key === range && now - historyCache.at < HISTORY_TTL_MS) {
-    return historyCache.data;
+  const cached = historyCache.get(range);
+  if (cached && now - cached.at < HISTORY_TTL_MS) {
+    return cached.data;
   }
 
   const interval = RANGE_INTERVAL[range];
@@ -121,7 +125,7 @@ export async function buildVolumeHistory(range: VolumeRange): Promise<VolumeHist
   }
 
   const data: VolumeHistoryPayload = { range, interval, buckets };
-  historyCache = { key: range, at: now, data };
+  historyCache.set(range, { at: now, data });
   return data;
 }
 
@@ -151,8 +155,9 @@ function sumCandlesUsd(candles: ExchangeCandle[], from?: number): number {
  * Volume from klines only — `/stats`, `/ticker`, and ticker WS volume
  * fields are known-bad; candles are the exchange's conventional source.
  *
- * 24h = 1m candles. Total = 1h since trading mainnet opened plus that
- * same 24h 1m window, so all-time is never below the live 24h print.
+ * 24h = 1m candles. Total = hourly candles since trading mainnet opened,
+ * spliced to the minute series at an hour boundary so all-time is never
+ * below the live 24h print and never double-counts the splice hour.
  *
  * Do not sum candle `n` for trades: it stays thousands per minute even
  * when `v` is 0 (orders/ticks). Unique fills come from BulkStats
@@ -168,36 +173,48 @@ export async function sumCandleVolumes(): Promise<{
   }
 
   const start24h = now - RANGE_MS["1D"];
+  // The hourly candle covering `start24h` opened before it, so counting that
+  // whole candle as "older" and the 1m candles from `start24h` on as "24h"
+  // bills the overlap twice. Splice on the hour instead and take the leading
+  // partial hour from the minute series.
+  const spliceMs = Math.floor(start24h / 3_600_000) * 3_600_000;
   const symbols = await marketSymbols();
   const [minuteSeries, hourSeries] = await Promise.all([
-    Promise.all(symbols.map((symbol) => fetchKlines(symbol, "1m", start24h, now))),
+    Promise.all(symbols.map((symbol) => fetchKlines(symbol, "1m", spliceMs, now))),
     Promise.all(symbols.map((symbol) => fetchKlines(symbol, "1h", MAINNET_START_MS, now))),
   ]);
 
   const volume24hUsd = minuteSeries.reduce((sum, candles) => sum + sumCandlesUsd(candles, start24h), 0);
+  // Minutes between the splice hour and the rolling window start — covered by
+  // neither the hourly sum below nor the 24h sum above.
+  const spliceGapUsd = minuteSeries.reduce((sum, candles) => {
+    let usd = 0;
+    for (const candle of candles) {
+      const t = Number(candle.t) || 0;
+      if (t >= spliceMs && t < start24h) usd += candleUsd(candle);
+    }
+    return sum + usd;
+  }, 0);
   const olderUsd = hourSeries.reduce((sum, candles) => {
     let usd = 0;
     for (const candle of candles) {
-      if ((Number(candle.t) || 0) < start24h) usd += candleUsd(candle);
+      if ((Number(candle.t) || 0) < spliceMs) usd += candleUsd(candle);
     }
     return sum + usd;
   }, 0);
 
-  const data = { at: now, volume24hUsd, volumeTotalUsd: olderUsd + volume24hUsd };
+  const data = { at: now, volume24hUsd, volumeTotalUsd: olderUsd + spliceGapUsd + volume24hUsd };
   volumeCache = data;
   return data;
 }
 
-/** Rolling 24h notional from 1m candles — same method as the exchange UI. */
-export async function sumVolume24hFrom1m(): Promise<number> {
-  return (await sumCandleVolumes()).volume24hUsd;
-}
 
 /** Hourly buckets from trading mainnet start — for the Total KPI spark. */
 export async function buildAllTimeHourly(): Promise<VolumeHistoryPayload> {
   const now = Date.now();
-  if (historyCache && historyCache.key === "ALL:1h" && now - historyCache.at < HISTORY_TTL_MS) {
-    return historyCache.data;
+  const cached = historyCache.get("ALL:1h");
+  if (cached && now - cached.at < HISTORY_TTL_MS) {
+    return cached.data;
   }
 
   const symbols = await marketSymbols();
@@ -233,6 +250,6 @@ export async function buildAllTimeHourly(): Promise<VolumeHistoryPayload> {
   }
 
   const data: VolumeHistoryPayload = { range: "ALL", interval: "1h", buckets };
-  historyCache = { key: "ALL:1h", at: now, data };
+  historyCache.set("ALL:1h", { at: now, data });
   return data;
 }

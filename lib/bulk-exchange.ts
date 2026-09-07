@@ -93,11 +93,6 @@ export function marketBase(symbol: string): string {
   return symbol.replace(/-USD$/i, "").toUpperCase();
 }
 
-export interface AccountFeeTier {
-  rollingVolume: number;
-  windowDays: number;
-}
-
 export interface AccountSnapshot {
   volumeUsd: number;
   windowDays: number;
@@ -113,18 +108,7 @@ function unwrapAccount(payload: unknown): Record<string, unknown> | null {
   const first = Array.isArray(payload) ? payload[0] : payload;
   const root = asRecord(first);
   if (!root) return null;
-  return asRecord(root.fullAccount) ?? asRecord(root.feeTier) ?? root;
-}
-
-function readFeeTier(payload: unknown): AccountFeeTier | null {
-  const quote = unwrapAccount(payload);
-  if (!quote) return null;
-  const rollingVolume = Number(quote.rollingVolume);
-  if (!Number.isFinite(rollingVolume) || rollingVolume < 0) return null;
-  return {
-    rollingVolume,
-    windowDays: Number(quote.windowDays) || 14,
-  };
+  return asRecord(root.fullAccount) ?? root;
 }
 
 function readAccountSnapshot(payload: unknown): AccountSnapshot | null {
@@ -150,7 +134,7 @@ function readAccountSnapshot(payload: unknown): AccountSnapshot | null {
   };
 }
 
-async function postAccount(wallet: string, type: "feeTier" | "fullAccount"): Promise<unknown> {
+async function postAccount(wallet: string): Promise<unknown> {
   const res = await fetch(`${EXCHANGE_API_BASE}/account`, {
     method: "POST",
     headers: {
@@ -158,19 +142,14 @@ async function postAccount(wallet: string, type: "feeTier" | "fullAccount"): Pro
       "Content-Type": "application/json",
       "User-Agent": "AURA-Intelligence/1.0",
     },
-    body: JSON.stringify({ type, user: wallet }),
+    body: JSON.stringify({ type: "fullAccount", user: wallet }),
     cache: "no-store",
   });
   if (!res.ok) return null;
   return res.json();
 }
 
-/** Unsigned account fee-tier quote — 14d rolling volume for the Volume board. */
-export async function fetchAccountFeeTier(wallet: string): Promise<AccountFeeTier | null> {
-  return readFeeTier(await postAccount(wallet, "feeTier"));
-}
-
 /** Margin, PnL, and 14d volume from an unsigned fullAccount snapshot. */
 export async function fetchAccountSnapshot(wallet: string): Promise<AccountSnapshot | null> {
-  return readAccountSnapshot(await postAccount(wallet, "fullAccount"));
+  return readAccountSnapshot(await postAccount(wallet));
 }

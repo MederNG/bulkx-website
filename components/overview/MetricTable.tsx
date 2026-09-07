@@ -24,8 +24,6 @@ export const CATEGORY_NAME_SVG = {
 /** Height of MetricTableHeader (label + pb-1.5 + hairline). Kept for callers
  * that need to match the legend's chrome; Category Share aligns to the donut
  * apex directly via chart margin instead. */
-export const METRIC_TABLE_HEADER_H = 24;
-
 /** The three columns both tables end with — label, count, share — are the
  * same fixed widths in both, and both tables hang them off their right edge.
  * That is what puts the tier table's Size / Depositors / Share directly under

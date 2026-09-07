@@ -19,10 +19,6 @@ export function formatUsd(value: number): string {
   return `$${formatNumber(value, value < 1000 ? 2 : 0)}`;
 }
 
-export function formatPercent(value: number, decimals = 1): string {
-  return `${value.toFixed(decimals)}%`;
-}
-
 export function truncateWallet(wallet: string, chars = 4): string {
   if (wallet.length <= chars * 2 + 3) return wallet;
   return `${wallet.slice(0, chars)}...${wallet.slice(-chars)}`;

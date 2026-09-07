@@ -109,11 +109,3 @@ export async function getLeaderboardForApp(
 }
 
 /** Full upstream wait — for API routes where freshness matters. */
-export async function getLiveLeaderboardFresh(): Promise<LeaderboardEntry[]> {
-  return getLeaderboardForApp();
-}
-
-export function clearLiveLeaderboardCache(): void {
-  cache = null;
-  inflight = null;
-}

@@ -4,19 +4,26 @@ import { useEffect, useState } from "react";
 import type { SparkRow } from "@/components/overview/MiniSpark";
 import { mergeLevelPoints, type LevelPoint } from "@/lib/exchange-level-history";
 
+/** Stable identity for the default `server` arg. A `= []` default allocates a
+ *  fresh array per render, and `server` is an effect dependency — that spins
+ *  the effect → setRows → render loop forever. */
+const NO_SERVER_ROWS: SparkRow[] = [];
+
 function readStored(key: string): LevelPoint[] {
-  const out: LevelPoint[] = [];
-  for (const store of [localStorage, sessionStorage]) {
-    try {
-      const raw = store.getItem(key);
-      if (!raw) continue;
-      const parsed = JSON.parse(raw) as SparkRow[];
-      if (Array.isArray(parsed)) out.push(...parsed);
-    } catch {
-      // ignore a broken store
-    }
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw) as SparkRow[];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    // Unavailable or broken store — the server rows still carry the trail.
+    return [];
   }
-  return out;
+}
+
+function sameSeries(a: SparkRow[], b: SparkRow[]): boolean {
+  if (a.length !== b.length) return false;
+  return a.every((row, i) => row.t === b[i].t && row.value === b[i].value);
 }
 
 /**
@@ -26,9 +33,9 @@ function readStored(key: string): LevelPoint[] {
 export function useLevelSpark(
   key: string,
   live: number,
-  server: SparkRow[] = [],
+  server: SparkRow[] = NO_SERVER_ROWS,
 ): SparkRow[] {
-  const [rows, setRows] = useState<SparkRow[]>([]);
+  const [rows, setRows] = useState<SparkRow[]>(NO_SERVER_ROWS);
 
   useEffect(() => {
     if (!Number.isFinite(live)) return;
@@ -42,13 +49,9 @@ export function useLevelSpark(
     } catch {
       // quota — keep the in-memory trail only
     }
-    setRows(next);
+    // The poll re-runs this every tick; only re-render when a vertex moved.
+    setRows((prev) => (sameSeries(prev, next) ? prev : next));
   }, [key, live, server]);
 
   return rows;
-}
-
-/** @deprecated use useLevelSpark */
-export function useSessionSpark(key: string, value: number): SparkRow[] {
-  return useLevelSpark(key, value);
 }

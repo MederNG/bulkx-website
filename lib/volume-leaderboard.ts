@@ -77,11 +77,6 @@ export function attachExchangeStats(entries: LeaderboardEntry[]): LeaderboardEnt
   });
 }
 
-/** @deprecated use attachExchangeStats */
-export function attachVolume(entries: LeaderboardEntry[]): LeaderboardEntry[] {
-  return attachExchangeStats(entries);
-}
-
 export async function sampleWalletVolumes(
   wallets: string[],
   concurrency = 8,
