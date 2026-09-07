@@ -29,12 +29,16 @@
      rgb(var(--t-accent-rgb) / 0.5) instead of a second hard-coded rgba. */
   --t-accent: #ffb547;
   --t-accent-rgb: 255 181 71;
-  --t-accent-hover: #ffcb7d;
-  --t-accent-hi: #ffd591;
-  /* Four stops of the accent, dark→pale, for the APR gradient bar. */
-  --t-accent-deep: #6a4018;
-  --t-accent-mid: #c47e2e;
-  --t-accent-pale: #ffe7c2;
+  /* One accent, not a family. These aliases used to carry lighter and
+     muddier golds (#ffd591, #c47e2e, #6a4018) left over from the old
+     design; against the warm base they read as haze rather than as the
+     brand colour. Everything now resolves to --t-accent exactly, and the
+     pulses that used to shift hue shift their glow instead. */
+  --t-accent-hover: var(--t-accent);
+  --t-accent-hi: var(--t-accent);
+  --t-accent-deep: var(--t-accent);
+  --t-accent-mid: var(--t-accent);
+  --t-accent-pale: var(--t-accent);
 
   /* Status — identical in both themes by design. */
   --t-green: #00b481;
@@ -85,11 +89,11 @@
 
   --t-accent: #5a2c40;
   --t-accent-rgb: 90 44 64;
-  --t-accent-hover: #7a3e58;
-  --t-accent-hi: #8a4a63;
-  --t-accent-deep: #2e1621;
-  --t-accent-mid: #45212f;
-  --t-accent-pale: #9c6b80;
+  --t-accent-hover: var(--t-accent);
+  --t-accent-hi: var(--t-accent);
+  --t-accent-deep: var(--t-accent);
+  --t-accent-mid: var(--t-accent);
+  --t-accent-pale: var(--t-accent);
 
   --t-green: #00b481;
   --t-red: #ef4a3c;
@@ -149,6 +153,23 @@
   /* Back-compat for inline chart SVG that still names the old faces. */
   --font-ibm-plex-sans: var(--font-familjen);
   --font-ibm-plex-mono: var(--font-overpass-mono);
+}
+
+/* Logo ink swap. Named after the ink, not the theme: the cream mark rides
+   the dark theme and the near-black mark rides the light one. Done in CSS
+   rather than in React so it is already correct on first paint, the same
+   way the palette is. */
+.logo-ink-light {
+  display: block;
+}
+.logo-ink-dark {
+  display: none;
+}
+:root[data-theme="light"] .logo-ink-light {
+  display: none;
+}
+:root[data-theme="light"] .logo-ink-dark {
+  display: block;
 }
 
 /* Page shell width — the redesign runs wider than the old 1400px grid. */

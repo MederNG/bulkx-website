@@ -63,7 +63,14 @@ export function PreDepositsRecapCard({ className }: { className?: string }) {
             alt=""
             width={83}
             height={32}
-            className="shrink-0"
+            className="logo-ink-light shrink-0"
+          />
+          <Image
+            src="/logos/bulkx-logo-dark.svg"
+            alt=""
+            width={83}
+            height={32}
+            className="logo-ink-dark shrink-0"
           />
           <span className="font-label text-text-dim">Intelligence</span>
         </div>

@@ -66,14 +66,26 @@ export function SiteNav() {
       <div className="shell flex min-h-[60px] items-center justify-between gap-x-3 py-[11px] sm:gap-x-[26px]">
         <div className="flex min-w-0 items-center gap-[26px]">
           <Link href="/" className="flex min-w-0 items-center gap-[11px] text-text-primary">
-            <Image
-              src="/logos/bulkx-logo-light.svg"
-              alt="BULK"
-              width={83}
-              height={32}
-              priority
-              className="hidden sm:block"
-            />
+            {/* Both marks ship; CSS shows the one the theme calls for. */}
+            <span className="hidden sm:block">
+              <Image
+                src="/logos/bulkx-logo-light.svg"
+                alt="BULK"
+                width={83}
+                height={32}
+                priority
+                className="logo-ink-light"
+              />
+              <Image
+                src="/logos/bulkx-logo-dark.svg"
+                alt=""
+                aria-hidden
+                width={83}
+                height={32}
+                priority
+                className="logo-ink-dark"
+              />
+            </span>
             <span className="font-sans text-[17px] font-semibold tracking-[-0.02em] text-text-secondary">
               INTELLIGENCE
             </span>
