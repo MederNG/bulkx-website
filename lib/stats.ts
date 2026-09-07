@@ -6,7 +6,6 @@ import { percentileValue } from "@/lib/percentiles";
 import { filterSnapshotsByRange, readSnapshots } from "@/lib/snapshots";
 import { getLeaderboardTop } from "@/lib/leaderboard-table";
 import { categoryLabel } from "@/lib/utils";
-import { computeDepositAuraPredictContext } from "@/lib/deposit-aura-predict";
 import { buildWalletData } from "@/lib/wallet-data";
 import type {
   ChartRange,
@@ -131,17 +130,4 @@ export function getSortedLeaderboard(
 export function getChartSnapshots(range: ChartRange): Snapshot[] {
   const snapshots = readSnapshots();
   return filterSnapshotsByRange(snapshots, range);
-}
-
-export function getDepositAuraPredictContext(
-  currentTvl: number,
-  nowMs: number = Date.now(),
-  entries?: LeaderboardEntry[]
-) {
-  return computeDepositAuraPredictContext(
-    entries ?? getLeaderboard(),
-    currentTvl,
-    nowMs,
-    readSnapshots()
-  );
 }

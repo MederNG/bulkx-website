@@ -371,7 +371,7 @@ export function CalculatorSection({ totalAuraSupply = 0 }: { totalAuraSupply?: n
         <PanelCard glossy glossDelay={-11} className="py-10 text-center">
           <p className="font-label m-0 text-text-dim">Aura Predictor</p>
           <p className="mx-auto m-0 mt-3 max-w-[560px] font-sans text-[13px] leading-relaxed text-text-secondary">
-            Coming Soon. Model what trading earns over the weeks.
+            Coming soon: model your weekly trading earnings
           </p>
         </PanelCard>
       )}

@@ -1,4 +1,4 @@
-import { getCurrentCampaignWeek } from "@/lib/deposit-aura-predict";
+import { getCurrentCampaignWeek } from "@/lib/campaign-clock";
 
 export type AuraSource = "deposit" | "referral" | "other";
 

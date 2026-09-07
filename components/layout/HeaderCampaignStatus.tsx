@@ -60,7 +60,7 @@ function WeekTicks({ today }: { today: number | null }) {
 export function HeaderCampaignStatus() {
   const live = useLiveFinancials();
   const exchange = useLiveExchange();
-  const nextSnapshot = live.depositPredict.nextSnapshotTimestamp;
+  const nextSnapshot = live.campaign.nextSnapshotTimestamp;
   const [today, setToday] = useState<number | null>(null);
   const [remainingMs, setRemainingMs] = useState<number | null>(null);
 
@@ -74,7 +74,7 @@ export function HeaderCampaignStatus() {
     return () => window.clearInterval(id);
   }, [nextSnapshot]);
 
-  const week = live.depositPredict.campaignWeek;
+  const week = live.campaign.week;
   const left = remainingMs != null ? formatLeftCompact(remainingMs) : "—";
 
   return (

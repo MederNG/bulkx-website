@@ -170,13 +170,3 @@ export function computeProjectedSnapshotTvl(
     expectedGrowthPercent,
   };
 }
-
-export function formatSnapshotUtc(timestampMs: number): string {
-  const date = new Date(timestampMs).toLocaleDateString("en-US", {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-    timeZone: "UTC",
-  });
-  return `${date}, 13:00 UTC`;
-}

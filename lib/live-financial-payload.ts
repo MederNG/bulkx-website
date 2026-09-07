@@ -1,12 +1,9 @@
-import {
-  refreshDepositPredictClock,
-  type DepositAuraPredictContext,
-} from "@/lib/deposit-aura-predict";
+import { buildCampaignClock, type CampaignClock } from "@/lib/campaign-clock";
 import { getLeaderboard, getLeaderboardMtimeMs } from "@/lib/fetcher";
 import { getLiveTotals } from "@/lib/live-totals";
 import { computeProjectedSnapshotTvl, type ProjectedSnapshotTvl } from "@/lib/projected-snapshot-tvl";
 import { getSnapshotsMtimeMs } from "@/lib/snapshots";
-import { getChartSnapshots, getDepositAuraPredictContext } from "@/lib/stats";
+import { getChartSnapshots } from "@/lib/stats";
 import { getTotalsMtimeMs, readTotals } from "@/lib/totals";
 import type { LeaderboardEntry, Totals } from "@/types";
 import {
@@ -29,7 +26,7 @@ export interface LiveFinancialPayload {
   referenceTimeMs: number;
   projection: ProjectedSnapshotTvl;
   secondaryMetrics: TvlKpiSecondaryMetrics;
-  depositPredict: DepositAuraPredictContext;
+  campaign: CampaignClock;
 }
 
 function assembleLiveFinancialPayload(
@@ -63,7 +60,7 @@ function assembleLiveFinancialPayload(
     totalWithdrawn,
     referenceTimeMs,
   );
-  const depositPredict = getDepositAuraPredictContext(currentTvl, referenceTimeMs, entries);
+  const campaign = buildCampaignClock(referenceTimeMs);
 
   return {
     currentTvl,
@@ -76,7 +73,7 @@ function assembleLiveFinancialPayload(
     referenceTimeMs,
     projection,
     secondaryMetrics,
-    depositPredict,
+    campaign,
   };
 }
 
@@ -99,7 +96,7 @@ export function buildLiveFinancialPayloadFromDisk(): LiveFinancialPayload {
   return {
     ...base,
     referenceTimeMs: now,
-    depositPredict: refreshDepositPredictClock(base.depositPredict, now, base.currentTvl),
+    campaign: buildCampaignClock(now),
   };
 }
 
@@ -144,7 +141,7 @@ export async function buildLiveFinancialPayload(): Promise<LiveFinancialPayload>
       totals.totalWithdrawn,
       referenceTimeMs,
     ),
-    depositPredict: refreshDepositPredictClock(base.depositPredict, referenceTimeMs, totals.tvl),
+    campaign: buildCampaignClock(referenceTimeMs),
   };
 
   livePayloadCache = { at: now, data };
