@@ -40,6 +40,16 @@ export function categoryLabel(key: string): string {
   const weekPrefixMatch = key.match(/^week\d+_(.+)$/i);
   if (weekPrefixMatch) return categoryLabel(weekPrefixMatch[1]);
 
+  // Same for "mainnet_weekN_*": the drill-down is already scoped to that week,
+  // so the prefix is a redundant echo. "protocol" is the week's bonus bucket
+  // and is the one remainder that must not be stripped further — the filter
+  // below drops that word as noise, which would leave nothing to show.
+  const mainnetPrefixMatch = key.match(/^mainnet_week\d+_(.+)$/i);
+  if (mainnetPrefixMatch) {
+    const rest = mainnetPrefixMatch[1];
+    return rest.toLowerCase() === "protocol" ? "Protocol" : categoryLabel(rest);
+  }
+
   const parts = key.split("_").filter((part) => part.toLowerCase() !== "protocol");
   if (parts.length !== key.split("_").length) {
     return categoryLabel(parts.join("_"));
