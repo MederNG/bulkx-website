@@ -61,6 +61,47 @@ export function parseAuraCategoryKey(key: string): ParsedAuraCategory {
   return { group: "other" };
 }
 
+// Fees, maker rebates and held OI are all the same activity — trading on
+// mainnet — so a week's drill-down shows them as one row instead of three.
+// Liquidations/ADL, referrals and the protocol bonus stay on their own.
+const MAINNET_SUFFIX_RE = /^mainnet_week(\d+)_(.+)$/;
+const MAINNET_TRADING_SUFFIXES = new Set(["fees", "maker", "held_oi"]);
+const MAINNET_TRADING_LABEL = "Mainnet Trading";
+
+/** Collapse each week's mainnet trading sub-categories into a single row. */
+function mergeMainnetTrading(items: CategoryBreakdownItem[]): CategoryBreakdownItem[] {
+  const mergedByWeek = new Map<string, CategoryBreakdownItem>();
+  const rows: CategoryBreakdownItem[] = [];
+
+  for (const item of items) {
+    const match = item.key.match(MAINNET_SUFFIX_RE);
+    if (!match || !MAINNET_TRADING_SUFFIXES.has(match[2].toLowerCase())) {
+      rows.push(item);
+      continue;
+    }
+
+    const mergedKey = `mainnet_week${match[1]}_trading`;
+    const existing = mergedByWeek.get(mergedKey);
+    if (existing) {
+      existing.points += item.points;
+      existing.share += item.share;
+      continue;
+    }
+
+    // A fresh row — never mutate the caller's items.
+    const row: CategoryBreakdownItem = {
+      key: mergedKey,
+      category: MAINNET_TRADING_LABEL,
+      points: item.points,
+      share: item.share,
+    };
+    mergedByWeek.set(mergedKey, row);
+    rows.push(row);
+  }
+
+  return rows;
+}
+
 export const OVERVIEW_GROUP = "overview";
 
 /** One bucket per source *type*, combined across every week (not per-week). */
@@ -147,12 +188,11 @@ export function filterCategoryBreakdown(
   const weekMatch = selectedGroup.match(/^week-(\d+)$/);
   if (weekMatch) {
     const week = Number(weekMatch[1]);
-    return data
-      .filter((item) => {
-        const parsed = parseAuraCategoryKey(item.key);
-        return parsed.group === "week" && parsed.week === week;
-      })
-      .sort((a, b) => b.points - a.points);
+    const items = data.filter((item) => {
+      const parsed = parseAuraCategoryKey(item.key);
+      return parsed.group === "week" && parsed.week === week;
+    });
+    return mergeMainnetTrading(items).sort((a, b) => b.points - a.points);
   }
 
   return [...data].sort((a, b) => b.points - a.points);
