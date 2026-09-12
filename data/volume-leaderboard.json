@@ -1,42 +1,49 @@
 {
-  "updatedAt": "2026-09-12T14:19:54.956Z",
-  "cursor": 15080,
+  "updatedAt": "2026-09-12T17:24:19.177Z",
+  "cursor": 15480,
   "windowDays": 14,
   "rows": [
     {
       "wallet": "3i8LkowoNejA1BRX3QNnvM9aCBLAGhSFuRpvVF9qVUDa",
       "volumeUsd": 16762828.550062,
-      "balanceUsd": 119502.373978,
-      "pnlUsd": 13777.915708999999,
-      "updatedAt": "2026-09-12T14:19:38.989Z"
+      "balanceUsd": 119670.58403,
+      "pnlUsd": 13948.484724999998,
+      "updatedAt": "2026-09-12T17:24:05.035Z"
     },
     {
       "wallet": "Gd5Cy1RQ2eDXtrBnX8fXkN3Ay7Ayhr2hM919Vy9gHEWm",
       "volumeUsd": 15277846.764020998,
-      "balanceUsd": 623925.156548,
-      "pnlUsd": 20983.035923000003,
-      "updatedAt": "2026-09-12T14:19:38.989Z"
+      "balanceUsd": 623768.493665,
+      "pnlUsd": 21420.568402,
+      "updatedAt": "2026-09-12T17:24:05.035Z"
     },
     {
       "wallet": "EibQ2VYpzj18qSdEBkmxWVzde7FzamTxVG9rZyY689Yj",
       "volumeUsd": 5413041.68552,
-      "balanceUsd": 130826.79568,
-      "pnlUsd": -5502.751239,
-      "updatedAt": "2026-09-12T14:19:38.989Z"
+      "balanceUsd": 130637.93489,
+      "pnlUsd": -5333.980001,
+      "updatedAt": "2026-09-12T17:24:05.035Z"
+    },
+    {
+      "wallet": "DgPU4NFa8NTbsGMxzvqnouwk9Sda94Q79WhuhF833gcV",
+      "volumeUsd": 3124800.618598,
+      "balanceUsd": 4053.679623,
+      "pnlUsd": -5034.8635699999995,
+      "updatedAt": "2026-09-12T17:24:05.035Z"
     },
     {
       "wallet": "FJ2KJkDmwDNzwWuwGHcGKoXTc6qpoAP3XPdnBYv3JBL4",
       "volumeUsd": 2271353.257922,
-      "balanceUsd": 264274.145622,
-      "pnlUsd": 10987.716677999999,
-      "updatedAt": "2026-09-12T14:19:38.989Z"
+      "balanceUsd": 264332.655854,
+      "pnlUsd": 10840.026831000001,
+      "updatedAt": "2026-09-12T17:24:05.035Z"
     },
     {
       "wallet": "ARKG323N7eBy2b3BskDpmWvcxZ92RSr7cdq5dy9bWG9C",
       "volumeUsd": 2043094.5749179998,
       "balanceUsd": 0,
       "pnlUsd": -19144.819071,
-      "updatedAt": "2026-09-12T01:26:59.865Z"
+      "updatedAt": "2026-09-12T17:24:05.035Z"
     },
     {
       "wallet": "ETGL5G8UsQqLXg1S63BQwPDJWpv8uN2xjJNjAkhnisw7",
@@ -48,16 +55,16 @@
     {
       "wallet": "FDUHiXFYM3V5gbR7rW4yXBJZrRKD8juJFpTDSyFMPe3t",
       "volumeUsd": 761879.488825,
-      "balanceUsd": 174772.478539,
-      "pnlUsd": 1073.465535,
-      "updatedAt": "2026-09-12T14:19:38.989Z"
+      "balanceUsd": 174770.01263,
+      "pnlUsd": 1020.6024030000001,
+      "updatedAt": "2026-09-12T17:24:05.035Z"
     },
     {
       "wallet": "3T2QV53BaFnrN2AmqpdAReBZ9hUWKKDFPXXgEHqAJ6hH",
       "volumeUsd": 725230.684441,
       "balanceUsd": 0,
       "pnlUsd": -321.730261,
-      "updatedAt": "2026-09-12T14:19:38.989Z"
+      "updatedAt": "2026-09-12T17:24:05.035Z"
     },
     {
       "wallet": "7fzGkLCUE3yLR2tBpudi2WxuzCZw6WAeRb3NGk6LDgKZ",
@@ -69,16 +76,16 @@
     {
       "wallet": "2HuYYV3pahBH4tWnGDSUrkPQNm3Pfv6jN5oLq3T43MNJ",
       "volumeUsd": 411368.081368,
-      "balanceUsd": 141118.134967,
-      "pnlUsd": 66.326788,
-      "updatedAt": "2026-09-12T14:19:38.989Z"
+      "balanceUsd": 141118.171778,
+      "pnlUsd": 76.564561,
+      "updatedAt": "2026-09-12T17:24:05.035Z"
     },
     {
       "wallet": "Dhx5233ZX8QXr37iRakowgrEnWFN1hDfcibUqyqxRWwu",
       "volumeUsd": 365452.054588,
-      "balanceUsd": 13155.625329,
-      "pnlUsd": -1268.541117,
-      "updatedAt": "2026-09-12T14:19:38.989Z"
+      "balanceUsd": 13156.587697,
+      "pnlUsd": -1135.653128,
+      "updatedAt": "2026-09-12T17:24:05.035Z"
     },
     {
       "wallet": "97Nq39YDZq77pfPY97RLA8ScBbPapQEwkDUjYNZiuMUd",
@@ -106,7 +113,7 @@
       "volumeUsd": 264373.486643,
       "balanceUsd": 0,
       "pnlUsd": 0,
-      "updatedAt": "2026-09-12T14:19:38.989Z"
+      "updatedAt": "2026-09-12T17:24:05.035Z"
     },
     {
       "wallet": "nAU5tETTb3DRT6oHEnXYUzcEokBKEpfiCQPWwyMNc3f",
@@ -132,9 +139,9 @@
     {
       "wallet": "3rGQjUT2ejv8PGjf8GTLUiVGvJo5CPDu44KeZV8SLcf5",
       "volumeUsd": 148953.677374,
-      "balanceUsd": 12308.36723,
-      "pnlUsd": -2798.2887760000003,
-      "updatedAt": "2026-09-12T14:19:38.989Z"
+      "balanceUsd": 12309.340374,
+      "pnlUsd": -2729.7833140000002,
+      "updatedAt": "2026-09-12T17:24:05.035Z"
     },
     {
       "wallet": "57bhHJXkDnjEyyCqGYbG3oTrnsSKq6oL5gufeHA3YdQ5",
@@ -146,9 +153,9 @@
     {
       "wallet": "5GHMPskpm21G3efYZRoHrCgYZKNTSkMMBVY3vne7PUQm",
       "volumeUsd": 138644.441379,
-      "balanceUsd": 60132.839351,
-      "pnlUsd": 41.95285999999999,
-      "updatedAt": "2026-09-12T14:19:38.989Z"
+      "balanceUsd": 60132.0124,
+      "pnlUsd": -108.356743,
+      "updatedAt": "2026-09-12T17:24:05.035Z"
     },
     {
       "wallet": "6986VpFCXBPX5sPtCDHeiTZD4TjsL5HGeyqrdEzEgu2Z",
@@ -160,9 +167,9 @@
     {
       "wallet": "Ffd5bfJKuLWzoqbf4Scwt638EKG2FAPArkuYCkWxn9Qo",
       "volumeUsd": 97303.628155,
-      "balanceUsd": 264.502816,
-      "pnlUsd": -352.146282,
-      "updatedAt": "2026-09-11T22:44:38.308Z"
+      "balanceUsd": 264.31085,
+      "pnlUsd": -355.77016499999996,
+      "updatedAt": "2026-09-12T17:24:05.035Z"
     },
     {
       "wallet": "expwKo5XkVdJ9ZRpggVdhCjsStX4WAT7LSTpt7m7BYe",
@@ -246,14 +253,14 @@
       "volumeUsd": 50036.766708,
       "balanceUsd": 770.989838,
       "pnlUsd": -208.678208,
-      "updatedAt": "2026-09-12T14:19:38.989Z"
+      "updatedAt": "2026-09-12T17:24:05.035Z"
     },
     {
       "wallet": "3aDPJiuydGDUcHZVVhGhyhnZ55QbBdxsmymVmhZBaa1f",
       "volumeUsd": 44782.146323,
-      "balanceUsd": 8707.593491,
-      "pnlUsd": -209.332406,
-      "updatedAt": "2026-09-12T14:19:38.989Z"
+      "balanceUsd": 8708.167167,
+      "pnlUsd": -220.13396799999998,
+      "updatedAt": "2026-09-12T17:24:05.035Z"
     },
     {
       "wallet": "4JX2ZeQnKQ98qxNuXxpsCLt2quh37yZ527jMMPWNptJJ",
@@ -267,7 +274,7 @@
       "volumeUsd": 43522.316829,
       "balanceUsd": 392.970772,
       "pnlUsd": 0,
-      "updatedAt": "2026-09-12T14:19:38.989Z"
+      "updatedAt": "2026-09-12T17:24:05.035Z"
     },
     {
       "wallet": "3jsK2DF7NfZxrgEPwzDCqh9J7PUPGahcpjio6ynCrfq8",
@@ -288,7 +295,7 @@
       "volumeUsd": 32077.39971,
       "balanceUsd": 544.333656,
       "pnlUsd": 48.325874,
-      "updatedAt": "2026-09-10T14:36:04.067Z"
+      "updatedAt": "2026-09-12T17:24:05.035Z"
     },
     {
       "wallet": "BcDgu34n4JtSraG429avhokt2EedbprDFWB3BuD6etLy",
@@ -337,7 +344,7 @@
       "volumeUsd": 21909.222007,
       "balanceUsd": 0,
       "pnlUsd": 923.183438,
-      "updatedAt": "2026-09-12T14:19:38.989Z"
+      "updatedAt": "2026-09-12T17:24:05.035Z"
     },
     {
       "wallet": "1261pfsBEzEd7ygRdMuh5p8QE4mAALYT7yS34qLq57uJ",
@@ -384,9 +391,9 @@
     {
       "wallet": "4wvyeLJWR1dy3LR7zf7v9CdXRUNGpMCJy8oDPu5QzSQK",
       "volumeUsd": 14257.93627,
-      "balanceUsd": 17.478701,
-      "pnlUsd": -2.847819,
-      "updatedAt": "2026-09-09T14:46:12.673Z"
+      "balanceUsd": 16.972806,
+      "pnlUsd": -3.12309,
+      "updatedAt": "2026-09-12T17:24:05.035Z"
     },
     {
       "wallet": "GRMowh47RQcqPnuWTAW4TsKNbc6RCPuyUkECVWf6qjAN",
@@ -405,9 +412,9 @@
     {
       "wallet": "7AmEXgpFD93xJ57j3uFrhDBiHyMbNCjE6FvijtJd6Qt5",
       "volumeUsd": 11453.884556,
-      "balanceUsd": 2548.140965,
-      "pnlUsd": -3.812891,
-      "updatedAt": "2026-09-12T14:19:38.989Z"
+      "balanceUsd": 2546.270056,
+      "pnlUsd": 36.396472,
+      "updatedAt": "2026-09-12T17:24:05.035Z"
     },
     {
       "wallet": "GZmkA8gcLrndxaAZVaRvfiYHihvN3jKrg8aWNPQQtWSd",
@@ -424,18 +431,18 @@
       "updatedAt": "2026-09-12T14:19:38.989Z"
     },
     {
+      "wallet": "FsaqNxPR7RfoMCjny11MAsMnL5hoqWz7kURA8Hziw2dZ",
+      "volumeUsd": 10536.097916,
+      "balanceUsd": 2052.64404,
+      "pnlUsd": 75.92789,
+      "updatedAt": "2026-09-12T17:24:05.035Z"
+    },
+    {
       "wallet": "C9GKHYm5c1S2WpkkBpWjuZjbE7yhWnFqSciKvfJUmHAw",
       "volumeUsd": 9340.418696,
       "balanceUsd": 0,
       "pnlUsd": -6.152695,
       "updatedAt": "2026-09-10T23:21:35.913Z"
-    },
-    {
-      "wallet": "FsaqNxPR7RfoMCjny11MAsMnL5hoqWz7kURA8Hziw2dZ",
-      "volumeUsd": 9328.018549,
-      "balanceUsd": 2862.264535,
-      "pnlUsd": 34.309932,
-      "updatedAt": "2026-09-08T21:59:08.015Z"
     },
     {
       "wallet": "E8jaEYLfU1DTK4jRXjeRyD3vum5giBi9A4MgwuhmdADz",
@@ -491,7 +498,7 @@
       "volumeUsd": 6342.230654,
       "balanceUsd": 101.802423,
       "pnlUsd": -1.806204,
-      "updatedAt": "2026-09-09T21:53:50.482Z"
+      "updatedAt": "2026-09-12T17:24:05.035Z"
     },
     {
       "wallet": "EXBt9b4tB3PqYExju1HUNPMAD6d89fve2f1H2ShoFXWk",
@@ -904,84 +911,84 @@
       "volumeUsd": 0,
       "balanceUsd": 950000,
       "pnlUsd": 0,
-      "updatedAt": "2026-09-12T14:19:38.989Z"
+      "updatedAt": "2026-09-12T17:24:05.035Z"
     },
     {
       "wallet": "FFEkbhctyy1U1Q7D2wfoDNE7R8QP9j2dkDcYavZKWRJ5",
       "volumeUsd": 0,
       "balanceUsd": 150000,
       "pnlUsd": 0,
-      "updatedAt": "2026-09-12T14:19:38.989Z"
+      "updatedAt": "2026-09-12T17:24:05.035Z"
     },
     {
       "wallet": "2YPycSqBYgurW96AEGnCvRuXp7znSAqxzfVHBtwR9KBy",
       "volumeUsd": 0,
       "balanceUsd": 10,
       "pnlUsd": 0,
-      "updatedAt": "2026-09-12T14:19:38.989Z"
+      "updatedAt": "2026-09-12T17:24:05.035Z"
     },
     {
       "wallet": "4VSsSjHWaG431YTtyrrUieoyR4MgCLnYWRD48DCrj15F",
       "volumeUsd": 0,
       "balanceUsd": 990.0022,
       "pnlUsd": 0,
-      "updatedAt": "2026-09-12T14:19:38.989Z"
+      "updatedAt": "2026-09-12T17:24:05.035Z"
     },
     {
       "wallet": "5wFaC3M4EGhL7z4hzagDMqPR3dr4iErPSU2fP8GFdag5",
       "volumeUsd": 0,
       "balanceUsd": 300000,
       "pnlUsd": 0,
-      "updatedAt": "2026-09-12T14:19:38.989Z"
+      "updatedAt": "2026-09-12T17:24:05.035Z"
     },
     {
       "wallet": "8wMx3Krdcz33kiP59KDVvS2wGPrg3enrQEkyH1K3Fbji",
       "volumeUsd": 0,
       "balanceUsd": 300,
       "pnlUsd": 0,
-      "updatedAt": "2026-09-12T14:19:38.989Z"
+      "updatedAt": "2026-09-12T17:24:05.035Z"
     },
     {
       "wallet": "D8c7rMa2mb3MRtAE8rV6PXKxcixqhJkHNPapcq8W4bQk",
       "volumeUsd": 0,
       "balanceUsd": 221117.167457,
       "pnlUsd": 0,
-      "updatedAt": "2026-09-12T14:19:38.989Z"
+      "updatedAt": "2026-09-12T17:24:05.035Z"
     },
     {
       "wallet": "EgE3QiZjqTFLLeBa8tZZGeK7sNZPNaewQBCmBh48S7qM",
       "volumeUsd": 0,
       "balanceUsd": 200,
       "pnlUsd": 0,
-      "updatedAt": "2026-09-12T14:19:38.989Z"
+      "updatedAt": "2026-09-12T17:24:05.035Z"
     },
     {
       "wallet": "6YvPkJGE1UxhtWELpts6rzcjFa3oRxymHrBLyADPdRW7",
       "volumeUsd": 0,
       "balanceUsd": 268075.962683,
       "pnlUsd": 0,
-      "updatedAt": "2026-09-12T14:19:38.989Z"
+      "updatedAt": "2026-09-12T17:24:05.035Z"
     },
     {
       "wallet": "4VDSvqoxgqqAsM7fwav13nMjJ57tG93YjzqM2iGXGy9q",
       "volumeUsd": 0,
       "balanceUsd": 101,
       "pnlUsd": 0,
-      "updatedAt": "2026-09-12T14:19:38.989Z"
+      "updatedAt": "2026-09-12T17:24:05.035Z"
     },
     {
       "wallet": "7RwwtqzA3Ur1ZwNFriLgQzeeYRdEuD4sDe6GNp6MTW2i",
       "volumeUsd": 0,
       "balanceUsd": 250958.68337,
       "pnlUsd": 0,
-      "updatedAt": "2026-09-12T14:19:38.989Z"
+      "updatedAt": "2026-09-12T17:24:05.035Z"
     },
     {
       "wallet": "3BjCKyCHhjA6nb7WhFg5c7j2Qg2GGKEbcjzENtTwDpCW",
       "volumeUsd": 0,
       "balanceUsd": 10,
       "pnlUsd": 0,
-      "updatedAt": "2026-09-12T14:19:38.989Z"
+      "updatedAt": "2026-09-12T17:24:05.035Z"
     },
     {
       "wallet": "BHhfpdsEGEZhbNdv1TSZXicfVpUFN1qeQiTWtA3nX6P2",
@@ -995,49 +1002,49 @@
       "volumeUsd": 0,
       "balanceUsd": 0.0029,
       "pnlUsd": 0,
-      "updatedAt": "2026-09-12T14:19:38.989Z"
+      "updatedAt": "2026-09-12T17:24:05.035Z"
     },
     {
       "wallet": "86aHci6eNZuCTDuRmW5PM4DKPF75zfzXaomG12WBMEg3",
       "volumeUsd": 0,
       "balanceUsd": 1000.081699,
       "pnlUsd": 0,
-      "updatedAt": "2026-09-12T14:19:38.989Z"
+      "updatedAt": "2026-09-12T17:24:05.035Z"
     },
     {
       "wallet": "6pXJKehUfhE6RWibPJSvJx6djS5K5ZrhdB2cqfWYPEFS",
       "volumeUsd": 0,
       "balanceUsd": 14548.218881,
       "pnlUsd": 0,
-      "updatedAt": "2026-09-12T14:19:38.989Z"
+      "updatedAt": "2026-09-12T17:24:05.035Z"
     },
     {
       "wallet": "F798uRiw4eEZtqMHLDsJho9r7h8nhtmRSAaU64CMf5HV",
       "volumeUsd": 0,
       "balanceUsd": 100000,
       "pnlUsd": 0,
-      "updatedAt": "2026-09-12T14:19:38.989Z"
+      "updatedAt": "2026-09-12T17:24:05.035Z"
     },
     {
       "wallet": "8jvhK9aVoTXTKeMsyZfkZzdbTiVWMDapGajbDuPZVwbF",
       "volumeUsd": 0,
       "balanceUsd": 29999.996414,
       "pnlUsd": 0,
-      "updatedAt": "2026-09-12T14:19:38.989Z"
+      "updatedAt": "2026-09-12T17:24:05.035Z"
     },
     {
       "wallet": "8ddc12hR2ePg4UkkWcecd9ShcNJyHrkBpLDjd8Yjn4GG",
       "volumeUsd": 0,
       "balanceUsd": 40000,
       "pnlUsd": 0,
-      "updatedAt": "2026-09-12T14:19:38.989Z"
+      "updatedAt": "2026-09-12T17:24:05.035Z"
     },
     {
       "wallet": "EHdW4FPrYthc7ZkUiAAwVSXhU4R3weKhnH4jk4Cwpu7s",
       "volumeUsd": 0,
       "balanceUsd": 98.7117,
       "pnlUsd": 0,
-      "updatedAt": "2026-09-12T14:19:38.989Z"
+      "updatedAt": "2026-09-12T17:24:05.035Z"
     },
     {
       "wallet": "3thKmda1HJckR1QhZ3xwQKiNkNqzRwnPyrwmLFy69XfJ",
@@ -1079,7 +1086,7 @@
       "volumeUsd": 0,
       "balanceUsd": 86701.736895,
       "pnlUsd": 0,
-      "updatedAt": "2026-09-12T01:26:59.865Z"
+      "updatedAt": "2026-09-12T17:24:05.035Z"
     },
     {
       "wallet": "GvBpReGJNbCoSpXfMq9E6e9jyAqgjbZ5juaf9MQTusH2",
@@ -2381,14 +2388,14 @@
       "volumeUsd": 0,
       "balanceUsd": 406.33082,
       "pnlUsd": 0,
-      "updatedAt": "2026-09-09T14:46:12.673Z"
+      "updatedAt": "2026-09-12T17:24:05.035Z"
     },
     {
       "wallet": "DifC1FrKyxdwzLHDi6TrMC6oibNMQNv3oBujXpsXodZT",
       "volumeUsd": 0,
       "balanceUsd": 100002.558414,
       "pnlUsd": 0,
-      "updatedAt": "2026-09-11T19:58:36.042Z"
+      "updatedAt": "2026-09-12T17:24:05.035Z"
     },
     {
       "wallet": "AC1vehEkvD9VTpNv9pWf2wX4MQKrydNXZoJypDkrrBaV",
