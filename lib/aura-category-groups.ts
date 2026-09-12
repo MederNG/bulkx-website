@@ -61,11 +61,16 @@ export function parseAuraCategoryKey(key: string): ParsedAuraCategory {
   return { group: "other" };
 }
 
-// Fees, maker rebates and held OI are all the same activity — trading on
-// mainnet — so a week's drill-down shows them as one row instead of three.
-// Liquidations/ADL, referrals and the protocol bonus stay on their own.
+// Fees, maker rebates, held OI and liquidations/ADL are all the same activity
+// — trading on mainnet — so a week's drill-down shows them as one row instead
+// of four. Referrals and the protocol bonus stay on their own.
 const MAINNET_SUFFIX_RE = /^mainnet_week(\d+)_(.+)$/;
-const MAINNET_TRADING_SUFFIXES = new Set(["fees", "maker", "held_oi"]);
+const MAINNET_TRADING_SUFFIXES = new Set([
+  "fees",
+  "maker",
+  "held_oi",
+  "liquidations_adl",
+]);
 const MAINNET_TRADING_LABEL = "Mainnet Trading";
 
 /** Collapse each week's mainnet trading sub-categories into a single row. */
