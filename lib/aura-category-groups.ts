@@ -114,7 +114,7 @@ const SOURCE_LABEL_OVERRIDES: Record<string, string> = {
   retro: "Retro",
   "pre-deposits": "Pre-Deposits",
   referrals: "Referrals",
-  "trading-mainnet": "Trading Mainnet",
+  "trading-mainnet": "Trading",
 };
 
 const FIXED_SOURCE_ORDER = ["retro", "pre-deposits", "referrals"];
