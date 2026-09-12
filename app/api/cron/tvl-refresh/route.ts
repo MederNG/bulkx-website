@@ -1,20 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 
+import { dispatchRepositoryEvent, isAuthorizedCronRequest } from "@/lib/cron-dispatch";
+
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-const GITHUB_REPO = "MakerBuild/aurabulk";
 const DISPATCH_EVENT = "tvl-refresh";
-
-function isAuthorized(req: NextRequest): boolean {
-  const secret = process.env.CRON_SECRET;
-  if (!secret) return process.env.NODE_ENV !== "production";
-  return req.headers.get("authorization") === `Bearer ${secret}`;
-}
 
 /** Vercel Cron backup — triggers the daily TVL GitHub Action via repository_dispatch. */
 export async function GET(req: NextRequest) {
-  if (!isAuthorized(req)) {
+  if (!isAuthorizedCronRequest(req)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -26,24 +21,13 @@ export async function GET(req: NextRequest) {
     );
   }
 
-  const res = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/dispatches`, {
-    method: "POST",
-    headers: {
-      Accept: "application/vnd.github+json",
-      Authorization: `Bearer ${token}`,
-      "X-GitHub-Api-Version": "2022-11-28",
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ event_type: DISPATCH_EVENT }),
-  });
-
-  if (res.status === 204) {
+  const result = await dispatchRepositoryEvent(token, DISPATCH_EVENT);
+  if (result.ok) {
     return NextResponse.json({ ok: true, event: DISPATCH_EVENT });
   }
 
-  const detail = await res.text();
   return NextResponse.json(
-    { error: "GitHub dispatch failed", status: res.status, detail },
+    { error: "GitHub dispatch failed", status: result.status, detail: result.detail },
     { status: 502 },
   );
 }

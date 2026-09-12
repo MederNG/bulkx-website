@@ -5,6 +5,8 @@ on:
     # Saturdays at 13:00 UTC
     - cron: "0 13 * * 6"
   workflow_dispatch:
+  repository_dispatch:
+    types: [aura-refresh]
 
 permissions:
   contents: write
