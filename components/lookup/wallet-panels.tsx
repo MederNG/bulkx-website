@@ -9,13 +9,13 @@ import {
 } from "@/components/overview/AuraDonut";
 import { PanelLabel } from "@/components/overview/PanelCard";
 import { Select } from "@/components/ui/Select";
-import { aggregateBySource } from "@/lib/aura-category-groups";
+import { aggregateBySource, filterCategoryBreakdown } from "@/lib/aura-category-groups";
 import { extractCampaignWeek } from "@/lib/wallet-aura-breakdown";
 import {
   chartPrimaryRamp,
   type OverviewDonutSegment,
 } from "@/lib/overview-metrics";
-import { cn, formatNumber, formatUsd } from "@/lib/utils";
+import { categoryLabel, cn, formatNumber, formatUsd } from "@/lib/utils";
 import { useNarrowViewport } from "@/lib/use-narrow-viewport";
 
 export function weekBreakdown(categories: Record<string, number> | undefined) {
@@ -61,13 +61,20 @@ export function PersonalSourcesPanel({ data }: { data: WalletData }) {
       })
       .map(([key, points]) => ({
         key,
-        category: key,
+        category: categoryLabel(key),
         points: Number(points) || 0,
         share: 0,
       }));
-    return aggregateBySource(items)
-      .filter((row) => row.points > 0)
-      .sort((a, b) => b.points - a.points);
+
+    // "All weeks" rolls up by source type (Mainnet / Pre-Deposits / …). Picking
+    // one week drills into that week's own categories instead, exactly as the
+    // global breakdown does — mainnet trading merged, prefixes stripped.
+    const rows =
+      selectedWeek === "all"
+        ? aggregateBySource(items)
+        : filterCategoryBreakdown(items, `week-${selectedWeek}`);
+
+    return rows.filter((row) => row.points > 0).sort((a, b) => b.points - a.points);
   }, [data.categories, selectedWeek]);
 
   const totalAura = useMemo(

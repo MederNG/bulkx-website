@@ -1,4 +1,4 @@
-import { mainnetCampaignWeek } from "@/lib/aura-category-groups";
+import { parseAuraCategoryKey } from "@/lib/aura-category-groups";
 import { getCurrentCampaignWeek } from "@/lib/campaign-clock";
 
 export type AuraSource = "deposit" | "referral" | "other";
@@ -19,7 +19,6 @@ export interface WalletAuraBreakdown {
 
 const DEPOSIT_RE = /^(?:predeposit_)?week(\d+)$/;
 const REFERRAL_RE = /^(?:predeposit_)?referral_week(\d+)$/;
-const WEEK_PROTOCOL_RE = /^week(\d+)_protocol_.+$/;
 
 export function classifyAuraSource(key: string): AuraSource {
   if (DEPOSIT_RE.test(key)) return "deposit";
@@ -27,16 +26,16 @@ export function classifyAuraSource(key: string): AuraSource {
   return "other";
 }
 
+/**
+ * Which campaign week a category key belongs to, or null if it is not weekly.
+ * Defers to the group parser so the wallet lookup, the global breakdown and
+ * the Overview can never disagree about a key's week — its own patterns used
+ * to miss mainnet keys entirely and to require "_protocol_" in the middle,
+ * which dropped "weekN_exponent_correction" out of every week.
+ */
 export function extractCampaignWeek(key: string): number | null {
-  // Mainnet keys carry their own numbering, so they need the shared offset
-  // rather than the digits in the key — without this the wallet lookup offers
-  // no week filter for them at all.
-  const mainnetWeek = mainnetCampaignWeek(key);
-  if (mainnetWeek != null) return mainnetWeek;
-
-  const match =
-    key.match(DEPOSIT_RE) ?? key.match(REFERRAL_RE) ?? key.match(WEEK_PROTOCOL_RE);
-  return match ? Number(match[1]) : null;
+  const parsed = parseAuraCategoryKey(key);
+  return parsed.group === "week" ? parsed.week ?? null : null;
 }
 
 function emptyBreakdown(): AuraSourceBreakdown {
