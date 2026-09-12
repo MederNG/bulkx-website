@@ -1,3 +1,4 @@
+import { mainnetCampaignWeek } from "@/lib/aura-category-groups";
 import { getCurrentCampaignWeek } from "@/lib/campaign-clock";
 
 export type AuraSource = "deposit" | "referral" | "other";
@@ -27,6 +28,12 @@ export function classifyAuraSource(key: string): AuraSource {
 }
 
 export function extractCampaignWeek(key: string): number | null {
+  // Mainnet keys carry their own numbering, so they need the shared offset
+  // rather than the digits in the key — without this the wallet lookup offers
+  // no week filter for them at all.
+  const mainnetWeek = mainnetCampaignWeek(key);
+  if (mainnetWeek != null) return mainnetWeek;
+
   const match =
     key.match(DEPOSIT_RE) ?? key.match(REFERRAL_RE) ?? key.match(WEEK_PROTOCOL_RE);
   return match ? Number(match[1]) : null;

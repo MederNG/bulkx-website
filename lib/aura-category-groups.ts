@@ -27,15 +27,25 @@ const WEEK_RE = /^week(\d+)$/;
 const MAINNET_WEEK_RE = /^mainnet_week(\d+)(?:_.+)?$/;
 export const MAINNET_WEEK_OFFSET = 14;
 
+/**
+ * Campaign week a "mainnet_weekN" key belongs to, or null for anything else.
+ * The one place that offset lives, so every view agrees on which week mainnet
+ * categories land in.
+ */
+export function mainnetCampaignWeek(key: string): number | null {
+  const match = key.match(MAINNET_WEEK_RE);
+  return match ? Number(match[1]) + MAINNET_WEEK_OFFSET : null;
+}
+
 /** Map raw upstream category keys to Retro / Week N / Other buckets. */
 export function parseAuraCategoryKey(key: string): ParsedAuraCategory {
   if (key.startsWith("retro_")) {
     return { group: "retro" };
   }
 
-  const mainnetMatch = key.match(MAINNET_WEEK_RE);
-  if (mainnetMatch) {
-    return { group: "week", week: Number(mainnetMatch[1]) + MAINNET_WEEK_OFFSET };
+  const mainnetWeek = mainnetCampaignWeek(key);
+  if (mainnetWeek != null) {
+    return { group: "week", week: mainnetWeek };
   }
 
   const referralMatch = key.match(REFERRAL_WEEK_RE);
