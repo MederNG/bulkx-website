@@ -47,7 +47,7 @@ export function categoryLabel(key: string): string {
   const mainnetPrefixMatch = key.match(/^mainnet_week\d+_(.+)$/i);
   if (mainnetPrefixMatch) {
     const rest = mainnetPrefixMatch[1];
-    return rest.toLowerCase() === "protocol" ? "Protocol" : categoryLabel(rest);
+    return rest.toLowerCase() === "protocol" ? "Protocols" : categoryLabel(rest);
   }
 
   const parts = key.split("_").filter((part) => part.toLowerCase() !== "protocol");
