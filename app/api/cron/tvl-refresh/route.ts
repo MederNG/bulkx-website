@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-const GITHUB_REPO = "MederNG/bulkx-website";
+const GITHUB_REPO = "MakerBuild/aurabulk";
 const DISPATCH_EVENT = "tvl-refresh";
 
 function isAuthorized(req: NextRequest): boolean {
