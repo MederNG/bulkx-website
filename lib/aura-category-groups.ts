@@ -20,11 +20,22 @@ const PREDEPOSIT_WEEK_RE = /^predeposit_week(\d+)$/;
 // belongs to that week's group, not "Other".
 const WEEK_SUFFIX_RE = /^week(\d+)_.+$/;
 const WEEK_RE = /^week(\d+)$/;
+// Mainnet trading categories arrive as "mainnet_weekN" (optionally with a
+// source suffix) and restart their own numbering at 1. Pre-deposits ran weeks
+// 1-14, so mainnet week 1 is week 15 of the campaign — offset them onto the
+// same sequence instead of letting them fall into the "Other" catch-all.
+const MAINNET_WEEK_RE = /^mainnet_week(\d+)(?:_.+)?$/;
+export const MAINNET_WEEK_OFFSET = 14;
 
 /** Map raw upstream category keys to Retro / Week N / Other buckets. */
 export function parseAuraCategoryKey(key: string): ParsedAuraCategory {
   if (key.startsWith("retro_")) {
     return { group: "retro" };
+  }
+
+  const mainnetMatch = key.match(MAINNET_WEEK_RE);
+  if (mainnetMatch) {
+    return { group: "week", week: Number(mainnetMatch[1]) + MAINNET_WEEK_OFFSET };
   }
 
   const referralMatch = key.match(REFERRAL_WEEK_RE);
@@ -57,12 +68,15 @@ const SOURCE_LABEL_OVERRIDES: Record<string, string> = {
   retro: "Retro",
   "pre-deposits": "Pre-Deposits",
   referrals: "Referrals",
+  "trading-mainnet": "Trading Mainnet",
 };
 
 const FIXED_SOURCE_ORDER = ["retro", "pre-deposits", "referrals"];
 
 function sourceBucketKey(key: string): string {
   if (key.startsWith("retro_")) return "retro";
+  // Mainnet trading is its own source, not part of the small-source tail.
+  if (MAINNET_WEEK_RE.test(key)) return "trading-mainnet";
   if (/^week\d+$/i.test(key) || /^predeposit_week\d+$/i.test(key)) return "pre-deposits";
   if (/^(?:predeposit_)?referral_week\d+$/i.test(key)) return "referrals";
 
